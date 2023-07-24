@@ -58,6 +58,37 @@ class BaserunTest(unittest.TestCase):
             mock_warn.assert_called_once_with(
                 "Baserun has already been initialized. Additional calls to init will be ignored.")
 
+    @patch('requests.post')
+    def test_decorator(self, mock_post):
+        test_message = "This is a test log message from decorator"
+
+        @baserun.test(metadata={"key": "test"})
+        def decorated_function():
+            self.logger.info(test_message,
+                             extra={"baserun_payload": {"input": "What is the capital of the United States?"}})
+
+        decorated_function()
+
+        post_data = mock_post.call_args[1]['json']
+        self.assertIn(test_message, post_data['messages'][0]['message'])
+        self.assertEqual(post_data['metadata']['name'], 'decorated_function')
+        self.assertEqual(post_data['metadata']['key'], 'test')
+
+    @patch('requests.post')
+    def test_decorator_name_not_overridden_by_function_name(self, mock_post):
+        custom_name = "custom_metadata_name"
+
+        @baserun.test(metadata={"name": custom_name})
+        def arbitrary_function():
+            self.logger.info("This log is from a decorated function",
+                             extra={"baserun_payload": {"query": "Show me the metadata name"}})
+
+        arbitrary_function()
+
+        post_data = mock_post.call_args[1]['json']
+        self.assertEqual(post_data['metadata']['name'], custom_name)
+        self.assertNotEqual(post_data['metadata']['name'], 'arbitrary_function')
+
 
 if __name__ == '__main__':
     unittest.main()
