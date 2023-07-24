@@ -25,11 +25,10 @@ baserun.init(api_key="YOUR_API_KEY")
 * **Using as a decorator**: To log a test with Baserun, use baserun.test() as a decorator for your functions. The function name will be automatically inferred and added to the metadata, but you can also provide additional metadata if needed. Any log within the callstack provided with the extra baserun_payload property will be sent to Baserun.
 ```python
 import baserun
-import logging
 
 @baserun.test(metadata={"custom_key": "custom_value"})
 def my_function():
-    logger = logging.getLogger(__name__)
+    ...
     logger.info("Your log message", extra={"baserun_payload": {
         "input": "What is the capital of the United States?",
         "output": "Washington, D.C."
@@ -42,10 +41,9 @@ my_function()
 
 ```python
 import baserun
-import logging
 
-with baserun.test():
-    logger = logging.getLogger(__name__)
+with baserun.test(metadata={"custom_key": "custom_value"}):
+    ...
     logger.info("Your log message", extra={"baserun_payload": {
         "input": "What is the capital of the United States?",
         "output": "Washington, D.C."
