@@ -28,7 +28,10 @@ import logging
 
 with baserun.test():
     logger = logging.getLogger(__name__)
-    logger.info("Your log message", extra={"baserun_payload": {"input": "What is the capital of the United States?"}})
+    logger.info("Your log message", extra={"baserun_payload": {
+        "input": "What is the capital of the United States?"
+        "output": "Washington, D.C.",
+    }})
 ```
 
 ## Configuration
