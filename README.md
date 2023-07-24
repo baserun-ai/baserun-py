@@ -1,6 +1,6 @@
 # Baserun
 
-**[Baserun](https://baserun.ai)** is an evaluation platform for LLM applications. Our goal is to simplify the testing, debugging, and evaluation of LLM features helping make your app production ready.
+**[Baserun](https://baserun.ai)** is an evaluation platform for LLM applications. Our goal is to simplify the testing, debugging, and evaluation of LLM features helping get your app production ready.
 
 ## Installation
 
