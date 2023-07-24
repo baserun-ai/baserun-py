@@ -4,6 +4,7 @@ import requests
 import threading
 import contextlib
 import warnings
+import time
 
 _thread_local = threading.local()
 
@@ -15,11 +16,11 @@ class BaserunHandler(logging.Handler):
         self.api_key = api_key
         self.buffer = []
 
-    def flush(self):
+    def flush(self, metadata=None):
         if not self.buffer:
             return
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        requests.post(self.api_url, json=self.buffer, headers=headers)
+        requests.post(self.api_url, json={"metadata": metadata, "messages": self.buffer}, headers=headers)
         self.buffer = []
 
     def emit(self, record: logging.LogRecord) -> None:
@@ -31,7 +32,6 @@ class BaserunHandler(logging.Handler):
         baserun_payload = getattr(record, 'baserun_payload', {})
 
         log_entry = {
-            "baserun_id": baserun_id,
             "message": record.msg,
             "payload": baserun_payload
         }
@@ -64,19 +64,28 @@ class Baserun:
 
     @staticmethod
     @contextlib.contextmanager
-    def test() -> None:
+    def test(metadata=None) -> None:
         if not Baserun._initialized:
             raise ValueError("Baserun has not been initialized. Please call baserun.init() first.")
 
         baserun_id = str(uuid.uuid4())
         _thread_local.baserun_id = baserun_id
         try:
+            start_time = time.time()
+
             yield baserun_id
+
+            end_time = time.time()
+
+            metadata = metadata or {}
+            metadata['id'] = baserun_id
+            metadata['start_time'] = start_time
+            metadata['end_time'] = end_time
         finally:
             del _thread_local.baserun_id
 
             logger = logging.getLogger()
             for handler in logger.handlers:
                 if isinstance(handler, BaserunHandler):
-                    handler.flush()
+                    handler.flush(metadata)
 

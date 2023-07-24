@@ -18,8 +18,8 @@ class BaserunTest(unittest.TestCase):
             self.logger.info(test_message, extra={"baserun_payload": {"input": "What is the capital of the United States?"}})
 
         post_data = mock_post.call_args[1]['json']
-        self.assertIn(test_message, post_data[0]['message'])
-        self.assertEqual(post_data[0]['baserun_id'], baserun_id)
+        self.assertIn(test_message, post_data['messages'][0]['message'])
+        self.assertEqual(post_data['metadata']['id'], baserun_id)
 
     @patch('requests.post')
     def test_log_message_without_baserun_payload(self, mock_post):
@@ -46,10 +46,9 @@ class BaserunTest(unittest.TestCase):
 
         post_data = mock_post.call_args[1]['json']
 
-        self.assertIn(test_message_1, post_data[0]['message'])
-        self.assertIn(test_message_2, post_data[1]['message'])
-
-        self.assertTrue(all(entry['baserun_id'] == baserun_id for entry in post_data))
+        self.assertIn(test_message_1, post_data['messages'][0]['message'])
+        self.assertIn(test_message_2, post_data['messages'][1]['message'])
+        self.assertEqual(post_data['metadata']['id'], baserun_id)
 
     def test_baserun_initialize_only_once(self):
         with patch('warnings.warn') as mock_warn:
