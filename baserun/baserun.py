@@ -3,6 +3,7 @@ import uuid
 import requests
 import threading
 import contextlib
+import warnings
 
 _thread_local = threading.local()
 
@@ -44,8 +45,14 @@ class BaserunFilter(logging.Filter):
 
 
 class Baserun:
+    _initialized = False
+
     @staticmethod
     def init(api_key: str, api_url: str = "https://baserun.ai/api/logs") -> None:
+        if Baserun._initialized:
+            warnings.warn("Baserun has already been initialized. Additional calls to init will be ignored.")
+            return
+
         logger = logging.getLogger()
         handler = BaserunHandler(api_url, api_key)
         handler.setLevel(logging.INFO)
@@ -53,9 +60,14 @@ class Baserun:
         handler.addFilter(BaserunFilter())
         logger.addHandler(handler)
 
+        Baserun._initialized = True
+
     @staticmethod
     @contextlib.contextmanager
     def test() -> None:
+        if not Baserun._initialized:
+            raise ValueError("Baserun has not been initialized. Please call baserun.init() first.")
+
         baserun_id = str(uuid.uuid4())
         _thread_local.baserun_id = baserun_id
         try:

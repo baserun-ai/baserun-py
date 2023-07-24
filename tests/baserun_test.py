@@ -51,6 +51,14 @@ class BaserunTest(unittest.TestCase):
 
         self.assertTrue(all(entry['baserun_id'] == baserun_id for entry in post_data))
 
+    def test_baserun_initialize_only_once(self):
+        with patch('warnings.warn') as mock_warn:
+            baserun.init(api_key="Whatever")
+
+            # Check if a warning was issued
+            mock_warn.assert_called_once_with(
+                "Baserun has already been initialized. Additional calls to init will be ignored.")
+
 
 if __name__ == '__main__':
     unittest.main()
