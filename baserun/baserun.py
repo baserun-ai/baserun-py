@@ -44,6 +44,39 @@ class BaserunFilter(logging.Filter):
         return hasattr(record, 'baserun_payload')
 
 
+class BaserunTest(contextlib.ContextDecorator):
+    def __init__(self, metadata=None):
+        self.metadata = dict(metadata or {})
+
+    def __call__(self, func):
+        def wrapper(*args, **kwargs):
+            if 'name' not in self.metadata:
+                self.metadata['name'] = func.__name__
+            with self:
+                return func(*args, **kwargs)
+
+        return wrapper
+
+    def __enter__(self):
+        if not Baserun._initialized:
+            raise ValueError("Baserun has not been initialized. Please call baserun.init() first.")
+
+        self.metadata['id'] = str(uuid.uuid4())
+        _thread_local.baserun_id = self.metadata['id']
+        self.metadata['start_time'] = time.time()
+
+        return self.metadata['id']
+
+    def __exit__(self, *exc):
+        self.metadata['end_time'] = time.time()
+
+        del _thread_local.baserun_id
+        logger = logging.getLogger()
+        for handler in logger.handlers:
+            if isinstance(handler, BaserunHandler):
+                handler.flush(self.metadata)
+
+
 class Baserun:
     _initialized = False
 
@@ -63,29 +96,5 @@ class Baserun:
         Baserun._initialized = True
 
     @staticmethod
-    @contextlib.contextmanager
-    def test(metadata=None) -> None:
-        if not Baserun._initialized:
-            raise ValueError("Baserun has not been initialized. Please call baserun.init() first.")
-
-        baserun_id = str(uuid.uuid4())
-        _thread_local.baserun_id = baserun_id
-        try:
-            start_time = time.time()
-
-            yield baserun_id
-
-            end_time = time.time()
-
-            metadata = metadata or {}
-            metadata['id'] = baserun_id
-            metadata['start_time'] = start_time
-            metadata['end_time'] = end_time
-        finally:
-            del _thread_local.baserun_id
-
-            logger = logging.getLogger()
-            for handler in logger.handlers:
-                if isinstance(handler, BaserunHandler):
-                    handler.flush(metadata)
-
+    def test(metadata=None) -> BaserunTest:
+        return BaserunTest(metadata)
