@@ -18,8 +18,8 @@ class BaserunTest(unittest.TestCase):
             self.logger.info(test_message, extra={"baserun_payload": {"input": "What is the capital of the United States?"}})
 
         post_data = mock_post.call_args[1]['json']
-        self.assertIn(test_message, post_data['messages'][0]['message'])
-        self.assertEqual(post_data['metadata']['id'], baserun_id)
+        self.assertIn(test_message, post_data['tests'][0]['steps'][0]['message'])
+        self.assertEqual(post_data['tests'][0]['id'], baserun_id)
 
     @patch('requests.post')
     def test_log_message_without_baserun_payload(self, mock_post):
@@ -46,9 +46,9 @@ class BaserunTest(unittest.TestCase):
 
         post_data = mock_post.call_args[1]['json']
 
-        self.assertIn(test_message_1, post_data['messages'][0]['message'])
-        self.assertIn(test_message_2, post_data['messages'][1]['message'])
-        self.assertEqual(post_data['metadata']['id'], baserun_id)
+        self.assertIn(test_message_1, post_data['tests'][0]['steps'][0]['message'])
+        self.assertIn(test_message_2, post_data['tests'][0]['steps'][1]['message'])
+        self.assertEqual(post_data['tests'][0]['id'], baserun_id)
 
     def test_baserun_initialize_only_once(self):
         with patch('warnings.warn') as mock_warn:
@@ -70,9 +70,9 @@ class BaserunTest(unittest.TestCase):
         decorated_function()
 
         post_data = mock_post.call_args[1]['json']
-        self.assertIn(test_message, post_data['messages'][0]['message'])
-        self.assertEqual(post_data['metadata']['name'], 'decorated_function')
-        self.assertEqual(post_data['metadata']['key'], 'test')
+        self.assertIn(test_message, post_data['tests'][0]['steps'][0]['message'])
+        self.assertEqual(post_data['tests'][0]['name'], 'decorated_function')
+        self.assertEqual(post_data['tests'][0]['key'], 'test')
 
     @patch('requests.post')
     def test_decorator_name_not_overridden_by_function_name(self, mock_post):
@@ -86,8 +86,8 @@ class BaserunTest(unittest.TestCase):
         arbitrary_function()
 
         post_data = mock_post.call_args[1]['json']
-        self.assertEqual(post_data['metadata']['name'], custom_name)
-        self.assertNotEqual(post_data['metadata']['name'], 'arbitrary_function')
+        self.assertEqual(post_data['tests'][0]['name'], custom_name)
+        self.assertNotEqual(post_data['tests'][0]['name'], 'arbitrary_function')
 
 
 if __name__ == '__main__':

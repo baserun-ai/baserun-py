@@ -20,7 +20,7 @@ class BaserunHandler(logging.Handler):
         if not self.buffer:
             return
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        requests.post(self.api_url, json={"metadata": metadata, "messages": self.buffer}, headers=headers)
+        requests.post(self.api_url, json={"tests": [{**metadata, "steps": self.buffer}]}, headers=headers)
         self.buffer = []
 
     def emit(self, record: logging.LogRecord) -> None:
@@ -53,7 +53,9 @@ class BaserunTest(contextlib.ContextDecorator):
             if 'name' not in self.metadata:
                 self.metadata['name'] = func.__name__
             with self:
-                return func(*args, **kwargs)
+                result = func(*args, **kwargs)
+                self.metadata['result'] = str(result)
+                return result
 
         return wrapper
 
@@ -63,12 +65,12 @@ class BaserunTest(contextlib.ContextDecorator):
 
         self.metadata['id'] = str(uuid.uuid4())
         _thread_local.baserun_id = self.metadata['id']
-        self.metadata['start_time'] = time.time()
+        self.metadata['startTimestamp'] = time.time()
 
         return self.metadata['id']
 
     def __exit__(self, *exc):
-        self.metadata['end_time'] = time.time()
+        self.metadata['completionTimestamp'] = time.time()
 
         del _thread_local.baserun_id
         logger = logging.getLogger()
@@ -81,7 +83,7 @@ class Baserun:
     _initialized = False
 
     @staticmethod
-    def init(api_key: str, api_url: str = "https://baserun.ai/api/logs") -> None:
+    def init(api_key: str, api_url: str = "https://baserun.ai/api/runs") -> None:
         if Baserun._initialized:
             warnings.warn("Baserun has already been initialized. Additional calls to init will be ignored.")
             return
