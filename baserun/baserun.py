@@ -1,9 +1,11 @@
+import json
 import uuid
 import os
 import requests
 import threading
 import warnings
 import time
+from .helpers import BaserunProvider, BaserunType, get_provider_for_model
 
 _thread_local = threading.local()
 
@@ -72,7 +74,7 @@ class Baserun:
         return wrapper
 
     @staticmethod
-    def log(message, payload=None):
+    def log(message: str):
         if not Baserun._initialized:
             return
 
@@ -86,8 +88,87 @@ class Baserun:
 
         log_entry = {
             "message": message,
-            "payload": payload
         }
+
+        _thread_local.buffer.append(log_entry)
+
+    @staticmethod
+    def log_llm_chat(config: dict, messages: list[dict], output: str, variables: dict[str, str] = None):
+        if not Baserun._initialized:
+            return
+
+        baserun_id = getattr(_thread_local, "baserun_id", None)
+        if not baserun_id:
+            warnings.warn(
+                "baserun.log_llm_chat was called outside of a Baserun decorated test. The log will be ignored.")
+            return
+
+        if 'model' not in config:
+            warnings.warn("The 'model' property must be specified in config, falling back to baserun.log")
+            Baserun.log(json.dumps({"config": config, "messages": messages, "output": output, "variables": variables}))
+            return
+
+        model = config['model']
+        provider = get_provider_for_model(model)
+        if not isinstance(provider, BaserunProvider):
+            warnings.warn(f"The specified model '{model}' is not supported by Baserun, falling back to baserun.log")
+            Baserun.log(json.dumps({"config": config, "messages": messages, "output": output, "variables": variables}))
+            return
+
+        if not hasattr(_thread_local, 'buffer'):
+            _thread_local.buffer = []
+
+        log_entry = {
+            "type": BaserunType.CHAT.name.lower(),
+            "provider": provider.name.lower(),
+            "config": config,
+            "messages": [
+                {
+                    "role": message["role"],
+                    "content": message["content"].replace("{", "{{").replace("}", "}}")
+                }
+                for message in messages
+            ],
+            "output": output,
+            "variables": variables if variables else {}
+        }
+
+        _thread_local.buffer.append(log_entry)
+
+    @staticmethod
+    def log_llm_completion(config: dict[str, any], prompt: str, output: str, variables: dict[str, str] = None):
+        if not Baserun._initialized:
+            return
+
+        baserun_id = getattr(_thread_local, "baserun_id", None)
+        if not baserun_id:
+            warnings.warn("baserun.log_llm_completion was called outside of a Baserun decorated test. The log will be ignored.")
+            return
+
+        if 'model' not in config:
+            warnings.warn("The 'model' property must be specified in config, falling back to baserun.log")
+            Baserun.log(json.dumps({"config": config, "prompt": prompt, "output": output, "variables": variables}))
+            return
+
+        model = config['model']
+        provider = get_provider_for_model(model)
+        if not isinstance(provider, BaserunProvider):
+            warnings.warn(f"The specified model '{model}' is not supported by Baserun, falling back to baserun.log")
+            Baserun.log(json.dumps({"config": config, "prompt": prompt, "output": output, "variables": variables}))
+            return
+
+        if not hasattr(_thread_local, 'buffer'):
+            _thread_local.buffer = []
+
+        log_entry = {
+            "type": BaserunType.COMPLETION.name.lower(),
+            "provider": provider.name.lower(),
+            "config": config,
+            "prompt": prompt.replace("{", "{{").replace("}", "}}"),
+            "output": output,
+            "variables": variables if variables else {}
+        }
+
         _thread_local.buffer.append(log_entry)
 
     @staticmethod
