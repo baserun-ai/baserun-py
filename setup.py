@@ -7,4 +7,10 @@ setup(
     install_requires=[
         'requests>=2.31.0'
     ],
+    entry_points={
+        'pytest11': ['baserun = baserun.pytest_plugin'],
+        'console_scripts': [
+            'baserun = baserun.cli:main',
+        ],
+    },
 )

@@ -1,6 +1,6 @@
 # Baserun
 
-**[Baserun](https://baserun.ai)** is an evaluation platform for LLM applications. Our goal is to simplify the testing, debugging, and evaluation of LLM features helping get your app production ready.
+**[Baserun](https://baserun.ai)** is an evaluation platform for LLM applications. Our mission is to simplify the testing, debugging, and evaluation of LLM features, helping you get your app production-ready.
 
 ## Installation
 
@@ -10,50 +10,94 @@ To install `baserun`, use pip:
 pip install baserun
 ```
 
+## Setting Up Your API Key
+
+Before running your tests, you'll need to set up the `BASERUN_API_KEY` environment variable with the API key from your Baserun dashboard:
+
+For UNIX-based systems (Linux/MacOS):
+```bash
+export BASERUN_API_KEY='your_api_key_here'
+```
+
+For Windows:
+```bash
+setx BASERUN_API_KEY "your_api_key_here"
+```
+This will ensure that your tests can authenticate and send data to Baserun.
+
 ## Quick Start
 
-1. **Initialization**: Begin by initializing Baserun with your API key:
+**Log with the decorator**: Simply use `@baserun.test` as a decorator for your test functions. All baserun logs within the decorated function will be sent to Baserun as part of your test run.
 
 ```python
 import baserun
 
-baserun.init(api_key="YOUR_API_KEY")
-```
-
-2. **Logging**: 
-
-* **Using as a decorator**: To log a test with Baserun, use baserun.test() as a decorator for your functions. The function name will be automatically inferred and added to the metadata, but you can also provide additional metadata if needed. Any log within the callstack provided with the extra baserun_payload property will be sent to Baserun.
-```python
-import baserun
-
-@baserun.test(metadata={"custom_key": "custom_value"})
-def my_function():
+@baserun.test
+def test_my_function():
     ...
-    logger.info("Your log message", extra={"baserun_payload": {
-        "input": "What is the capital of the United States?",
-        "output": "Washington, D.C."
-    }})
-
-my_function()
+    baserun.log("Your log message")
 ```
 
-* **Using Context Manager**: you can also use baserun.test() as a context. Likewise any logs generated within that context that are annotated with the `baserun_payload` property will be sent to Baserun. 
+## Running tests with pytest
+To execute your tests and send logs to Baserun, simply use the --baserun flag with pytest.
 
+```bash
+pytest --baserun your_test_module.py
+```
+
+## Running tests with unittest
+When you derive your test case from `BaserunTestCase`, there's no need to use the `@baserun.test` decorator. All test methods within a class that inherits from `BaserunTestCase` will automatically send logs to Baserun.
 ```python
 import baserun
 
-with baserun.test(metadata={"custom_key": "custom_value"}):
-    ...
-    logger.info("Your log message", extra={"baserun_payload": {
-        "input": "What is the capital of the United States?",
-        "output": "Washington, D.C."
-    }})
+class YourTest(baserun.BaserunTestCase):
+    
+    def test_example(self):
+        ...
+        baserun.log("Your unittest log message")
 ```
 
-## Configuration
-
-- **Setting Log Level**: Ensure your logging level is set to `INFO` to capture and forward the relevant log messages:
+If your test case doesn't inherit from `BaserunTestCase`, then you need to decorate your test methods explicitly to send logs to Baserun.
 
 ```python
-logging.basicConfig(level=logging.INFO)
+import unittest
+import baserun
+
+class AnotherTest(unittest.TestCase):
+    
+    @baserun.test
+    def test_decorated_example(self):
+        ...
+        baserun.log("Your unittest log message from a decorated test")
+```
+
+To run your unittests:
+
+```bash
+python -m unittest your_unittest_module.py
+```
+
+## Using Baserun CLI
+To run a Python module with Baserun logging enabled:
+
+```bash
+baserun --api-key=YOUR_API_KEY your_module_name
+```
+
+## Explicit Initialization
+For cases where you want more control:
+```python
+import baserun
+
+baserun.init(api_url='YOUR_API_URL')
+
+@baserun.test
+def some_function():
+    ...
+    baserun.log("Your log message for explicit initialization")
+    
+some_function()
+
+# At the end of your script or before exit
+baserun.flush()
 ```
