@@ -57,20 +57,6 @@ class YourTest(baserun.BaserunTestCase):
         baserun.log("Your unittest log message")
 ```
 
-If your test case doesn't inherit from `BaserunTestCase`, then you need to decorate your test methods explicitly to send logs to Baserun.
-
-```python
-import unittest
-import baserun
-
-class AnotherTest(unittest.TestCase):
-    
-    @baserun.test
-    def test_decorated_example(self):
-        ...
-        baserun.log("Your unittest log message from a decorated test")
-```
-
 To run your unittests:
 
 ```bash
@@ -81,7 +67,7 @@ python -m unittest your_unittest_module.py
 To run a Python module with Baserun logging enabled:
 
 ```bash
-baserun --api-key=YOUR_API_KEY your_module_name
+baserun your_module_name
 ```
 
 ## Explicit Initialization
