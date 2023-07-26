@@ -61,8 +61,37 @@ Logs an interaction with a LLM chat API to Baserun during a test run.
 
 ```python
 import baserun
+import openai
 
-baserun.log("A custom message")
+
+@baserun.test
+def log_llm_chat_example():
+    config = {
+        "model": "gpt-3.5-turbo",
+        "temperature": 0.7
+    }
+
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Who won the world series in {year}?"}
+    ]
+
+    variables = {"year": "2020"}
+
+    response = openai.ChatCompletion.create(
+        **config,
+        messages=[
+            {"role": message["role"], "content": message["content"].format(variables)}
+            for message in messages
+        ],
+    )
+
+    baserun.log_llm_chat(
+        config=config,
+        messages=messages,
+        output=response['choices'][0]['message']['content'],
+        variables=variables
+    )
 ```
 
 ## log_llm_completion
@@ -76,8 +105,29 @@ Logs an interaction with a LLM completion API to Baserun during a test run.
 
 ```python
 import baserun
+import openai
 
-baserun.log("A custom message")
+@baserun.test
+def log_llm_completion_example():
+    config = {
+        "model": "text-davinci-003",
+        "temperature": 0.8,
+        "max_tokens": 100
+    }
+    prompt = "Once upon a time, there was a {character} who {action}."
+    variables = {"character": "brave knight", "action": "fought dragons"}
+    
+    response = openai.Completion.create(
+        **config,
+        prompt=prompt.format(variables),
+    )
+    
+    baserun.log_llm_completion(
+        config=config,
+        prompt=prompt,
+        output=response['choices'][0]['text'],
+        variables=variables
+    )
 ```
 
 
