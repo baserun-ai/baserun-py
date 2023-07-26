@@ -35,8 +35,51 @@ import baserun
 @baserun.test
 def test_my_function():
     ...
-    baserun.log("Your log message")
+    baserun.log("Custom log message")
 ```
+
+## log
+Logs a custom message to Baserun during a test run.
+
+### Parameters
+* message (str): The custom log message to be recorded.
+
+```python
+import baserun
+
+baserun.log("A custom message")
+```
+
+## log_llm_chat
+Logs an interaction with a LLM chat API to Baserun during a test run.
+
+### Parameters
+* config (dict): A dictionary containing the configuration for the LLM model, including the model and any other relevant parameters.
+* messages (list of dict): A list of messages representing the conversation between the user and the LLM model. Each message is represented as a dictionary with keys role and content, where role can be "system", "user", or "assistant", and content is the text of the message. Use prompt templates (e.g., "{variable}") in the content to specify variables that will be substituted at runtime. 
+* output (str): The output response from the LLM model. 
+* variables (dict, optional): A dictionary of variables used in the chat messages.
+
+```python
+import baserun
+
+baserun.log("A custom message")
+```
+
+## log_llm_completion
+Logs an interaction with a LLM completion API to Baserun during a test run.
+
+### Parameters
+* config (dict): A dictionary containing the configuration for the LLM model, including the model and any other relevant parameters.
+* prompt (str): The input prompt for the LLM model. Use prompt templates (e.g., "{variable}") in the prompt to specify variables that will be substituted at runtime.
+* output (str): The output response from the LLM model. 
+* variables (dict, optional): A dictionary of variables used in the completion prompt.
+
+```python
+import baserun
+
+baserun.log("A custom message")
+```
+
 
 ## Running tests with pytest
 To execute your tests and send logs to Baserun, simply use the --baserun flag with pytest.
@@ -80,7 +123,7 @@ baserun.init(api_url='YOUR_API_URL')
 @baserun.test
 def some_function():
     ...
-    baserun.log("Your log message for explicit initialization")
+    baserun.log("Custom log message")
     
 some_function()
 
