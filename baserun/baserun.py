@@ -37,8 +37,8 @@ class Baserun:
                 return func(*args, **kwargs)
 
             test_name = func.__name__
-            test_id = str(uuid.uuid4())
-            _thread_local.baserun_id = test_id
+            test_execution_id = str(uuid.uuid4())
+            _thread_local.baserun_test_execution_id = test_execution_id
             _thread_local.buffer = []
             start_time = time.time()
 
@@ -48,27 +48,27 @@ class Baserun:
                 end_time = time.time()
                 Baserun.store_test({
                     'name': test_name,
-                    'id': test_id,
+                    'id': test_execution_id,
                     'error': str(e),
                     'startTimestamp': start_time,
                     'completionTimestamp': end_time,
                     "steps": _thread_local.buffer
                 })
                 _thread_local.buffer = []
-                del _thread_local.baserun_id
+                del _thread_local.baserun_test_execution_id
                 raise e
 
             end_time = time.time()
             Baserun.store_test({
                 'name': test_name,
-                'id': test_id,
+                'id': test_execution_id,
                 'result': str(result),
                 'startTimestamp': start_time,
                 'completionTimestamp': end_time,
                 "steps": _thread_local.buffer
             })
             _thread_local.buffer = []
-            del _thread_local.baserun_id
+            del _thread_local.baserun_test_execution_id
             return result
 
         return wrapper
@@ -78,8 +78,8 @@ class Baserun:
         if not Baserun._initialized:
             return
 
-        baserun_id = getattr(_thread_local, "baserun_id", None)
-        if not baserun_id:
+        baserun_test_execution_id = getattr(_thread_local, "baserun_test_execution_id", None)
+        if not baserun_test_execution_id:
             warnings.warn("baserun.log was called outside of a Baserun decorated test. The log will be ignored.")
             return
 
@@ -97,8 +97,8 @@ class Baserun:
         if not Baserun._initialized:
             return
 
-        baserun_id = getattr(_thread_local, "baserun_id", None)
-        if not baserun_id:
+        baserun_test_execution_id = getattr(_thread_local, "baserun_test_execution_id", None)
+        if not baserun_test_execution_id:
             warnings.warn(
                 "baserun.log_llm_chat was called outside of a Baserun decorated test. The log will be ignored.")
             return
@@ -140,8 +140,8 @@ class Baserun:
         if not Baserun._initialized:
             return
 
-        baserun_id = getattr(_thread_local, "baserun_id", None)
-        if not baserun_id:
+        baserun_test_execution_id = getattr(_thread_local, "baserun_test_execution_id", None)
+        if not baserun_test_execution_id:
             warnings.warn("baserun.log_llm_completion was called outside of a Baserun decorated test. The log will be ignored.")
             return
 
