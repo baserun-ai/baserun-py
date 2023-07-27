@@ -3,7 +3,7 @@ from baserun import Baserun
 
 def pytest_addoption(parser):
     parser.addoption("--baserun", action="store_true", help="Enable baserun functionality")
-    parser.addoption("--baserun-api-url", default="https://baserun.ai/api/runs", help="Baserun API URL")
+    parser.addoption("--baserun-api-url", default="https://baserun.ai/api/v1/runs", help="Baserun API URL")
 
 
 def pytest_sessionstart(session):

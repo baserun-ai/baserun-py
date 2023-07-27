@@ -10,7 +10,7 @@ class TestBaserunInit(unittest.TestCase):
     def setUpClass(cls) -> None:
         os.environ["BASERUN_API_KEY"] = "test-key"
         cls.api_key = "test_api_key"
-        cls.api_url = "https://baserun.ai/api/runs"
+        cls.api_url = "https://baserun.ai/api/v1/runs"
         baserun.init(cls.api_url)
 
     @patch("baserun.flush")
