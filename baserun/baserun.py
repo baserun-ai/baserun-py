@@ -47,7 +47,7 @@ class Baserun:
             except Exception as e:
                 end_time = time.time()
                 Baserun.store_test({
-                    'name': test_name,
+                    'test_name': test_name,
                     'id': test_execution_id,
                     'error': str(e),
                     'startTimestamp': start_time,
@@ -60,7 +60,7 @@ class Baserun:
 
             end_time = time.time()
             Baserun.store_test({
-                'name': test_name,
+                'test_name': test_name,
                 'id': test_execution_id,
                 'result': str(result),
                 'startTimestamp': start_time,
