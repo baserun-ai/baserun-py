@@ -7,7 +7,7 @@ class BaserunTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        api_url = os.environ.get("BASERUN_API_URL", "https://baserun.ai/api/runs")
+        api_url = os.environ.get("BASERUN_API_URL", "https://baserun.ai/api/v1/runs")
         Baserun.init(api_url)
 
     def run(self, result=None):

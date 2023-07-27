@@ -17,7 +17,7 @@ class Baserun:
     _api_key = None
 
     @staticmethod
-    def init(api_url: str = "https://baserun.ai/api/runs") -> None:
+    def init(api_url: str = "https://baserun.ai/api/v1/runs") -> None:
         api_key = os.environ.get('BASERUN_API_KEY')
         if not api_key:
             raise ValueError("Baserun API key is missing. Ensure the BASERUN_API_KEY environment variable is set.")
