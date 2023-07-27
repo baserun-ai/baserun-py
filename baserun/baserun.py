@@ -6,6 +6,7 @@ import threading
 import warnings
 import time
 from .helpers import BaserunProvider, BaserunType, get_provider_for_model
+from .openai import monkey_patch_openai
 
 _thread_local = threading.local()
 
@@ -29,6 +30,8 @@ class Baserun:
         Baserun._api_url = api_url
         Baserun._api_key = api_key
         Baserun._initialized = True
+
+        monkey_patch_openai(Baserun._append_to_buffer)
 
     @staticmethod
     def test(func):
@@ -83,14 +86,11 @@ class Baserun:
             warnings.warn("baserun.log was called outside of a Baserun decorated test. The log will be ignored.")
             return
 
-        if not hasattr(_thread_local, 'buffer'):
-            _thread_local.buffer = []
-
         log_entry = {
             "message": message,
         }
 
-        _thread_local.buffer.append(log_entry)
+        Baserun._append_to_buffer(log_entry)
 
     @staticmethod
     def log_llm_chat(config: dict, messages: list[dict], output: str, variables: dict[str, str] = None):
@@ -115,9 +115,6 @@ class Baserun:
             Baserun.log(json.dumps({"config": config, "messages": messages, "output": output, "variables": variables}))
             return
 
-        if not hasattr(_thread_local, 'buffer'):
-            _thread_local.buffer = []
-
         log_entry = {
             "type": BaserunType.CHAT.name.lower(),
             "provider": provider.name.lower(),
@@ -133,7 +130,7 @@ class Baserun:
             "variables": variables if variables else {}
         }
 
-        _thread_local.buffer.append(log_entry)
+        Baserun._append_to_buffer(log_entry)
 
     @staticmethod
     def log_llm_completion(config: dict[str, any], prompt: str, output: str, variables: dict[str, str] = None):
@@ -157,9 +154,6 @@ class Baserun:
             Baserun.log(json.dumps({"config": config, "prompt": prompt, "output": output, "variables": variables}))
             return
 
-        if not hasattr(_thread_local, 'buffer'):
-            _thread_local.buffer = []
-
         log_entry = {
             "type": BaserunType.COMPLETION.name.lower(),
             "provider": provider.name.lower(),
@@ -169,7 +163,7 @@ class Baserun:
             "variables": variables if variables else {}
         }
 
-        _thread_local.buffer.append(log_entry)
+        Baserun._append_to_buffer(log_entry)
 
     @staticmethod
     def store_test(test_data: dict):
@@ -192,3 +186,10 @@ class Baserun:
             warnings.warn(f"Failed to upload results to Baserun: {str(e)}")
 
         Baserun._testExecutions = []
+
+    @staticmethod
+    def _append_to_buffer(log_entry: dict):
+        if not hasattr(_thread_local, 'buffer'):
+            _thread_local.buffer = []
+
+        _thread_local.buffer.append(log_entry)
