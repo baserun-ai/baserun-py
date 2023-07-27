@@ -12,7 +12,7 @@ _thread_local = threading.local()
 
 class Baserun:
     _initialized = False
-    _tests = []
+    _testExecutions = []
     _api_url = None
     _api_key = None
 
@@ -173,7 +173,7 @@ class Baserun:
 
     @staticmethod
     def store_test(test_data: dict):
-        Baserun._tests.append(test_data)
+        Baserun._testExecutions.append(test_data)
 
     @staticmethod
     def flush():
@@ -181,14 +181,14 @@ class Baserun:
             warnings.warn("Baserun has not been initialized. No data will be flushed.")
             return
 
-        if not Baserun._tests:
+        if not Baserun._testExecutions:
             return
 
         headers = {"Authorization": f"Bearer {Baserun._api_key}"}
         try:
-            response = requests.post(Baserun._api_url, json={"tests": Baserun._tests}, headers=headers)
+            response = requests.post(Baserun._api_url, json={"testExecutions": Baserun._testExecutions}, headers=headers)
             response.raise_for_status()
         except requests.RequestException as e:
             warnings.warn(f"Failed to upload results to Baserun: {str(e)}")
 
-        Baserun._tests = []
+        Baserun._testExecutions = []
