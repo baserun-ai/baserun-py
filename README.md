@@ -132,7 +132,7 @@ def log_llm_completion_example():
 
 
 ## Running tests with pytest
-To execute your tests and send logs to Baserun, simply use the --baserun flag with pytest.
+To execute your tests and send logs to Baserun, simply use the --baserun plugin with pytest. When using the --baserun plugin there's no need to use the `@baserun.test` decorator. All tests will automatically send logs to Baserun.
 
 ```bash
 pytest --baserun your_test_module.py
