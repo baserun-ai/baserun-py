@@ -27,33 +27,59 @@ This will ensure that your tests can authenticate and send data to Baserun.
 
 ## Quick Start
 
-**Log with the decorator**: Simply use `@baserun.test` as a decorator for your test functions. All baserun logs within the decorated function will be sent to Baserun as part of your test run.
+**Automatic logging with pytest and openai**: by default all openai completion and chat requests will be logged to Baserun.
+Logs will be aggregated by test and openai logs will include latency and token usage.
 
 ```python
-import baserun
+import openai
 
-@baserun.test
-def test_my_function():
-    ...
-    baserun.log("Custom log message")
+def test_paris_trip():
+    activities_response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        temperature=0.7,
+        messages=[
+            {"role": "User", "content": "What are three activities to do in Paris? Return a CSV of the activities:"}
+        ],
+    )
+    
+    activities_csv = activities_response['choices'][0]['message']['content']
+    
+    itinerary_response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        temperature=0.7,
+        messages=[
+            {"role": "User", "content": f"Plan a concise, one day itinerary for these activities: {activities_csv}"}
+        ],
+    )
+    
+    return itinerary_response['choices'][0]['message']['content']
 ```
 
-## log
+To run the test and log to baserun:
+
+```bash
+pytest --baserun test_module.py
+```
+
+## Baserun API
+
+### log
 Logs a custom message to Baserun during a test run.
 
-### Parameters
+#### Parameters
 * message (str): The custom log message to be recorded.
 
 ```python
 import baserun
 
-baserun.log("A custom message")
+def some_function():
+    baserun.log("A custom message")
 ```
 
-## log_llm_chat
+### log_llm_chat
 Logs an interaction with a LLM chat API to Baserun during a test run.
 
-### Parameters
+#### Parameters
 * config (dict): A dictionary containing the configuration for the LLM model, including the model and any other relevant parameters.
 * messages (list of dict): A list of messages representing the conversation between the user and the LLM model. Each message is represented as a dictionary with keys role and content, where role can be "system", "user", or "assistant", and content is the text of the message. Use prompt templates (e.g., "{variable}") in the content to specify variables that will be substituted at runtime. 
 * output (str): The output response from the LLM model. 
@@ -94,10 +120,10 @@ def log_llm_chat_example():
     )
 ```
 
-## log_llm_completion
+### log_llm_completion
 Logs an interaction with a LLM completion API to Baserun during a test run.
 
-### Parameters
+#### Parameters
 * config (dict): A dictionary containing the configuration for the LLM model, including the model and any other relevant parameters.
 * prompt (str): The input prompt for the LLM model. Use prompt templates (e.g., "{variable}") in the prompt to specify variables that will be substituted at runtime.
 * output (str): The output response from the LLM model. 
@@ -116,12 +142,12 @@ def log_llm_completion_example():
     }
     prompt = "Once upon a time, there was a {character} who {action}."
     variables = {"character": "brave knight", "action": "fought dragons"}
-    
+
     response = openai.Completion.create(
         **config,
         prompt=prompt.format(variables),
     )
-    
+
     baserun.log_llm_completion(
         config=config,
         prompt=prompt,
@@ -130,16 +156,15 @@ def log_llm_completion_example():
     )
 ```
 
-
 ## Running tests with pytest
-To execute your tests and send logs to Baserun, simply use the --baserun plugin with pytest. When using the --baserun plugin there's no need to use the `@baserun.test` decorator. All tests will automatically send logs to Baserun.
+To execute your tests and send logs to Baserun, simply use the --baserun plugin with pytest. When using the --baserun plugin each test will automatically group logs together and then send them to Baserun.
 
 ```bash
 pytest --baserun your_test_module.py
 ```
 
 ## Running tests with unittest
-When you derive your test case from `BaserunTestCase`, there's no need to use the `@baserun.test` decorator. All test methods within a class that inherits from `BaserunTestCase` will automatically send logs to Baserun.
+When you derive your test case from `BaserunTestCase` all test methods will automatically group logs together and then send them to Baserun.
 ```python
 import baserun
 
@@ -156,14 +181,30 @@ To run your unittests:
 python -m unittest your_unittest_module.py
 ```
 
-## Using Baserun CLI
-To run a Python module with Baserun logging enabled:
+## Custom tests
+In order to group logs together for custom tests use the `@baserun.test` decorator which will group all logs within the decorated function and then send them to Baserun once the test run completes.
+
+```python
+import baserun
+
+@baserun.test
+def custom_test():
+    ...
+    baserun.log("Custom log message")
+
+custom_test()
+```
+
+### Using Baserun CLI
+To run a Python module with custom tests:
 
 ```bash
 baserun your_module_name
 ```
 
-## Explicit Initialization
+The Baserun CLI will handle initializing itself and then flushing logs to Baserun. 
+
+### Explicit Initialization and Flushing
 For cases where you want more control:
 ```python
 import baserun
@@ -171,11 +212,11 @@ import baserun
 baserun.init(api_url='YOUR_API_URL')
 
 @baserun.test
-def some_function():
+def custom_test():
     ...
     baserun.log("Custom log message")
     
-some_function()
+custom_test()
 
 # At the end of your script or before exit
 baserun.flush()
