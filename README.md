@@ -34,21 +34,33 @@ Logs will be aggregated by test and openai logs will include latency and token u
 import openai
 
 def test_paris_trip():
+    activities_prompt = (
+        "What are three activities to do in Paris? Return CSV of the activities:"
+    )
     activities_response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
         messages=[
-            {"role": "User", "content": "What are three activities to do in Paris? Return a CSV of the activities:"}
+            {
+                "role": "User",
+                "content": activities_prompt
+            }
         ],
     )
     
     activities_csv = activities_response['choices'][0]['message']['content']
     
+    itinerary_prompt = (
+        f"Plan a concise, one day itinerary for these activities: {activities_csv}"
+    )
     itinerary_response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
         messages=[
-            {"role": "User", "content": f"Plan a concise, one day itinerary for these activities: {activities_csv}"}
+            {
+                "role": "User", 
+                "content": itinerary_prompt
+            }
         ],
     )
     
