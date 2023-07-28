@@ -18,26 +18,42 @@ class BaserunTests(baserun.BaserunTestCase):
         if self.next_assert:
             self.next_assert()
 
-    def test_log_message(self):
-        test_message = "This is a test log message"
-        baserun.log(test_message)
+    def test_log(self):
+        log_name = "TestEvent"
+        baserun.log(log_name)
 
         def assertion_func():
             stored_data = self.mock_baserun_store.call_args[0][0]
-            self.assertIn(test_message, stored_data['steps'][0]['message'])
+            self.assertIn(log_name, stored_data['steps'][0]['name'])
+
+        self.next_assert = assertion_func
+
+    def test_log_with_payload(self):
+        event_name = "TestEvent"
+        event_payload = {
+            "action": "called_api",
+            "value": 42
+        }
+
+        baserun.log(event_name, payload=event_payload)
+
+        def assertion_func():
+            stored_data = self.mock_baserun_store.call_args[0][0]
+            self.assertIn(event_name, stored_data['steps'][0]['name'])
+            self.assertEqual(event_payload, stored_data['steps'][0]['payload'])
 
         self.next_assert = assertion_func
 
     def test_multiple_logs_same_baserun_id(self):
-        test_message_1 = "First test log message"
-        test_message_2 = "Second test log message"
-        baserun.log(test_message_1)
-        baserun.log(test_message_2)
+        log_name_1 = "TestEvent1"
+        log_name_2 = "TestEvent2"
+        baserun.log(log_name_1)
+        baserun.log(log_name_2)
 
         def assertion_func():
             stored_data = self.mock_baserun_store.call_args[0][0]
-            self.assertIn(test_message_1, stored_data['steps'][0]['message'])
-            self.assertIn(test_message_2, stored_data['steps'][1]['message'])
+            self.assertIn(log_name_1, stored_data['steps'][0]['name'])
+            self.assertIn(log_name_2, stored_data['steps'][1]['name'])
 
         self.next_assert = assertion_func
 

@@ -4,24 +4,37 @@ from baserun import baserun as baserun_module
 
 # Run using BASERUN_API_KEY="test-key" pytest --baserun --no-flush tests/pytest_test.py
 def test_log_message():
-    test_message = "This is a test log message"
-    baserun.log(test_message)
+    log_name = "TestEvent"
+    baserun.log(log_name)
 
     stored_data = baserun_module._thread_local.buffer
-    assert test_message in stored_data[0]['message']
+    assert log_name in stored_data[0]['name']
 
 
 def test_multiple_logs_same_baserun_id():
-    test_message_1 = "First test log message"
-    test_message_2 = "Second test log message"
+    log_name_1 = "TestEvent1"
+    log_name_2 = "TestEvent2"
 
-    baserun.log(test_message_1)
-    baserun.log(test_message_2)
+    baserun.log(log_name_1)
+    baserun.log(log_name_2)
 
     stored_data = baserun_module._thread_local.buffer
-    assert test_message_1 in stored_data[0]['message']
-    assert test_message_2 in stored_data[1]['message']
+    assert log_name_1 in stored_data[0]['name']
+    assert log_name_2 in stored_data[1]['name']
 
+
+def test_log_with_payload():
+    event_name = "TestEvent"
+    event_payload = {
+        "action": "called_api",
+        "value": 42
+    }
+
+    baserun.log(event_name, payload=event_payload)
+
+    stored_data = baserun_module._thread_local.buffer
+    assert stored_data[0]['name'] == event_name
+    assert stored_data[0]['payload'] == event_payload
 
 def test_log_llm_chat():
     config = {

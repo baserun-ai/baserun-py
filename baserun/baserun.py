@@ -77,7 +77,7 @@ class Baserun:
         return wrapper
 
     @staticmethod
-    def log(message: str):
+    def log(name: str, payload: dict = None):
         if not Baserun._initialized:
             return
 
@@ -87,7 +87,9 @@ class Baserun:
             return
 
         log_entry = {
-            "message": message,
+            "name": name,
+            "payload": payload,
+            "timestamp": time.time(),
         }
 
         Baserun._append_to_buffer(log_entry)
@@ -127,7 +129,8 @@ class Baserun:
                 for message in messages
             ],
             "output": output,
-            "variables": variables if variables else {}
+            "variables": variables if variables else {},
+            "timestamp": time.time(),
         }
 
         Baserun._append_to_buffer(log_entry)
@@ -160,7 +163,8 @@ class Baserun:
             "config": config,
             "prompt": prompt.replace("{", "{{").replace("}", "}}"),
             "output": output,
-            "variables": variables if variables else {}
+            "variables": variables if variables else {},
+            "timestamp": time.time(),
         }
 
         Baserun._append_to_buffer(log_entry)

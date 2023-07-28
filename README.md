@@ -80,12 +80,13 @@ Logs a custom message to Baserun during a test run.
 
 #### Parameters
 * message (str): The custom log message to be recorded.
+* payload (dict, optional): Additional data associated with the event. Defaults to None.
 
 ```python
 import baserun
 
 def some_function():
-    baserun.log("A custom message")
+    baserun.log("SomeEvent", payload={"key": "value"})
 ```
 
 ### log_llm_chat
@@ -184,7 +185,7 @@ class YourTest(baserun.BaserunTestCase):
     
     def test_example(self):
         ...
-        baserun.log("Your unittest log message")
+        baserun.log("ExampleEvent", payload={"key": "value"})
 ```
 
 To run your unittests:
@@ -202,7 +203,7 @@ import baserun
 @baserun.test
 def custom_test():
     ...
-    baserun.log("Custom log message")
+    baserun.log("CustomEvent", payload={"key": "value"})
 
 custom_test()
 ```
@@ -226,7 +227,7 @@ baserun.init(api_url='YOUR_API_URL')
 @baserun.test
 def custom_test():
     ...
-    baserun.log("Custom log message")
+    baserun.log("CustomEvent", payload={"key": "value"})
     
 custom_test()
 
