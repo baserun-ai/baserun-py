@@ -15,18 +15,41 @@ class TestBaserunInit(unittest.TestCase):
 
     @patch("baserun.flush")
     @patch("baserun.Baserun.store_test")
-    def test_explicit_init(self, mock_store_test, mock_flush):
+    def test_explicit_log(self, mock_store_test, mock_flush):
 
         @baserun.test
         def sample_test():
-            baserun.log("Testing explicit init")
+            baserun.log("TestEvent")
 
         sample_test()
         baserun.flush()
 
         mock_store_test.assert_called_once()
         stored_data = mock_store_test.call_args[0][0]
-        self.assertEqual(stored_data['steps'][0]['message'], "Testing explicit init")
+        self.assertEqual(stored_data['steps'][0]['name'], "TestEvent")
+
+        mock_flush.assert_called_once()
+
+    @patch("baserun.flush")
+    @patch("baserun.Baserun.store_test")
+    def test_explicit_log_with_payload(self, mock_store_test, mock_flush):
+        log_name = "TestEvent"
+        log_payload = {
+            "action": "called_api",
+            "value": 42
+        }
+
+        @baserun.test
+        def sample_test():
+            baserun.log(log_name, log_payload)
+
+        sample_test()
+        baserun.flush()
+
+        mock_store_test.assert_called_once()
+        stored_data = mock_store_test.call_args[0][0]
+        self.assertEqual(stored_data['steps'][0]['name'], log_name)
+        self.assertEqual(stored_data['steps'][0]['payload'], log_payload)
 
         mock_flush.assert_called_once()
 
