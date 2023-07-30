@@ -12,6 +12,12 @@ class BaserunType(Enum):
     COMPLETION = auto()
 
 
+class BaserunStepType(Enum):
+    LOG = auto()
+    AUTO_LLM = auto()
+    CUSTOM_LLM = auto()
+
+
 SupportedModels = {
     BaserunProvider.OPENAI: [
         "gpt-3.5-turbo",

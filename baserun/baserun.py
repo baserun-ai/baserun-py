@@ -5,7 +5,7 @@ import requests
 import threading
 import warnings
 import time
-from .helpers import BaserunProvider, BaserunType, get_provider_for_model
+from .helpers import BaserunProvider, BaserunStepType, BaserunType, get_provider_for_model
 from .openai import monkey_patch_openai
 
 _thread_local = threading.local()
@@ -87,6 +87,7 @@ class Baserun:
             return
 
         log_entry = {
+            "stepType": BaserunStepType.LOG.name.lower(),
             "name": name,
             "payload": payload,
             "timestamp": time.time(),
@@ -118,6 +119,7 @@ class Baserun:
             return
 
         log_entry = {
+            "stepType": BaserunStepType.CUSTOM_LLM.name.lower(),
             "type": BaserunType.CHAT.name.lower(),
             "provider": provider.name.lower(),
             "config": config,
@@ -158,6 +160,7 @@ class Baserun:
             return
 
         log_entry = {
+            "stepType": BaserunStepType.CUSTOM_LLM.name.lower(),
             "type": BaserunType.COMPLETION.name.lower(),
             "provider": provider.name.lower(),
             "config": config,
