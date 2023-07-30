@@ -8,6 +8,7 @@ def test_log_message():
     baserun.log(log_name)
 
     stored_data = baserun_module._thread_local.buffer
+    assert stored_data[0]['stepType'] == 'log'
     assert log_name in stored_data[0]['name']
 
 
@@ -19,6 +20,8 @@ def test_multiple_logs_same_baserun_id():
     baserun.log(log_name_2)
 
     stored_data = baserun_module._thread_local.buffer
+    assert stored_data[0]['stepType'] == 'log'
+    assert stored_data[1]['stepType'] == 'log'
     assert log_name_1 in stored_data[0]['name']
     assert log_name_2 in stored_data[1]['name']
 
@@ -33,6 +36,7 @@ def test_log_with_payload():
     baserun.log(event_name, payload=event_payload)
 
     stored_data = baserun_module._thread_local.buffer
+    assert stored_data[0]['stepType'] == 'log'
     assert stored_data[0]['name'] == event_name
     assert stored_data[0]['payload'] == event_payload
 
@@ -50,6 +54,7 @@ def test_log_llm_chat():
     baserun.log_llm_chat(config=config, messages=messages, output=output)
 
     stored_data = baserun_module._thread_local.buffer
+    assert stored_data[0]['stepType'] == 'custom_llm'
     assert stored_data[0]['type'] == "chat"
     assert stored_data[0]['provider'] == "openai"
     assert stored_data[0]['config']['model'] == "gpt-3.5-turbo"
@@ -72,6 +77,7 @@ def test_log_llm_completion():
     baserun.log_llm_completion(config=config, prompt=prompt, output="Some random output", variables=variables)
 
     stored_data = baserun_module._thread_local.buffer
+    assert stored_data[0]['stepType'] == 'custom_llm'
     assert stored_data[0]['type'] == "completion"
     assert stored_data[0]['provider'] == "openai"
     assert stored_data[0]['config']['model'] == "text-davinci-003"
