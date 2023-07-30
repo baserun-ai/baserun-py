@@ -69,7 +69,7 @@ class Baserun:
                 'testName': test_name,
                 'testInputs': test_inputs,
                 'id': test_execution_id,
-                'result': str(result),
+                'result': str(result) if result is not None else '',
                 'startTimestamp': start_time,
                 'completionTimestamp': end_time,
                 "steps": _thread_local.buffer
