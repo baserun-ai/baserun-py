@@ -1,6 +1,6 @@
 from importlib import import_module
 import time
-from .helpers import BaserunProvider, BaserunType
+from .helpers import BaserunProvider, BaserunStepType, BaserunType
 
 BANNED_CONFIG_KEYS = ['api_base', 'api_key', 'headers', 'organization', 'messages', 'prompt']
 
@@ -22,6 +22,7 @@ def monkey_patch_openai(log):
             output = response["choices"][0]["text"]
 
             log_entry = {
+                "stepType": BaserunStepType.AUTO_LLM.name.lower(),
                 "type": BaserunType.COMPLETION.name.lower(),
                 "provider": BaserunProvider.OPENAI.name.lower(),
                 "config": config,
@@ -47,6 +48,7 @@ def monkey_patch_openai(log):
             usage = response["usage"]
 
             log_entry = {
+                "stepType": BaserunStepType.AUTO_LLM.name.lower(),
                 "type": BaserunType.CHAT.name.lower(),
                 "provider": BaserunProvider.OPENAI.name.lower(),
                 "config": config,
