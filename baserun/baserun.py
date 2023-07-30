@@ -40,6 +40,8 @@ class Baserun:
                 return func(*args, **kwargs)
 
             test_name = func.__name__
+            test_inputs = [str(arg) for arg in args] + [str(v) for v in kwargs.values()]
+
             test_execution_id = str(uuid.uuid4())
             _thread_local.baserun_test_execution_id = test_execution_id
             _thread_local.buffer = []
@@ -51,6 +53,7 @@ class Baserun:
                 end_time = time.time()
                 Baserun.store_test({
                     'testName': test_name,
+                    'testInputs': test_inputs,
                     'id': test_execution_id,
                     'error': str(e),
                     'startTimestamp': start_time,
@@ -64,6 +67,7 @@ class Baserun:
             end_time = time.time()
             Baserun.store_test({
                 'testName': test_name,
+                'testInputs': test_inputs,
                 'id': test_execution_id,
                 'result': str(result),
                 'startTimestamp': start_time,
