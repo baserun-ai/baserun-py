@@ -2,6 +2,7 @@ from importlib import import_module
 import time
 from .helpers import BaserunProvider, BaserunType
 
+BANNED_CONFIG_KEYS = ['api_base', 'api_key', 'headers', 'organization', 'messages', 'prompt']
 
 def monkey_patch_openai(log):
     try:
@@ -16,7 +17,7 @@ def monkey_patch_openai(log):
             end_time = time.time()
 
             prompt = kwargs.get('prompt', "")
-            config = {key: value for key, value in kwargs.items() if key != 'prompt'}
+            config = {key: value for key, value in kwargs.items() if key not in BANNED_CONFIG_KEYS}
             usage = response["usage"]
             output = response["choices"][0]["text"]
 
@@ -41,7 +42,7 @@ def monkey_patch_openai(log):
             end_time = time.time()
 
             messages = kwargs.get('messages', [])
-            config = {key: value for key, value in kwargs.items() if key != 'messages'}
+            config = {key: value for key, value in kwargs.items() if key not in BANNED_CONFIG_KEYS}
             output = response["choices"][0]["message"]["content"]
             usage = response["usage"]
 
