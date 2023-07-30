@@ -44,7 +44,7 @@ def monkey_patch_openai(log):
 
             messages = kwargs.get('messages', [])
             config = {key: value for key, value in kwargs.items() if key not in BANNED_CONFIG_KEYS}
-            output = response["choices"][0]["message"]["content"]
+            output = response["choices"][0]["message"]
             usage = response["usage"]
 
             log_entry = {
