@@ -2,9 +2,10 @@ import json
 import uuid
 import os
 import requests
-import threading
-import warnings
 import time
+import threading
+from urllib.parse import urlparse
+import warnings
 from .helpers import BaserunProvider, BaserunStepType, BaserunType, get_provider_for_model
 from .openai import monkey_patch_openai
 
@@ -193,6 +194,13 @@ class Baserun:
         try:
             response = requests.post(Baserun._api_url, json={"testExecutions": Baserun._testExecutions}, headers=headers)
             response.raise_for_status()
+
+            response_data = response.json()
+            test_run_id = response_data['id']
+            parsed_url = urlparse(Baserun._api_url)
+            url = f"{parsed_url.scheme}://{parsed_url.netloc}/runs/{test_run_id}"
+            return url
+
         except requests.RequestException as e:
             warnings.warn(f"Failed to upload results to Baserun: {str(e)}")
 
