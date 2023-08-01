@@ -35,7 +35,7 @@ def test_paris_trip():
         ],
     )
     
-    return response['choices'][0]['message']['content']
+    assert "Eiffel Tower" in response['choices'][0]['message']['content']
 ```
 
 To run the test and log to baserun:
@@ -61,5 +61,6 @@ Logs a custom message to Baserun. If Baserun is not initialized, this function w
 import baserun
 
 def test_custom_log():
+    ...
     baserun.log("CustomEvent", payload={"key": "value"})
 ```
