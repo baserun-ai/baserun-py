@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "baserun"
+version = "0.1"
+description = "Tools for testing, debugging, and evaluating LLM features."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    {name = "Adam Ginzberg", email = "adam@baserun.ai"}
+]
+dependencies = [
+    "requests>=2.31.0"
+]
+
+[project.urls]
+Homepage="https://baserun.ai"
+Repository="https://github.com/baserun-ai/baserun-py"
+
+[project.scripts]
+baserun = "baserun.cli:main"
+
+[project.entry-points.pytest11]
+pbaserun = "baserun.pytest_plugin"
