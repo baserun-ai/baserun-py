@@ -19,7 +19,7 @@ class TestBaserunInit(unittest.TestCase):
 
         @baserun.test
         def sample_test():
-            baserun.log("TestEvent")
+            baserun.log("TestEvent", "string payload")
 
         sample_test()
         baserun.flush()
@@ -27,6 +27,7 @@ class TestBaserunInit(unittest.TestCase):
         mock_store_test.assert_called_once()
         stored_data = mock_store_test.call_args[0][0]
         self.assertEqual(stored_data['steps'][0]['name'], "TestEvent")
+        self.assertEqual(stored_data['steps'][0]['payload'], "string payload")
 
         mock_flush.assert_called_once()
 
