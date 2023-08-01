@@ -4,6 +4,7 @@ import os
 import requests
 import time
 import threading
+from typing import Union
 from urllib.parse import urlparse
 import warnings
 from .helpers import BaserunProvider, BaserunStepType, BaserunType, get_provider_for_model
@@ -82,7 +83,7 @@ class Baserun:
         return wrapper
 
     @staticmethod
-    def log(name: str, payload: dict = None):
+    def log(name: str, payload: Union[str, dict]):
         if not Baserun._initialized:
             return
 
