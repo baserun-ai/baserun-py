@@ -55,7 +55,7 @@ Logs a custom message to Baserun. If Baserun is not initialized, this function w
 
 #### Parameters
 * message (str): The custom log message to be recorded.
-* payload (Union[str, dict]): The log's additional data, which can be either a string or a dictionary.
+* payload (Union[str, Dict]): The log's additional data, which can be either a string or a dictionary.
 
 ```python
 import baserun
