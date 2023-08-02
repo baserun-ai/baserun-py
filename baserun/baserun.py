@@ -4,7 +4,7 @@ import os
 import requests
 import time
 import threading
-from typing import Union
+from typing import List, Dict, Union
 from urllib.parse import urlparse
 import warnings
 from .helpers import BaserunProvider, BaserunStepType, BaserunType, get_provider_for_model
@@ -83,7 +83,7 @@ class Baserun:
         return wrapper
 
     @staticmethod
-    def log(name: str, payload: Union[str, dict]):
+    def log(name: str, payload: Union[str, Dict]):
         if not Baserun._initialized:
             return
 
@@ -102,7 +102,7 @@ class Baserun:
         Baserun._append_to_buffer(log_entry)
 
     @staticmethod
-    def log_llm_chat(config: dict, messages: list[dict], output: str, variables: dict[str, str] = None):
+    def log_llm_chat(config: Dict, messages: List[Dict], output: str, variables: Dict[str, str] = None):
         if not Baserun._initialized:
             return
 
@@ -144,7 +144,7 @@ class Baserun:
         Baserun._append_to_buffer(log_entry)
 
     @staticmethod
-    def log_llm_completion(config: dict[str, any], prompt: str, output: str, variables: dict[str, str] = None):
+    def log_llm_completion(config: Dict[str, any], prompt: str, output: str, variables: Dict[str, str] = None):
         if not Baserun._initialized:
             return
 
@@ -179,7 +179,7 @@ class Baserun:
         Baserun._append_to_buffer(log_entry)
 
     @staticmethod
-    def store_test(test_data: dict):
+    def store_test(test_data: Dict):
         Baserun._testExecutions.append(test_data)
 
     @staticmethod
@@ -208,7 +208,7 @@ class Baserun:
         Baserun._testExecutions = []
 
     @staticmethod
-    def _append_to_buffer(log_entry: dict):
+    def _append_to_buffer(log_entry: Dict):
         if not hasattr(_thread_local, 'buffer'):
             _thread_local.buffer = []
 
