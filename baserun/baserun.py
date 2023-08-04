@@ -1,3 +1,4 @@
+import inspect
 import json
 import uuid
 import os
@@ -37,48 +38,101 @@ class Baserun:
 
     @staticmethod
     def test(func):
-        def wrapper(*args, **kwargs):
-            if not Baserun._initialized:
-                return func(*args, **kwargs)
+        if inspect.iscoroutinefunction(func):
+            async def wrapper(*args, **kwargs):
+                if not Baserun._initialized:
+                    return func(*args, **kwargs)
 
-            test_name = func.__name__
-            test_inputs = [str(arg) for arg in args] + [str(v) for v in kwargs.values()]
+                test_name = func.__name__
+                test_inputs = []
+                for input_name, input_value in kwargs.items():
+                    if inspect.iscoroutine(input_value):
+                        input_result = input_value.__name__
+                    else:
+                        input_result = input_value
+                    test_inputs.append(f"{input_name}: {input_result}")
 
-            test_execution_id = str(uuid.uuid4())
-            _thread_local.baserun_test_execution_id = test_execution_id
-            _thread_local.buffer = []
-            start_time = time.time()
+                test_execution_id = str(uuid.uuid4())
+                _thread_local.baserun_test_execution_id = test_execution_id
+                _thread_local.buffer = []
+                start_time = time.time()
 
-            try:
-                result = func(*args, **kwargs)
-            except Exception as e:
+                try:
+                    result = await func(*args, **kwargs)
+                except Exception as e:
+                    end_time = time.time()
+                    Baserun.store_test({
+                        'testName': test_name,
+                        'testInputs': test_inputs,
+                        'id': test_execution_id,
+                        'error': str(e),
+                        'startTimestamp': start_time,
+                        'completionTimestamp': end_time,
+                        "steps": _thread_local.buffer
+                    })
+                    _thread_local.buffer = []
+                    del _thread_local.baserun_test_execution_id
+                    raise e
+
                 end_time = time.time()
                 Baserun.store_test({
                     'testName': test_name,
                     'testInputs': test_inputs,
                     'id': test_execution_id,
-                    'error': str(e),
+                    'result': str(result) if result is not None else '',
                     'startTimestamp': start_time,
                     'completionTimestamp': end_time,
                     "steps": _thread_local.buffer
                 })
                 _thread_local.buffer = []
                 del _thread_local.baserun_test_execution_id
-                raise e
+                return result
 
-            end_time = time.time()
-            Baserun.store_test({
-                'testName': test_name,
-                'testInputs': test_inputs,
-                'id': test_execution_id,
-                'result': str(result) if result is not None else '',
-                'startTimestamp': start_time,
-                'completionTimestamp': end_time,
-                "steps": _thread_local.buffer
-            })
-            _thread_local.buffer = []
-            del _thread_local.baserun_test_execution_id
-            return result
+        else:
+            def wrapper(*args, **kwargs):
+                if not Baserun._initialized:
+                    return func(*args, **kwargs)
+
+                test_name = func.__name__
+                test_inputs = []
+                for input_name, input_value in kwargs.items():
+                    test_inputs.append(f"{input_name}: {input_value}")
+
+                test_execution_id = str(uuid.uuid4())
+                _thread_local.baserun_test_execution_id = test_execution_id
+                _thread_local.buffer = []
+                start_time = time.time()
+
+                try:
+                    result = func(*args, **kwargs)
+                except Exception as e:
+                    end_time = time.time()
+                    Baserun.store_test({
+                        'testName': test_name,
+                        'testInputs': test_inputs,
+                        'id': test_execution_id,
+                        'error': str(e),
+                        'startTimestamp': start_time,
+                        'completionTimestamp': end_time,
+                        "steps": _thread_local.buffer
+                    })
+                    _thread_local.buffer = []
+                    del _thread_local.baserun_test_execution_id
+                    raise e
+
+                end_time = time.time()
+                Baserun.store_test({
+                    'testName': test_name,
+                    'testInputs': test_inputs,
+                    'id': test_execution_id,
+                    'result': str(result) if result is not None else '',
+                    'startTimestamp': start_time,
+                    'completionTimestamp': end_time,
+                    "steps": _thread_local.buffer
+                })
+                _thread_local.buffer = []
+                del _thread_local.baserun_test_execution_id
+                return result
 
         return wrapper
 
