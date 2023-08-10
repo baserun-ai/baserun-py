@@ -247,7 +247,7 @@ class Baserun:
 
         headers = {"Authorization": f"Bearer {Baserun._api_key}"}
         try:
-            response = requests.post(Baserun._api_url, json={"testExecutions": Baserun._testExecutions}, headers=headers)
+            response = requests.post(Baserun._api_url, json=json.loads(json.dumps({"testExecutions": Baserun._testExecutions}, default=str)), headers=headers)
             response.raise_for_status()
 
             response_data = response.json()
