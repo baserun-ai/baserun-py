@@ -11,12 +11,13 @@ import warnings
 from .helpers import BaserunStepType, TraceType
 from .openai import monkey_patch_openai
 
-_thread_local = threading.local()
-
 
 class Baserun:
     _initialized = False
+    _trace_id = None
     _traces = []
+    _buffer = []
+    _buffer_lock = threading.Lock()
     _api_base_url = None
     _api_key = None
 
@@ -38,10 +39,9 @@ class Baserun:
 
     @staticmethod
     def _trace(func: Callable, trace_type: TraceType, metadata: Optional[Dict] = None):
-        baserun_trace_id = getattr(_thread_local, "baserun_trace_id", None)
         if inspect.iscoroutinefunction(func):
             async def wrapper(*args, **kwargs):
-                if not Baserun._initialized or baserun_trace_id:
+                if not Baserun._initialized or Baserun._trace_id:
                     return await func(*args, **kwargs)
 
                 test_name = func.__name__
@@ -54,8 +54,8 @@ class Baserun:
                     test_inputs.append(f"{input_name}: {input_result}")
 
                 test_execution_id = str(uuid.uuid4())
-                _thread_local.baserun_trace_id = test_execution_id
-                _thread_local.buffer = []
+                Baserun._trace_id = test_execution_id
+                Baserun._buffer = []
                 start_time = time.time()
 
                 try:
@@ -69,7 +69,7 @@ class Baserun:
                         'result': str(result) if result is not None else '',
                         'startTimestamp': start_time,
                         'completionTimestamp': end_time,
-                        "steps": _thread_local.buffer,
+                        "steps": Baserun._buffer,
                         "metadata": metadata,
                     })
                     return result
@@ -83,7 +83,7 @@ class Baserun:
                         'error': str(e),
                         'startTimestamp': start_time,
                         'completionTimestamp': end_time,
-                        "steps": _thread_local.buffer,
+                        "steps": Baserun._buffer,
                         "metadata": metadata,
                     })
                     raise e
@@ -91,11 +91,11 @@ class Baserun:
                     if trace_type == TraceType.PRODUCTION:
                         Baserun.flush()
 
-                    _thread_local.buffer = []
-                    del _thread_local.baserun_trace_id
+                    Baserun._buffer = []
+                    Baserun._trace_id = None
         else:
             def wrapper(*args, **kwargs):
-                if not Baserun._initialized or baserun_trace_id:
+                if not Baserun._initialized or Baserun._trace_id:
                     return func(*args, **kwargs)
 
                 test_name = func.__name__
@@ -104,8 +104,8 @@ class Baserun:
                     test_inputs.append(f"{input_name}: {input_value}")
 
                 test_execution_id = str(uuid.uuid4())
-                _thread_local.baserun_trace_id = test_execution_id
-                _thread_local.buffer = []
+                Baserun._trace_id = test_execution_id
+                Baserun._buffer = []
                 start_time = time.time()
 
                 try:
@@ -119,7 +119,7 @@ class Baserun:
                         'result': str(result) if result is not None else '',
                         'startTimestamp': start_time,
                         'completionTimestamp': end_time,
-                        "steps": _thread_local.buffer,
+                        "steps": Baserun._buffer,
                         "metadata": metadata,
                     })
                     return result
@@ -133,7 +133,7 @@ class Baserun:
                         'error': str(e),
                         'startTimestamp': start_time,
                         'completionTimestamp': end_time,
-                        "steps": _thread_local.buffer,
+                        "steps": Baserun._buffer,
                         "metadata": metadata,
                     })
                     raise e
@@ -141,8 +141,8 @@ class Baserun:
                     if trace_type == TraceType.PRODUCTION:
                         Baserun.flush()
 
-                    _thread_local.buffer = []
-                    del _thread_local.baserun_trace_id
+                    Baserun._buffer = []
+                    Baserun._trace_id = None
 
         return wrapper
 
@@ -159,8 +159,7 @@ class Baserun:
         if not Baserun._initialized:
             return
 
-        baserun_trace_id = getattr(_thread_local, "baserun_trace_id", None)
-        if not baserun_trace_id:
+        if not Baserun._trace_id:
             warnings.warn("baserun.log was called outside of a Baserun decorated trace. The log will be ignored.")
             return
 
@@ -212,7 +211,5 @@ class Baserun:
 
     @staticmethod
     def _append_to_buffer(log_entry: Dict):
-        if not hasattr(_thread_local, 'buffer'):
-            _thread_local.buffer = []
-
-        _thread_local.buffer.append(log_entry)
+        with Baserun._buffer_lock:
+            Baserun._buffer.append(log_entry)
