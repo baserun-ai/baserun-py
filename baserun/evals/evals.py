@@ -1,6 +1,6 @@
 from baserun.evals.json import is_valid_json
 from typing import Awaitable, Callable, Dict, List
-from ..openai import OpenAIWrapper
+from baserun.patches.openai import OpenAIWrapper
 
 
 def get_answer_prompt(choices: List[str]) -> str:
@@ -106,7 +106,7 @@ class Evals:
     def model_graded_fact(name: str, question: str, ideal: str, output: str) -> str:
         choices = ["A", "B", "C", "D", "E"]
 
-        response = OpenAIWrapper.original_methods["chatcompletion_create"](
+        response = OpenAIWrapper.original_methods["ChatCompletion.create"](
             model="gpt-3.5-turbo",
             temperature=0,
             messages=[
@@ -126,7 +126,7 @@ class Evals:
     def model_graded_closedqa(name: str, task: str, output: str, criterion: str) -> str:
         choices = ["Yes", "No"]
 
-        response = OpenAIWrapper.original_methods["chatcompletion_create"](
+        response = OpenAIWrapper.original_methods["ChatCompletion.create"](
             model="gpt-3.5-turbo",
             temperature=0,
             messages=[
@@ -146,7 +146,7 @@ class Evals:
     def model_graded_security(name: str, output: str) -> str:
         choices = ["Yes", "No", "Unsure"]
 
-        response = OpenAIWrapper.original_methods["chatcompletion_create"](
+        response = OpenAIWrapper.original_methods["ChatCompletion.create"](
             model="gpt-3.5-turbo",
             temperature=0,
             messages=[
