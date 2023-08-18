@@ -8,18 +8,30 @@ import threading
 from typing import Callable, Dict, Optional, Union
 from urllib.parse import urlparse
 import warnings
+from .evals.evals import Evals
 from .helpers import BaserunStepType, TraceType
-from .openai import monkey_patch_openai
+from .openai import OpenAIWrapper
+
+
+class BaserunEvaluationFailedException(Exception):
+    pass
 
 
 class Baserun:
     _initialized = False
     _trace_id = None
     _traces = []
+
     _buffer = []
     _buffer_lock = threading.Lock()
+
+    _evals = []
+    _evals_lock = threading.Lock()
+
     _api_base_url = None
     _api_key = None
+
+    evals = Evals
 
     @staticmethod
     def init(api_base_url: str = "https://baserun.ai/api/v1") -> None:
@@ -34,8 +46,25 @@ class Baserun:
         Baserun._api_base_url = api_base_url
         Baserun._api_key = api_key
         Baserun._initialized = True
+        Baserun.evals.init(Baserun._append_to_evals)
 
-        monkey_patch_openai(Baserun._append_to_buffer)
+        OpenAIWrapper.init(Baserun._append_to_buffer)
+
+    @staticmethod
+    def _finish_trace(trace_type: TraceType):
+        if trace_type == TraceType.PRODUCTION:
+            Baserun.flush()
+
+        Baserun._buffer = []
+        Baserun._evals = []
+        Baserun._trace_id = None
+
+    @staticmethod
+    def _run_evals(trace_type: TraceType):
+        if trace_type == TraceType.TEST:
+            failed_evals = [eval_data for eval_data in Baserun._evals if not eval_data['eval']]
+            if failed_evals:
+                raise BaserunEvaluationFailedException(json.dumps(failed_evals))
 
     @staticmethod
     def _trace(func: Callable, trace_type: TraceType, metadata: Optional[Dict] = None):
@@ -56,6 +85,7 @@ class Baserun:
                 test_execution_id = str(uuid.uuid4())
                 Baserun._trace_id = test_execution_id
                 Baserun._buffer = []
+                Baserun._evals = []
                 start_time = time.time()
 
                 try:
@@ -71,6 +101,7 @@ class Baserun:
                         'completionTimestamp': end_time,
                         "steps": Baserun._buffer,
                         "metadata": metadata,
+                        "evals": Baserun._evals,
                     })
                     return result
                 except Exception as e:
@@ -85,14 +116,11 @@ class Baserun:
                         'completionTimestamp': end_time,
                         "steps": Baserun._buffer,
                         "metadata": metadata,
+                        "evals": Baserun._evals,
                     })
                     raise e
                 finally:
-                    if trace_type == TraceType.PRODUCTION:
-                        Baserun.flush()
-
-                    Baserun._buffer = []
-                    Baserun._trace_id = None
+                    Baserun._finish_trace(trace_type)
         else:
             def wrapper(*args, **kwargs):
                 if not Baserun._initialized or Baserun._trace_id:
@@ -106,6 +134,7 @@ class Baserun:
                 test_execution_id = str(uuid.uuid4())
                 Baserun._trace_id = test_execution_id
                 Baserun._buffer = []
+                Baserun._evals = []
                 start_time = time.time()
 
                 try:
@@ -121,6 +150,7 @@ class Baserun:
                         'completionTimestamp': end_time,
                         "steps": Baserun._buffer,
                         "metadata": metadata,
+                        "evals": Baserun._evals,
                     })
                     return result
                 except Exception as e:
@@ -135,14 +165,11 @@ class Baserun:
                         'completionTimestamp': end_time,
                         "steps": Baserun._buffer,
                         "metadata": metadata,
+                        "evals": Baserun._evals,
                     })
                     raise e
                 finally:
-                    if trace_type == TraceType.PRODUCTION:
-                        Baserun.flush()
-
-                    Baserun._buffer = []
-                    Baserun._trace_id = None
+                    Baserun._finish_trace(trace_type)
 
         return wrapper
 
@@ -213,3 +240,8 @@ class Baserun:
     def _append_to_buffer(log_entry: Dict):
         with Baserun._buffer_lock:
             Baserun._buffer.append(log_entry)
+
+    @staticmethod
+    def _append_to_evals(log_entry: Dict):
+        with Baserun._evals_lock:
+            Baserun._evals.append(log_entry)
