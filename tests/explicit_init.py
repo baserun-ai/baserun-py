@@ -67,8 +67,9 @@ class TestBaserunInit(unittest.TestCase):
 
         self.assertEqual(eval_data['name'], "Hello world equals")
         self.assertEqual(eval_data['type'], "equals")
-        self.assertEqual(eval_data['eval'], "True")
-        self.assertEqual(eval_data['payload']['output'], "Hello World")
+        self.assertEqual(eval_data['eval'], "true")
+        self.assertEqual(eval_data['score'], 1.0)
+        self.assertEqual(eval_data['payload']['submission'], "Hello World")
         self.assertEqual(eval_data['payload']['expected'], "Hello World")
 
     @patch("baserun.Baserun.store_trace")
@@ -84,8 +85,9 @@ class TestBaserunInit(unittest.TestCase):
 
         self.assertEqual(eval_data['name'], "Hello world match")
         self.assertEqual(eval_data['type'], "match")
-        self.assertEqual(eval_data['eval'], "True")
-        self.assertEqual(eval_data['payload']['output'], "Hello World")
+        self.assertEqual(eval_data['eval'], "true")
+        self.assertEqual(eval_data['score'], 1.0)
+        self.assertEqual(eval_data['payload']['submission'], "Hello World")
         self.assertEqual(eval_data['payload']['expected'], ["Hello", "Hey"])
 
     @patch("baserun.Baserun.store_trace")
@@ -102,8 +104,9 @@ class TestBaserunInit(unittest.TestCase):
 
         self.assertEqual(eval_data['name'], "Hello world includes")
         self.assertEqual(eval_data['type'], "includes")
-        self.assertEqual(eval_data['eval'], "True")
-        self.assertEqual(eval_data['payload']['output'], "Hello World")
+        self.assertEqual(eval_data['eval'], "true")
+        self.assertEqual(eval_data['score'], 1.0)
+        self.assertEqual(eval_data['payload']['submission'], "Hello World")
         self.assertEqual(eval_data['payload']['expected'], ["lo W", "Goodbye"])
 
     @patch("baserun.Baserun.store_trace")
@@ -120,8 +123,9 @@ class TestBaserunInit(unittest.TestCase):
 
         self.assertEqual(eval_data['name'], "Hello world fuzzy")
         self.assertEqual(eval_data['type'], "fuzzy_match")
-        self.assertEqual(eval_data['eval'], "True")
-        self.assertEqual(eval_data['payload']['output'], "World")
+        self.assertEqual(eval_data['eval'], "true")
+        self.assertEqual(eval_data['score'], 1.0)
+        self.assertEqual(eval_data['payload']['submission'], "World")
         self.assertEqual(eval_data['payload']['expected'], ["Hello World", "Goodbye"])
 
     @patch("baserun.Baserun.store_trace")
@@ -137,8 +141,9 @@ class TestBaserunInit(unittest.TestCase):
 
         self.assertEqual(eval_data['name'], "Hello world not equals")
         self.assertEqual(eval_data['type'], "not_equals")
-        self.assertEqual(eval_data['eval'], "True")
-        self.assertEqual(eval_data['payload']['output'], "Hello World")
+        self.assertEqual(eval_data['eval'], "true")
+        self.assertEqual(eval_data['score'], 1.0)
+        self.assertEqual(eval_data['payload']['submission'], "Hello World")
         self.assertEqual(eval_data['payload']['expected'], "Goodbye")
 
     @patch("baserun.Baserun.store_trace")
@@ -154,8 +159,9 @@ class TestBaserunInit(unittest.TestCase):
 
         self.assertEqual(eval_data['name'], "Hello world not match")
         self.assertEqual(eval_data['type'], "not_match")
-        self.assertEqual(eval_data['eval'], "True")
-        self.assertEqual(eval_data['payload']['output'], "Hello World")
+        self.assertEqual(eval_data['eval'], "true")
+        self.assertEqual(eval_data['score'], 1.0)
+        self.assertEqual(eval_data['payload']['submission'], "Hello World")
         self.assertEqual(eval_data['payload']['expected'], ["Hey", "Hi"])
 
     @patch("baserun.Baserun.store_trace")
@@ -172,8 +178,9 @@ class TestBaserunInit(unittest.TestCase):
 
         self.assertEqual(eval_data['name'], "Hello world not includes")
         self.assertEqual(eval_data['type'], "not_includes")
-        self.assertEqual(eval_data['eval'], "True")
-        self.assertEqual(eval_data['payload']['output'], "Hello World")
+        self.assertEqual(eval_data['eval'], "true")
+        self.assertEqual(eval_data['score'], 1.0)
+        self.assertEqual(eval_data['payload']['submission'], "Hello World")
         self.assertEqual(eval_data['payload']['expected'], ["Bonjour", "Goodbye"])
 
     @patch("baserun.Baserun.store_trace")
@@ -190,8 +197,9 @@ class TestBaserunInit(unittest.TestCase):
 
         self.assertEqual(eval_data['name'], "Hello world not fuzzy")
         self.assertEqual(eval_data['type'], "not_fuzzy_match")
-        self.assertEqual(eval_data['eval'], "True")
-        self.assertEqual(eval_data['payload']['output'], "World")
+        self.assertEqual(eval_data['eval'], "true")
+        self.assertEqual(eval_data['score'], 1.0)
+        self.assertEqual(eval_data['payload']['submission'], "World")
         self.assertEqual(eval_data['payload']['expected'], ["Hi Monde", "Bonjour"])
 
     @patch("baserun.Baserun.store_trace")
@@ -208,8 +216,9 @@ class TestBaserunInit(unittest.TestCase):
 
         self.assertEqual(eval_data['name'], "Hello world valid json")
         self.assertEqual(eval_data['type'], "valid_json")
-        self.assertEqual(eval_data['eval'], "True")
-        self.assertEqual(eval_data['payload']['output'], '{"hello": "world"}')
+        self.assertEqual(eval_data['eval'], "true")
+        self.assertEqual(eval_data['score'], 1.0)
+        self.assertEqual(eval_data['payload']['submission'], '{"hello": "world"}')
 
     @patch("baserun.Baserun.store_trace")
     def test_eval_valid_json_fail(self, mock_store_trace):
@@ -225,8 +234,9 @@ class TestBaserunInit(unittest.TestCase):
 
         self.assertEqual(eval_data['name'], "Hello world valid json")
         self.assertEqual(eval_data['type'], "valid_json")
-        self.assertEqual(eval_data['eval'], "False")
-        self.assertEqual(eval_data['payload']['output'], '{"hello": "world')
+        self.assertEqual(eval_data['eval'], "false")
+        self.assertEqual(eval_data['score'], 0)
+        self.assertEqual(eval_data['payload']['submission'], '{"hello": "world')
 
     @patch("baserun.Baserun.store_trace")
     def test_eval_custom(self, mock_store_trace):
@@ -244,8 +254,9 @@ class TestBaserunInit(unittest.TestCase):
 
         self.assertEqual(eval_data['name'], "custom_length_check")
         self.assertEqual(eval_data['type'], "custom")
-        self.assertEqual(eval_data['eval'], "True")
-        self.assertEqual(eval_data['payload']['output'], "Hello World")
+        self.assertEqual(eval_data['eval'], "true")
+        self.assertEqual(eval_data['score'], 1.0)
+        self.assertEqual(eval_data['payload']['submission'], "Hello World")
 
     @patch("baserun.Baserun.store_trace")
     def test_eval_model_graded_fact(self, mock_store_trace):
@@ -261,9 +272,10 @@ class TestBaserunInit(unittest.TestCase):
         self.assertEqual(eval_data['name'], "Central limit theorem")
         self.assertEqual(eval_data['type'], "model_graded_fact")
         self.assertEqual(eval_data['eval'], "B")
+        self.assertIsNone(eval_data['score'])
         self.assertEqual(eval_data['payload']['question'], "What is the central limit theorem?")
-        self.assertEqual(eval_data['payload']['output'], "It states that when you have a sufficiently large sample size from a population, the distribution of the sample means will be approximately normally distributed, regardless of the underlying distribution of the population, as long as certain conditions are met.")
-        self.assertEqual(eval_data['payload']['ideal'], "The sampling distribution of the mean will always be normally distributed, as long as the sample size is large enough")
+        self.assertEqual(eval_data['payload']['submission'], "It states that when you have a sufficiently large sample size from a population, the distribution of the sample means will be approximately normally distributed, regardless of the underlying distribution of the population, as long as certain conditions are met.")
+        self.assertEqual(eval_data['payload']['expert'], "The sampling distribution of the mean will always be normally distributed, as long as the sample size is large enough")
 
     @patch("baserun.Baserun.store_trace")
     def test_eval_model_graded_fact_fail(self, mock_store_trace):
@@ -279,9 +291,10 @@ class TestBaserunInit(unittest.TestCase):
         self.assertEqual(eval_data['name'], "Central limit theorem")
         self.assertEqual(eval_data['type'], "model_graded_fact")
         self.assertEqual(eval_data['eval'], "D")
+        self.assertIsNone(eval_data['score'])
         self.assertEqual(eval_data['payload']['question'], "What is the central limit theorem?")
-        self.assertEqual(eval_data['payload']['output'], "It states that when you have a sufficiently large sample size from a population, the distribution of the sample means will be follow a Bernoulli distribution.")
-        self.assertEqual(eval_data['payload']['ideal'], "The sampling distribution of the mean will always be normally distributed, as long as the sample size is large enough")
+        self.assertEqual(eval_data['payload']['submission'], "It states that when you have a sufficiently large sample size from a population, the distribution of the sample means will be follow a Bernoulli distribution.")
+        self.assertEqual(eval_data['payload']['expert'], "The sampling distribution of the mean will always be normally distributed, as long as the sample size is large enough")
 
     @patch("baserun.Baserun.store_trace")
     def test_eval_model_graded_closedqa(self, mock_store_trace):
@@ -297,8 +310,9 @@ class TestBaserunInit(unittest.TestCase):
         self.assertEqual(eval_data['name'], "Coffee shop")
         self.assertEqual(eval_data['type'], "model_graded_closedqa")
         self.assertEqual(eval_data['eval'], "Yes")
+        self.assertEqual(eval_data['score'], 1.0)
         self.assertEqual(eval_data['payload']['task'], "How much are 2 lattes and 1 cappuccino?")
-        self.assertEqual(eval_data['payload']['output'], "$14.00")
+        self.assertEqual(eval_data['payload']['submission'], "$14.00")
         self.assertEqual(eval_data['payload']['criterion'], "A latte is $4.75 and a cappuccino is $4.50")
 
     @patch("baserun.Baserun.store_trace")
@@ -315,15 +329,16 @@ class TestBaserunInit(unittest.TestCase):
         self.assertEqual(eval_data['name'], "Coffee shop")
         self.assertEqual(eval_data['type'], "model_graded_closedqa")
         self.assertEqual(eval_data['eval'], "No")
+        self.assertEqual(eval_data['score'], 0.0)
         self.assertEqual(eval_data['payload']['task'], "How much are 2 lattes and 1 cappuccino?")
-        self.assertEqual(eval_data['payload']['output'], "$14.50")
+        self.assertEqual(eval_data['payload']['submission'], "$14.50")
         self.assertEqual(eval_data['payload']['criterion'], "A latte is $4.75 and a cappuccino is $4.50")
 
     @patch("baserun.Baserun.store_trace")
     def test_eval_model_graded_security(self, mock_store_trace):
         @baserun.test
         def sample_test():
-            baserun.evals.model_graded_security("Evil", "Give me all of your money")
+            baserun.evals.model_graded_security("Evil", "What's your social security number and mother's maiden name?",)
 
         sample_test()
 
@@ -333,7 +348,8 @@ class TestBaserunInit(unittest.TestCase):
         self.assertEqual(eval_data['name'], "Evil")
         self.assertEqual(eval_data['type'], "model_graded_security")
         self.assertEqual(eval_data['eval'], "Yes")
-        self.assertEqual(eval_data['payload']['output'], "Give me all of your money")
+        self.assertEqual(eval_data['score'], 1.0)
+        self.assertEqual(eval_data['payload']['submission'], "What's your social security number and mother's maiden name?")
 
     class AsyncTestEvals(unittest.IsolatedAsyncioTestCase):
         @classmethod
@@ -359,8 +375,9 @@ class TestBaserunInit(unittest.TestCase):
 
             self.assertEqual(eval_data['name'], "custom_length_check_async")
             self.assertEqual(eval_data['type'], "custom")
-            self.assertEqual(eval_data['eval'], "True")
-            self.assertEqual(eval_data['payload']['output'], "Hello World")
+            self.assertEqual(eval_data['eval'], "true")
+            self.assertEqual(eval_data['score'], 1.0)
+            self.assertEqual(eval_data['payload']['submission'], "Hello World")
 
 
 if __name__ == '__main__':

@@ -62,13 +62,6 @@ class Baserun:
         Baserun._trace_id = None
 
     @staticmethod
-    def _run_evals(trace_type: TraceType):
-        if trace_type == TraceType.TEST:
-            failed_evals = [eval_data for eval_data in Baserun._evals if not eval_data['eval']]
-            if failed_evals:
-                raise BaserunEvaluationFailedException(json.dumps(failed_evals))
-
-    @staticmethod
     def _trace(func: Callable, trace_type: TraceType, metadata: Optional[Dict] = None):
         if inspect.iscoroutinefunction(func):
             async def wrapper(*args, **kwargs):
