@@ -1,11 +1,10 @@
 import openai
 from .patch import Patch
+from .constants import DEFAULT_USAGE
 from baserun.helpers import BaserunProvider, BaserunStepType, BaserunType
 from typing import Any, Callable, Dict, Optional, Sequence
 
 BANNED_CONFIG_KEYS = ['api_base', 'api_key', 'headers', 'organization', 'messages', 'prompt']
-
-DEFAULT_USAGE = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
 
 class OpenAIWrapper:
