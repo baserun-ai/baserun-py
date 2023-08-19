@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 import warnings
 from .evals.evals import Evals
 from .helpers import BaserunStepType, TraceType
-from .openai import OpenAIWrapper
+from baserun.patches.openai import OpenAIWrapper
 
 
 class BaserunEvaluationFailedException(Exception):
