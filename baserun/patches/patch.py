@@ -18,7 +18,11 @@ class Patch:
                 setattr(functools.reduce(getattr, symbol_parts[:-1], module), symbol_parts[-1], self._patched_method(symbol, original))
 
     def _patched_method(self, symbol: str, original_method):
-        if inspect.iscoroutinefunction(original_method):
+        unwrapped_method = original_method
+        while hasattr(unwrapped_method, '__wrapped__'):
+            unwrapped_method = unwrapped_method.__wrapped__
+
+        if inspect.iscoroutinefunction(unwrapped_method):
             async def async_wrapper(*args, **kwargs):
                 start_time = time.time()
                 response = None

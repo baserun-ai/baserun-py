@@ -10,7 +10,8 @@ from urllib.parse import urlparse
 import warnings
 from .evals.evals import Evals
 from .helpers import BaserunStepType, TraceType
-from baserun.patches.openai import OpenAIWrapper
+from .patches.anthropic import AnthropicWrapper
+from .patches.openai import OpenAIWrapper
 
 
 class BaserunEvaluationFailedException(Exception):
@@ -49,6 +50,7 @@ class Baserun:
         Baserun.evals.init(Baserun._append_to_evals)
 
         OpenAIWrapper.init(Baserun._append_to_buffer)
+        AnthropicWrapper.init(Baserun._append_to_buffer)
 
     @staticmethod
     def _finish_trace(trace_type: TraceType):

@@ -2,9 +2,8 @@ from enum import Enum, auto
 
 
 class BaserunProvider(Enum):
-    GOOGLE = auto()
+    ANTHROPIC = auto()
     OPENAI = auto()
-    LLAMA = auto()
 
 
 class BaserunType(Enum):
