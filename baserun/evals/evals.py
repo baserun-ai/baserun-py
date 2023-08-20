@@ -1,5 +1,5 @@
 from baserun.evals.json import is_valid_json
-from typing import Awaitable, Callable, Dict, List, Optional
+from typing import Awaitable, Callable, Dict, List, Optional, Union
 from baserun.patches.openai import OpenAIWrapper
 
 
@@ -38,51 +38,45 @@ class Evals:
             Evals._log_eval(data)
 
     @staticmethod
-    def equals(name: str, submission: str, expected: str) -> bool:
-        result = submission == expected
-        Evals._store_eval_data(name, "equals", str(result).lower(), int(result), {"submission": submission, "expected": expected})
-        return result
-
-    @staticmethod
-    def match(name: str, submission: str, expected: List[str]) -> bool:
+    def match(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
+        expected_list = [expected] if isinstance(expected, str) else expected
         result = any(submission.startswith(item) for item in expected)
-        Evals._store_eval_data(name, "match", str(result).lower(), int(result), {"submission": submission, "expected": expected})
+        Evals._store_eval_data(name, "match", str(result).lower(), int(result), {"submission": submission, "expected": expected_list})
         return result
 
     @staticmethod
-    def includes(name: str, submission: str, expected: List[str]) -> bool:
+    def includes(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
+        expected_list = [expected] if isinstance(expected, str) else expected
         result = any(item in submission for item in expected)
-        Evals._store_eval_data(name, "includes", str(result).lower(), int(result), {"submission": submission, "expected": expected})
+        Evals._store_eval_data(name, "includes", str(result).lower(), int(result), {"submission": submission, "expected": expected_list})
         return result
 
     @staticmethod
-    def fuzzy_match(name: str, submission: str, expected: List[str]) -> bool:
+    def fuzzy_match(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
+        expected_list = [expected] if isinstance(expected, str) else expected
         result = any(submission in item or item in submission for item in expected)
-        Evals._store_eval_data(name, "fuzzy_match", str(result).lower(), int(result), {"submission": submission, "expected": expected})
+        Evals._store_eval_data(name, "fuzzy_match", str(result).lower(), int(result), {"submission": submission, "expected": expected_list})
         return result
 
     @staticmethod
-    def not_equals(name: str, submission: str, expected: str) -> bool:
-        result = submission != expected
-        Evals._store_eval_data(name, "not_equals", str(result).lower(), int(result), {"submission": submission, "expected": expected})
-        return result
-
-    @staticmethod
-    def not_match(name: str, submission: str, expected: List[str]) -> bool:
+    def not_match(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
+        expected_list = [expected] if isinstance(expected, str) else expected
         result = not any(submission.startswith(item) for item in expected)
-        Evals._store_eval_data(name, "not_match", str(result).lower(), int(result), {"submission": submission, "expected": expected})
+        Evals._store_eval_data(name, "not_match", str(result).lower(), int(result), {"submission": submission, "expected": expected_list})
         return result
 
     @staticmethod
-    def not_includes(name: str, submission: str, expected: List[str]) -> bool:
+    def not_includes(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
+        expected_list = [expected] if isinstance(expected, str) else expected
         result = not any(item in submission for item in expected)
-        Evals._store_eval_data(name, "not_includes", str(result).lower(), int(result), {"submission": submission, "expected": expected})
+        Evals._store_eval_data(name, "not_includes", str(result).lower(), int(result), {"submission": submission, "expected": expected_list})
         return result
 
     @staticmethod
-    def not_fuzzy_match(name: str, submission: str, expected: List[str]) -> bool:
+    def not_fuzzy_match(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
+        expected_list = [expected] if isinstance(expected, str) else expected
         result = not any(submission in item or item in submission for item in expected)
-        Evals._store_eval_data(name, "not_fuzzy_match", str(result).lower(), int(result), {"submission": submission, "expected": expected})
+        Evals._store_eval_data(name, "not_fuzzy_match", str(result).lower(), int(result), {"submission": submission, "expected": expected_list})
         return result
 
     @staticmethod

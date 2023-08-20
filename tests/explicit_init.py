@@ -55,24 +55,6 @@ class TestBaserunInit(unittest.TestCase):
         mock_flush.assert_called_once()
 
     @patch("baserun.Baserun.store_trace")
-    def test_eval_equals(self, mock_store_trace):
-        @baserun.test
-        def sample_test():
-            baserun.evals.equals("Hello world equals", "Hello World", "Hello World")
-
-        sample_test()
-
-        stored_data = mock_store_trace.call_args[0][0]
-        eval_data = stored_data['evals'][0]
-
-        self.assertEqual(eval_data['name'], "Hello world equals")
-        self.assertEqual(eval_data['type'], "equals")
-        self.assertEqual(eval_data['eval'], "true")
-        self.assertEqual(eval_data['score'], 1.0)
-        self.assertEqual(eval_data['payload']['submission'], "Hello World")
-        self.assertEqual(eval_data['payload']['expected'], "Hello World")
-
-    @patch("baserun.Baserun.store_trace")
     def test_eval_match(self, mock_store_trace):
         @baserun.test
         def sample_test():
@@ -127,24 +109,6 @@ class TestBaserunInit(unittest.TestCase):
         self.assertEqual(eval_data['score'], 1.0)
         self.assertEqual(eval_data['payload']['submission'], "World")
         self.assertEqual(eval_data['payload']['expected'], ["Hello World", "Goodbye"])
-
-    @patch("baserun.Baserun.store_trace")
-    def test_eval_not_equals(self, mock_store_trace):
-        @baserun.test
-        def sample_test():
-            baserun.evals.not_equals("Hello world not equals", "Hello World", "Goodbye")
-
-        sample_test()
-
-        stored_data = mock_store_trace.call_args[0][0]
-        eval_data = stored_data['evals'][0]
-
-        self.assertEqual(eval_data['name'], "Hello world not equals")
-        self.assertEqual(eval_data['type'], "not_equals")
-        self.assertEqual(eval_data['eval'], "true")
-        self.assertEqual(eval_data['score'], 1.0)
-        self.assertEqual(eval_data['payload']['submission'], "Hello World")
-        self.assertEqual(eval_data['payload']['expected'], "Goodbye")
 
     @patch("baserun.Baserun.store_trace")
     def test_eval_not_match(self, mock_store_trace):
