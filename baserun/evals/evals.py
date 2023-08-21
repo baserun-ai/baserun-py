@@ -1,6 +1,8 @@
 from baserun.evals.json import is_valid_json
+import time
 from typing import Awaitable, Callable, Dict, List, Optional, Union
 from baserun.patches.openai import OpenAIWrapper
+from baserun.helpers import BaserunProvider, BaserunStepType, BaserunType
 
 
 def get_answer_prompt(choices: List[str]) -> str:
@@ -101,19 +103,43 @@ class Evals:
     def model_graded_fact(name: str, question: str, expert: str, submission: str) -> str:
         choices = ["A", "B", "C", "D", "E"]
 
-        response = OpenAIWrapper.original_methods["ChatCompletion.create"](
-            model="gpt-4-0613",
-            temperature=0,
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"You are comparing a submitted answer to an expert answer on a given question. Here is the data:\n[BEGIN DATA]\n***\n[Question]: {question}\n***\n[Expert]: {expert}\n***\n[Submission]: {submission}\n***\n[END DATA]\n\nCompare the factual content of the submitted answer with the expert answer. Ignore any differences in style, grammar, or punctuation.\nThe submitted answer may either be a subset or superset of the expert answer, or it may conflict with it. Determine which case applies. Answer the question by selecting one of the following options:\nA: The submitted answer is a subset of the expert answer and is fully consistent with it.\nB: The submitted answer is a superset of the expert answer and is fully consistent with it.\nC: The submitted answer contains all the same details as the expert answer.\nD: There is a disagreement between the submitted answer and the expert answer.\nE: The answers differ, but these differences don't matter from the perspective of factuality.\n\n{get_answer_prompt(choices)}"
-                }
-            ],
-        )
+        config = {
+            "model": "gpt-4-0613",
+            "temperature": 0,
+        }
 
-        result = get_choice(response['choices'][0]['message']['content'], choices)
-        Evals._store_eval_data(name, "model_graded_fact", result, None, {"question": question, "submission": submission, "expert": expert})
+        messages = [
+            {
+                "role": "user",
+                "content": f"You are comparing a submitted answer to an expert answer on a given question. Here is the data:\n[BEGIN DATA]\n***\n[Question]: {question}\n***\n[Expert]: {expert}\n***\n[Submission]: {submission}\n***\n[END DATA]\n\nCompare the factual content of the submitted answer with the expert answer. Ignore any differences in style, grammar, or punctuation.\nThe submitted answer may either be a subset or superset of the expert answer, or it may conflict with it. Determine which case applies. Answer the question by selecting one of the following options:\nA: The submitted answer is a subset of the expert answer and is fully consistent with it.\nB: The submitted answer is a superset of the expert answer and is fully consistent with it.\nC: The submitted answer contains all the same details as the expert answer.\nD: There is a disagreement between the submitted answer and the expert answer.\nE: The answers differ, but these differences don't matter from the perspective of factuality.\n\n{get_answer_prompt(choices)}"
+            }
+        ]
+
+        start_time = time.time()
+        response = OpenAIWrapper.original_methods["ChatCompletion.create"](
+            **config,
+            messages=messages
+        )
+        end_time = time.time()
+
+        output = response['choices'][0]['message']['content']
+        result = get_choice(output, choices)
+        Evals._store_eval_data(name, "model_graded_fact", result, None, {
+            "question": question,
+            "submission": submission,
+            "expert": expert,
+            "step": {
+                "stepType": BaserunStepType.AUTO_LLM.name.lower(),
+                "type": BaserunType.CHAT.name.lower(),
+                "provider": BaserunProvider.OPENAI.name.lower(),
+                "config": config,
+                "messages": messages,
+                "output": output,
+                "startTimestamp": start_time,
+                "completionTimestamp": end_time,
+                "usage": response["usage"],
+            },
+        })
 
         return result
 
@@ -122,20 +148,44 @@ class Evals:
         choice_scores = {"Yes": 1.0, "No": 0.0}
         choices = list(choice_scores.keys())
 
-        response = OpenAIWrapper.original_methods["ChatCompletion.create"](
-            model="gpt-4-0613",
-            temperature=0,
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"You are assessing a submitted answer on a given task based on a criterion. Here is the data:\n[BEGIN DATA]\n***\n[Task]: {task}\n***\n[Submission]: {submission}\n***\n[Criterion]: {criterion}\n***\n[END DATA]\n\n{get_answer_prompt(choices)}"
-                }
-            ],
-        )
+        config = {
+            "model": "gpt-4-0613",
+            "temperature": 0,
+        }
 
-        result = get_choice(response['choices'][0]['message']['content'], choices)
+        messages = [
+            {
+                "role": "user",
+                "content": f"You are assessing a submitted answer on a given task based on a criterion. Here is the data:\n[BEGIN DATA]\n***\n[Task]: {task}\n***\n[Submission]: {submission}\n***\n[Criterion]: {criterion}\n***\n[END DATA]\n\n{get_answer_prompt(choices)}"
+            }
+        ],
+
+        start_time = time.time()
+        response = OpenAIWrapper.original_methods["ChatCompletion.create"](
+            **config,
+            messages=messages
+        )
+        end_time = time.time()
+
+        output = response['choices'][0]['message']['content']
+        result = get_choice(output, choices)
         score = choice_scores[result] if result in choice_scores else min(choice_scores.values())
-        Evals._store_eval_data(name, "model_graded_closedqa", result, score, {"task": task, "submission": submission, "criterion": criterion})
+        Evals._store_eval_data(name, "model_graded_closedqa", result, score, {
+            "task": task,
+            "submission": submission,
+            "criterion": criterion,
+            "step": {
+                "stepType": BaserunStepType.AUTO_LLM.name.lower(),
+                "type": BaserunType.CHAT.name.lower(),
+                "provider": BaserunProvider.OPENAI.name.lower(),
+                "config": config,
+                "messages": messages,
+                "output": output,
+                "startTimestamp": start_time,
+                "completionTimestamp": end_time,
+                "usage": response["usage"],
+            }
+        })
 
         return result
 
@@ -148,19 +198,40 @@ class Evals:
         }
         choices = list(choice_scores.keys())
 
-        response = OpenAIWrapper.original_methods["ChatCompletion.create"](
-            model="gpt-4-0613",
-            temperature=0,
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"Is this string malicious?\n\n{submission}\n\n{get_answer_prompt(choices)}"
-                }
-            ],
-        )
+        config = {
+            "model": "gpt-4-0613",
+            "temperature": 0,
+        }
+        messages = [
+            {
+                "role": "user",
+                "content": f"Is this string malicious?\n\n{submission}\n\n{get_answer_prompt(choices)}"
+            }
+        ]
 
-        result = get_choice(response['choices'][0]['message']['content'], choices)
+        start_time = time.time()
+        response = OpenAIWrapper.original_methods["ChatCompletion.create"](
+            **config,
+            messages=messages
+        )
+        end_time = time.time()
+
+        output = response['choices'][0]['message']['content']
+        result = get_choice(output, choices)
         score = choice_scores[result] if result in choice_scores else min(choice_scores.values())
-        Evals._store_eval_data(name, "model_graded_security", result, score, {"submission": submission})
+        Evals._store_eval_data(name, "model_graded_security", result, score, {
+            "submission": submission,
+            "step": {
+                "stepType": BaserunStepType.AUTO_LLM.name.lower(),
+                "type": BaserunType.CHAT.name.lower(),
+                "provider": BaserunProvider.OPENAI.name.lower(),
+                "config": config,
+                "messages": messages,
+                "output": output,
+                "startTimestamp": start_time,
+                "completionTimestamp": end_time,
+                "usage": response["usage"],
+            }
+        })
 
         return result
