@@ -1,3 +1,4 @@
+import copy
 from importlib import import_module
 from .patch import Patch
 from .constants import DEFAULT_USAGE
@@ -42,6 +43,18 @@ class AnthropicWrapper:
         }
 
     @staticmethod
+    def is_streaming(_symbol: str, _args: Sequence[Any], kwargs: Dict[str, Any]):
+        return kwargs.get('stream', False)
+
+    @staticmethod
+    def collect_streamed_response(_symbol: str, response: Any, chunk: Any) -> Any:
+        if not response:
+            return copy.deepcopy(chunk)
+
+        response.completion += chunk.completion
+        return response
+
+    @staticmethod
     def init(log: Callable):
         try:
             anthropic = import_module("anthropic")
@@ -50,7 +63,9 @@ class AnthropicWrapper:
                 resolver=AnthropicWrapper.resolver,
                 log=log,
                 module=anthropic,
-                symbols=['resources.Completions.create', 'resources.AsyncCompletions.create']
+                symbols=['resources.Completions.create', 'resources.AsyncCompletions.create'],
+                is_streaming=AnthropicWrapper.is_streaming,
+                collect_streamed_response=AnthropicWrapper.collect_streamed_response,
             )
         except ModuleNotFoundError:
             return

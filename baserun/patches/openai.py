@@ -24,7 +24,7 @@ class OpenAIWrapper:
         if error:
             output = f"Error: {error}"
         elif response:
-            usage = response["usage"]
+            usage = response.get("usage", DEFAULT_USAGE)
             if baserun_type == BaserunType.CHAT:
                 output = response["choices"][0].get("message", "")
             else:
@@ -53,10 +53,88 @@ class OpenAIWrapper:
             }
 
     @staticmethod
+    def is_streaming(_symbol: str, _args: Sequence[Any], kwargs: Dict[str, Any]):
+        return kwargs.get('stream', False)
+
+    @staticmethod
+    def collect_streamed_response(symbol: str, response: Any, chunk: Any) -> Any:
+        if "ChatCompletion" in symbol:
+            if response is None:
+                response = {
+                    "id": chunk.get("id"),
+                    "object": "chat.completion",
+                    "created": chunk.get("created"),
+                    "model": chunk.get("model"),
+                    "choices": [],
+                    "usage": DEFAULT_USAGE,
+                }
+
+            for new_choice in chunk.get("choices", []):
+                new_index = new_choice.get("index", 0)
+                new_delta = new_choice.get("delta", {})
+                new_content = new_delta.get("content", "")
+                new_role = new_delta.get("role", "assistant")
+                new_name = new_delta.get("name", None)
+                new_function_call = new_delta.get("function_call", None)
+                new_finish_reason = new_choice.get("finish_reason")
+
+                for existing_choice in response.get("choices", []):
+                    if existing_choice.get("index", -1) == new_index:
+                        if new_content:
+                            if "content" in existing_choice["message"]:
+                                existing_choice["message"]["content"] += new_content
+                            else:
+                                existing_choice["message"]["content"] = new_content
+                        if new_function_call:
+                            existing_choice["message"]["function_call"] = new_function_call
+                        if new_name:
+                            existing_choice["name"] = new_name
+
+                        existing_choice["finish_reason"] = new_finish_reason
+                        break
+                else:
+                    new_choice_obj = {
+                        "index": new_index,
+                        "message": {
+                            "role": new_role
+                        },
+                        "finish_reason": new_finish_reason
+                    }
+
+                    if new_content:
+                        new_choice_obj["message"]["content"] = new_content
+                    if new_function_call:
+                        new_choice_obj["message"]["function_call"] = new_function_call
+                    if new_name:
+                        new_choice_obj["message"]["name"] = new_name
+
+                    response["choices"].append(new_choice_obj)
+
+            return response
+        else:
+            if response is None:
+                return chunk
+
+            for new_choice in chunk.get("choices", []):
+                new_index = new_choice.get("index", 0)
+                new_text = new_choice.get("text", "")
+
+                for existing_choice in response.get("choices", []):
+                    if existing_choice.get("index", -1) == new_index:
+                        existing_choice["text"] += new_text
+                        break
+                else:
+                    response["choices"].append(new_choice)
+
+            return response
+
+    @staticmethod
     def init(log: Callable):
         Patch(
             resolver=OpenAIWrapper.resolver,
             log=log,
             module=openai,
-            symbols=list(OpenAIWrapper.original_methods.keys())
+            symbols=list(OpenAIWrapper.original_methods.keys()),
+            is_streaming=OpenAIWrapper.is_streaming,
+            collect_streamed_response=OpenAIWrapper.collect_streamed_response
         )
