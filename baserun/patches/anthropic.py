@@ -58,6 +58,11 @@ class AnthropicWrapper:
     def init(log: Callable):
         try:
             anthropic = import_module("anthropic")
+
+            # Only support anthropic >= 0.3
+            if not hasattr(anthropic, "Anthropic"):
+                return
+
             AnthropicWrapper.client = anthropic.Anthropic()
             Patch(
                 resolver=AnthropicWrapper.resolver,
