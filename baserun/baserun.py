@@ -62,56 +62,77 @@ class Baserun:
         Baserun._trace_id = None
 
     @staticmethod
+    def _start_trace(trace_type: TraceType, func: Callable, kwargs: Dict, metadata: Optional[Dict] = None):
+        trace_name = func.__name__
+        trace_inputs = []
+        for input_name, input_value in kwargs.items():
+            if inspect.iscoroutine(input_value):
+                input_result = input_value.__name__
+            else:
+                input_result = input_value
+            trace_inputs.append(f"{input_name}: {input_result}")
+
+        trace_execution_id = str(uuid.uuid4())
+        Baserun._trace_id = trace_execution_id
+        Baserun._buffer = []
+        Baserun._evals = []
+        start_time = time.time()
+
+        return {
+            "type": trace_type,
+            "testName": trace_name,
+            "testInputs": trace_inputs,
+            "id": trace_execution_id,
+            "startTimestamp": start_time,
+            "metadata": metadata,
+        }
+
+    @staticmethod
     def _trace(func: Callable, trace_type: TraceType, metadata: Optional[Dict] = None):
         if inspect.iscoroutinefunction(func):
             async def wrapper(*args, **kwargs):
                 if not Baserun._initialized or Baserun._trace_id:
                     return await func(*args, **kwargs)
 
-                test_name = func.__name__
-                test_inputs = []
-                for input_name, input_value in kwargs.items():
-                    if inspect.iscoroutine(input_value):
-                        input_result = input_value.__name__
-                    else:
-                        input_result = input_value
-                    test_inputs.append(f"{input_name}: {input_result}")
-
-                test_execution_id = str(uuid.uuid4())
-                Baserun._trace_id = test_execution_id
-                Baserun._buffer = []
-                Baserun._evals = []
-                start_time = time.time()
+                trace_data = Baserun._start_trace(trace_type, func, kwargs, metadata)
 
                 try:
                     result = await func(*args, **kwargs)
-                    end_time = time.time()
                     Baserun.store_trace({
-                        'type': trace_type,
-                        'testName': test_name,
-                        'testInputs': test_inputs,
-                        'id': test_execution_id,
+                        **trace_data,
                         'result': str(result) if result is not None else '',
-                        'startTimestamp': start_time,
-                        'completionTimestamp': end_time,
-                        "steps": Baserun._buffer,
-                        "metadata": metadata,
-                        "evals": Baserun._evals,
                     })
                     return result
                 except Exception as e:
-                    end_time = time.time()
                     Baserun.store_trace({
-                        'type': trace_type,
-                        'testName': test_name,
-                        'testInputs': test_inputs,
-                        'id': test_execution_id,
+                        **trace_data,
                         'error': str(e),
-                        'startTimestamp': start_time,
-                        'completionTimestamp': end_time,
-                        "steps": Baserun._buffer,
-                        "metadata": metadata,
-                        "evals": Baserun._evals,
+                    })
+                    raise e
+                finally:
+                    Baserun._finish_trace(trace_type)
+        elif inspect.isasyncgenfunction(func):
+            async def wrapper(*args, **kwargs):
+                if not Baserun._initialized or Baserun._trace_id:
+                    async for item in func(*args, **kwargs):
+                        yield item
+
+                trace_data = Baserun._start_trace(trace_type, func, kwargs, metadata)
+
+                try:
+                    result = []
+                    async for item in func(*args, **kwargs):
+                        result.append(item)
+                        yield item
+
+                    Baserun.store_trace({
+                        **trace_data,
+                        'result': str(result) if result is not None else '',
+                    })
+                except Exception as e:
+                    Baserun.store_trace({
+                        **trace_data,
+                        'error': str(e),
                     })
                     raise e
                 finally:
@@ -121,46 +142,19 @@ class Baserun:
                 if not Baserun._initialized or Baserun._trace_id:
                     return func(*args, **kwargs)
 
-                test_name = func.__name__
-                test_inputs = []
-                for input_name, input_value in kwargs.items():
-                    test_inputs.append(f"{input_name}: {input_value}")
-
-                test_execution_id = str(uuid.uuid4())
-                Baserun._trace_id = test_execution_id
-                Baserun._buffer = []
-                Baserun._evals = []
-                start_time = time.time()
+                trace_data = Baserun._start_trace(trace_type, func, kwargs, metadata)
 
                 try:
                     result = func(*args, **kwargs)
-                    end_time = time.time()
                     Baserun.store_trace({
-                        'type': trace_type,
-                        'testName': test_name,
-                        'testInputs': test_inputs,
-                        'id': test_execution_id,
+                        **trace_data,
                         'result': str(result) if result is not None else '',
-                        'startTimestamp': start_time,
-                        'completionTimestamp': end_time,
-                        "steps": Baserun._buffer,
-                        "metadata": metadata,
-                        "evals": Baserun._evals,
                     })
                     return result
                 except Exception as e:
-                    end_time = time.time()
                     Baserun.store_trace({
-                        'type': trace_type,
-                        'testName': test_name,
-                        'testInputs': test_inputs,
-                        'id': test_execution_id,
+                        **trace_data,
                         'error': str(e),
-                        'startTimestamp': start_time,
-                        'completionTimestamp': end_time,
-                        "steps": Baserun._buffer,
-                        "metadata": metadata,
-                        "evals": Baserun._evals,
                     })
                     raise e
                 finally:
@@ -195,8 +189,13 @@ class Baserun:
         Baserun._append_to_buffer(log_entry)
 
     @staticmethod
-    def store_trace(trace_data: Dict):
-        Baserun._traces.append(trace_data)
+    def store_trace(trace_data):
+        Baserun._traces.append({
+            **trace_data,
+            "completionTimestamp": time.time(),
+            "steps": Baserun._buffer,
+            "evals": Baserun._evals,
+        })
 
     @staticmethod
     def flush():
