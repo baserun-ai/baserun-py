@@ -49,8 +49,8 @@ class Baserun:
         Baserun._initialized = True
         Baserun.evals.init(Baserun._append_to_evals)
 
-        OpenAIWrapper.init(Baserun._append_to_buffer)
-        AnthropicWrapper.init(Baserun._append_to_buffer)
+        OpenAIWrapper.init(Baserun._handle_auto_llm)
+        AnthropicWrapper.init(Baserun._handle_auto_llm)
 
     @staticmethod
     def _finish_trace(trace_type: TraceType):
@@ -229,6 +229,29 @@ class Baserun:
 
         finally:
             Baserun._traces = []
+
+    @staticmethod
+    def _handle_auto_llm(log_entry: Dict):
+        # Add as a step if there is an existing trace
+        if Baserun._trace_id:
+            Baserun._append_to_buffer(log_entry)
+            return
+
+        # Tests by definition create their own wrapping trace. If we are here we are by definition in an initialized
+        # production deployment and now capture the LLM calls automatically.
+        Baserun._traces.append({
+            "type": TraceType.PRODUCTION,
+            "testName": f"{log_entry['provider']} {log_entry['type']}",
+            "testInputs": [],
+            "id": str(uuid.uuid4()),
+            "result": str(log_entry["output"]),
+            "startTimestamp": log_entry["startTimestamp"],
+            "completionTimestamp": log_entry["completionTimestamp"],
+            "steps": [log_entry],
+            "metadata": None,
+            "evals": [],
+        })
+        Baserun.flush()
 
     @staticmethod
     def _append_to_buffer(log_entry: Dict):
