@@ -37,11 +37,9 @@ class Patch:
                         stream_response = None
                         stream_error = None
                         try:
-                            collected_response = None
                             async for chunk in await original_method(*args, **kwargs):
-                                collected_response = self.collect_streamed_response(symbol, collected_response, chunk)
+                                stream_response = self.collect_streamed_response(symbol, stream_response, chunk)
                                 yield chunk
-                            stream_response = collected_response
                         except Exception as stream_e:
                             stream_error = stream_e
                             raise
@@ -77,11 +75,9 @@ class Patch:
                         stream_response = None
                         stream_error = None
                         try:
-                            collected_response = None
                             for chunk in original_method(*args, **kwargs):
-                                collected_response = self.collect_streamed_response(symbol, collected_response, chunk)
+                                stream_response = self.collect_streamed_response(symbol, stream_response, chunk)
                                 yield chunk
-                            stream_response = collected_response
                         except Exception as stream_e:
                             stream_error = stream_e
                             raise
