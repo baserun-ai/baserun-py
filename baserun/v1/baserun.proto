@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package baserun.v1;
+
+message Status {
+    string message = 1;
+
+    enum StatusCode {
+        STATUS_CODE_UNSPECIFIED = 0;
+        STATUS_CODE_OK = 1;
+        STATUS_CODE_ERROR = 2;
+    }
+
+    StatusCode code = 2;
+}
+
+message Message {
+    string role = 1;
+    string content = 2;
+    string finish_reason = 3;
+}
+
+message Span {
+    bytes trace_id = 1;
+    uint64 span_id = 2;
+    string name = 3;
+    fixed64 start_time = 4;
+    fixed64 end_time = 5;
+    Status status = 6;
+
+    // Attributes
+    string vendor = 7;
+    string request_type = 8;
+    string api_base = 9;
+    string api_type = 10;
+    string model = 11;
+    float temperature = 12;
+    float top_p = 13;
+    float frequency_penalty = 14;
+    float presence_penalty = 15;
+    int32 total_tokens = 16;
+    int32 completion_tokens = 17;
+    int32 prompt_tokens = 18;
+
+    repeated Message prompt_messages = 19;
+    repeated Message completions = 20;
+}
+
+message SubmitSpanRequest {
+    Span span = 1;
+}
+
+message SubmitSpanResponse {
+    string message = 1;
+}
+
+service SpanSubmissionService {
+    rpc SubmitSpan (SubmitSpanRequest) returns (SubmitSpanResponse);
+}

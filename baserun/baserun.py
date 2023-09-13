@@ -1,17 +1,26 @@
+import importlib
 import inspect
 import json
-import uuid
 import os
-import requests
-import time
 import threading
+import time
+import uuid
+import warnings
 from typing import Callable, Dict, Optional, Union
 from urllib.parse import urlparse
-import warnings
+
+import grpc
+import requests
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
 from .evals.evals import Evals
+from .exporter import BaserunExporter
 from .helpers import BaserunStepType, TraceType
+from .instrumentation.openai import OpenAIInstrumentor
 from .patches.anthropic import AnthropicWrapper
-from .patches.openai import OpenAIWrapper
+from .v1.baserun_pb2_grpc import SpanSubmissionServiceStub
 
 
 class BaserunEvaluationFailedException(Exception):
@@ -32,25 +41,48 @@ class Baserun:
     _api_base_url = None
     _api_key = None
 
+    _grpc_channel: grpc.Channel = None
+    _submit_span_stub: SpanSubmissionServiceStub = None
+
     evals = Evals
 
     @staticmethod
     def init(api_base_url: str = "https://baserun.ai/api/v1") -> None:
-        api_key = os.environ.get('BASERUN_API_KEY')
+        api_key = os.environ.get("BASERUN_API_KEY")
         if not api_key:
-            raise ValueError("Baserun API key is missing. Ensure the BASERUN_API_KEY environment variable is set.")
+            raise ValueError(
+                "Baserun API key is missing. Ensure the BASERUN_API_KEY environment variable is set."
+            )
 
         if Baserun._initialized:
-            warnings.warn("Baserun has already been initialized. Additional calls to init will be ignored.")
+            warnings.warn(
+                "Baserun has already been initialized. Additional calls to init will be ignored."
+            )
             return
 
         Baserun._api_base_url = api_base_url
         Baserun._api_key = api_key
         Baserun._initialized = True
+        Baserun._grpc_channel = grpc.insecure_channel("localhost:50051")
+        Baserun._submit_span_stub = SpanSubmissionServiceStub(Baserun._grpc_channel)
         Baserun.evals.init(Baserun._append_to_evals)
 
-        OpenAIWrapper.init(Baserun._handle_auto_llm)
         AnthropicWrapper.init(Baserun._handle_auto_llm)
+
+        tracer_provider = trace.get_tracer_provider()
+        tracer = tracer_provider.get_tracer("baserun")
+        if not hasattr(tracer, "active_span_processor"):
+            # This is almost always a ProxyTracerProvider?
+            tracer_provider = TracerProvider()
+            trace.set_tracer_provider(tracer_provider)
+
+        processor = BatchSpanProcessor(BaserunExporter())
+        tracer_provider.add_span_processor(processor)
+
+        if importlib.util.find_spec("openai") is not None:
+            instrumentor = OpenAIInstrumentor()
+            if not instrumentor.is_instrumented_by_opentelemetry:
+                instrumentor.instrument()
 
     @staticmethod
     def _finish_trace(trace_type: TraceType):
@@ -62,7 +94,12 @@ class Baserun:
         Baserun._trace_id = None
 
     @staticmethod
-    def _start_trace(trace_type: TraceType, func: Callable, kwargs: Dict, metadata: Optional[Dict] = None):
+    def _start_trace(
+        trace_type: TraceType,
+        func: Callable,
+        kwargs: Dict,
+        metadata: Optional[Dict] = None,
+    ):
         trace_name = func.__name__
         trace_inputs = []
         for input_name, input_value in kwargs.items():
@@ -90,6 +127,7 @@ class Baserun:
     @staticmethod
     def _trace(func: Callable, trace_type: TraceType, metadata: Optional[Dict] = None):
         if inspect.iscoroutinefunction(func):
+
             async def wrapper(*args, **kwargs):
                 if not Baserun._initialized or Baserun._trace_id:
                     return await func(*args, **kwargs)
@@ -98,20 +136,26 @@ class Baserun:
 
                 try:
                     result = await func(*args, **kwargs)
-                    Baserun.store_trace({
-                        **trace_data,
-                        'result': str(result) if result is not None else '',
-                    })
+                    Baserun.store_trace(
+                        {
+                            **trace_data,
+                            "result": str(result) if result is not None else "",
+                        }
+                    )
                     return result
                 except Exception as e:
-                    Baserun.store_trace({
-                        **trace_data,
-                        'error': str(e),
-                    })
+                    Baserun.store_trace(
+                        {
+                            **trace_data,
+                            "error": str(e),
+                        }
+                    )
                     raise e
                 finally:
                     Baserun._finish_trace(trace_type)
+
         elif inspect.isasyncgenfunction(func):
+
             async def wrapper(*args, **kwargs):
                 if not Baserun._initialized or Baserun._trace_id:
                     async for item in func(*args, **kwargs):
@@ -125,19 +169,25 @@ class Baserun:
                         result.append(item)
                         yield item
 
-                    Baserun.store_trace({
-                        **trace_data,
-                        'result': str(result) if result is not None else '',
-                    })
+                    Baserun.store_trace(
+                        {
+                            **trace_data,
+                            "result": str(result) if result is not None else "",
+                        }
+                    )
                 except Exception as e:
-                    Baserun.store_trace({
-                        **trace_data,
-                        'error': str(e),
-                    })
+                    Baserun.store_trace(
+                        {
+                            **trace_data,
+                            "error": str(e),
+                        }
+                    )
                     raise e
                 finally:
                     Baserun._finish_trace(trace_type)
+
         else:
+
             def wrapper(*args, **kwargs):
                 if not Baserun._initialized or Baserun._trace_id:
                     return func(*args, **kwargs)
@@ -146,16 +196,20 @@ class Baserun:
 
                 try:
                     result = func(*args, **kwargs)
-                    Baserun.store_trace({
-                        **trace_data,
-                        'result': str(result) if result is not None else '',
-                    })
+                    Baserun.store_trace(
+                        {
+                            **trace_data,
+                            "result": str(result) if result is not None else "",
+                        }
+                    )
                     return result
                 except Exception as e:
-                    Baserun.store_trace({
-                        **trace_data,
-                        'error': str(e),
-                    })
+                    Baserun.store_trace(
+                        {
+                            **trace_data,
+                            "error": str(e),
+                        }
+                    )
                     raise e
                 finally:
                     Baserun._finish_trace(trace_type)
@@ -176,7 +230,9 @@ class Baserun:
             return
 
         if not Baserun._trace_id:
-            warnings.warn("baserun.log was called outside of a Baserun decorated trace. The log will be ignored.")
+            warnings.warn(
+                "baserun.log was called outside of a Baserun decorated trace. The log will be ignored."
+            )
             return
 
         log_entry = {
@@ -190,12 +246,14 @@ class Baserun:
 
     @staticmethod
     def store_trace(trace_data):
-        Baserun._traces.append({
-            **trace_data,
-            "completionTimestamp": time.time(),
-            "steps": Baserun._buffer,
-            "evals": Baserun._evals,
-        })
+        Baserun._traces.append(
+            {
+                **trace_data,
+                "completionTimestamp": time.time(),
+                "steps": Baserun._buffer,
+                "evals": Baserun._evals,
+            }
+        )
 
     @staticmethod
     def flush():
@@ -209,17 +267,31 @@ class Baserun:
         headers = {"Authorization": f"Bearer {Baserun._api_key}"}
 
         try:
-            if all(trace.get('type') == TraceType.TEST for trace in Baserun._traces):
-                response = requests.post(f"{Baserun._api_base_url}/runs", json=json.loads(json.dumps({"testExecutions": Baserun._traces}, default=str)), headers=headers)
+            if all(trace.get("type") == TraceType.TEST for trace in Baserun._traces):
+                response = requests.post(
+                    f"{Baserun._api_base_url}/runs",
+                    json=json.loads(
+                        json.dumps({"testExecutions": Baserun._traces}, default=str)
+                    ),
+                    headers=headers,
+                )
                 response.raise_for_status()
 
                 response_data = response.json()
-                test_run_id = response_data['id']
+                test_run_id = response_data["id"]
                 parsed_url = urlparse(Baserun._api_base_url)
                 url = f"{parsed_url.scheme}://{parsed_url.netloc}/runs/{test_run_id}"
                 return url
-            elif all(trace.get('type') == TraceType.PRODUCTION for trace in Baserun._traces):
-                response = requests.post(f"{Baserun._api_base_url}/traces", json=json.loads(json.dumps({"traces": Baserun._traces}, default=str)), headers=headers)
+            elif all(
+                trace.get("type") == TraceType.PRODUCTION for trace in Baserun._traces
+            ):
+                response = requests.post(
+                    f"{Baserun._api_base_url}/traces",
+                    json=json.loads(
+                        json.dumps({"traces": Baserun._traces}, default=str)
+                    ),
+                    headers=headers,
+                )
                 response.raise_for_status()
                 return
             else:
@@ -239,18 +311,20 @@ class Baserun:
 
         # Tests by definition create their own wrapping trace. If we are here we are by definition in an initialized
         # production deployment and now capture the LLM calls automatically.
-        Baserun._traces.append({
-            "type": TraceType.PRODUCTION,
-            "testName": f"{log_entry['provider']} {log_entry['type']}",
-            "testInputs": [],
-            "id": str(uuid.uuid4()),
-            "result": str(log_entry["output"]),
-            "startTimestamp": log_entry["startTimestamp"],
-            "completionTimestamp": log_entry["completionTimestamp"],
-            "steps": [log_entry],
-            "metadata": None,
-            "evals": [],
-        })
+        Baserun._traces.append(
+            {
+                "type": TraceType.PRODUCTION,
+                "testName": f"{log_entry['provider']} {log_entry['type']}",
+                "testInputs": [],
+                "id": str(uuid.uuid4()),
+                "result": str(log_entry["output"]),
+                "startTimestamp": log_entry["startTimestamp"],
+                "completionTimestamp": log_entry["completionTimestamp"],
+                "steps": [log_entry],
+                "metadata": None,
+                "evals": [],
+            }
+        )
         Baserun.flush()
 
     @staticmethod
