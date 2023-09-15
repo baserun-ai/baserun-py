@@ -10,7 +10,6 @@ from baserun.v1.baserun_pb2 import Status, Message, Span, SubmitSpanRequest
 
 class BaserunExporter(SpanExporter):
     @staticmethod
-    @staticmethod
     def _extract_prefix_dicts(attributes, prefix) -> list[dict[str, Any]]:
         result = {}
         for key, value in attributes.items():
@@ -85,11 +84,7 @@ class BaserunExporter(SpanExporter):
                 completions=completions,
             )
             span_request = SubmitSpanRequest(span=span_message)
-            import pdb
-
-            pdb.set_trace()
-
-            response = Baserun._submit_span_stub.SubmitSpan(span_request)
+            Baserun._submit_span_stub.SubmitSpan(span_request)
 
     def shutdown(self) -> None:
         pass

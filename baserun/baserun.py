@@ -54,6 +54,8 @@ class Baserun:
                 "Baserun API key is missing. Ensure the BASERUN_API_KEY environment variable is set."
             )
 
+        grpc_base = os.environ.get("BASERUN_GRPC_URI", "grpc.baserun.ai:50051")
+
         if Baserun._initialized:
             warnings.warn(
                 "Baserun has already been initialized. Additional calls to init will be ignored."
@@ -63,8 +65,19 @@ class Baserun:
         Baserun._api_base_url = api_base_url
         Baserun._api_key = api_key
         Baserun._initialized = True
-        Baserun._grpc_channel = grpc.insecure_channel("localhost:50051")
+
+        if "localhost" in grpc_base:
+            Baserun._grpc_channel = grpc.insecure_channel(grpc_base)
+        else:
+            ssl_creds = grpc.ssl_channel_credentials()
+            call_credentials = grpc.access_token_call_credentials(api_key)
+            channel_credentials = grpc.composite_channel_credentials(
+                ssl_creds, call_credentials
+            )
+            Baserun._grpc_channel = grpc.secure_channel(grpc_base, channel_credentials)
+
         Baserun._submit_span_stub = SpanSubmissionServiceStub(Baserun._grpc_channel)
+
         Baserun.evals.init(Baserun._append_to_evals)
 
         AnthropicWrapper.init(Baserun._handle_auto_llm)
