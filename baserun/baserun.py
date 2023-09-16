@@ -66,15 +66,18 @@ class Baserun:
         Baserun._api_key = api_key
         Baserun._initialized = True
 
-        if "localhost" in grpc_base:
-            Baserun._grpc_channel = grpc.insecure_channel(grpc_base)
+        if key_chain := os.environ.get("SSL_KEY_CHAIN"):
+            ssl_creds = grpc.ssl_channel_credentials(
+                root_certificates=bytes(key_chain, "utf-8")
+            )
         else:
             ssl_creds = grpc.ssl_channel_credentials()
-            call_credentials = grpc.access_token_call_credentials(api_key)
-            channel_credentials = grpc.composite_channel_credentials(
-                ssl_creds, call_credentials
-            )
-            Baserun._grpc_channel = grpc.secure_channel(grpc_base, channel_credentials)
+
+        call_credentials = grpc.access_token_call_credentials(api_key)
+        channel_credentials = grpc.composite_channel_credentials(
+            ssl_creds, call_credentials
+        )
+        Baserun._grpc_channel = grpc.secure_channel(grpc_base, channel_credentials)
 
         Baserun._submit_span_stub = SpanSubmissionServiceStub(Baserun._grpc_channel)
 
