@@ -1,13 +1,13 @@
 import inspect
 import json
 import uuid
-import os
 import requests
 import time
 import threading
 from typing import Callable, Dict, Optional, Union
 from urllib.parse import urlparse
 import warnings
+from .api_key import get_api_key
 from .evals.evals import Evals
 from .helpers import BaserunStepType, TraceType
 from .patches.anthropic import AnthropicWrapper
@@ -30,27 +30,20 @@ class Baserun:
     _evals_lock = threading.Lock()
 
     _api_base_url = None
-    _api_key = None
 
     evals = Evals
 
     @staticmethod
     def init(api_base_url: str = "https://baserun.ai/api/v1") -> None:
-        api_key = os.environ.get('BASERUN_API_KEY')
-        if not api_key:
-            raise ValueError("Baserun API key is missing. Ensure the BASERUN_API_KEY environment variable is set.")
+        Baserun._api_base_url = api_base_url
 
         if Baserun._initialized:
-            warnings.warn("Baserun has already been initialized. Additional calls to init will be ignored.")
             return
 
-        Baserun._api_base_url = api_base_url
-        Baserun._api_key = api_key
-        Baserun._initialized = True
         Baserun.evals.init(Baserun._append_to_evals)
-
         OpenAIWrapper.init(Baserun._handle_auto_llm)
         AnthropicWrapper.init(Baserun._handle_auto_llm)
+        Baserun._initialized = True
 
     @staticmethod
     def _finish_trace(trace_type: TraceType):
@@ -206,7 +199,7 @@ class Baserun:
         if not Baserun._traces:
             return
 
-        headers = {"Authorization": f"Bearer {Baserun._api_key}"}
+        headers = {"Authorization": f"Bearer {get_api_key()}"}
 
         try:
             if all(trace.get('type') == TraceType.TEST for trace in Baserun._traces):
