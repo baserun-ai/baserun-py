@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 import logging
+from types import GeneratorType
 from typing import Collection
 
 import openai
-from opentelemetry import context as context_api
+from opentelemetry import context as context_api, trace
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.utils import (
     _SUPPRESS_INSTRUMENTATION_KEY,
     unwrap,
 )
+from opentelemetry.sdk.trace import Span
 from opentelemetry.trace import get_tracer, SpanKind
 from opentelemetry.trace.status import Status, StatusCode
 from wrapt import wrap_function_wrapper
@@ -48,63 +50,90 @@ def with_tracer_wrapper(func):
     return with_tracer
 
 
+def generator_wrapper(original_generator: GeneratorType, span: Span):
+    for value in original_generator:
+        # Currently we only support one choice in streaming responses
+        prefix = f"{SpanAttributes.LLM_COMPLETIONS}.0"
+
+        role = value.choices[0].delta.get("role")
+        if role:
+            span.set_attribute(f"{prefix}.role", role)
+
+        new_content = value.choices[0].delta.get("content")
+        if new_content:
+            span.set_attribute(
+                f"{prefix}.content",
+                span.attributes.get(f"{prefix}.content", "") + new_content,
+            )
+
+        if new_content is None or value.choices[0].finish_reason:
+            span.end()
+
+        yield value
+
+
 @with_tracer_wrapper
 def instrumented_wrapper(tracer, to_wrap, wrapped, instance, args, kwargs):
     if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
         return wrapped(*args, **kwargs)
 
     name = to_wrap.get("span_name")
-    with tracer.start_as_current_span(
+
+    # Start new span
+    span = tracer.start_span(
         name,
         kind=SpanKind.CLIENT,
         attributes={
             SpanAttributes.LLM_VENDOR: "OpenAI",
             SpanAttributes.LLM_REQUEST_TYPE: name.split(".")[-1],
         },
-    ) as span:
-        # Set request attributes
-        if span.is_recording():
-            try:
-                span.set_attribute(SpanAttributes.OPENAI_API_BASE, openai.api_base)
-                span.set_attribute(SpanAttributes.OPENAI_API_TYPE, openai.api_type)
-                span.set_attribute(
-                    SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model")
-                )
-                span.set_attribute(
-                    SpanAttributes.LLM_TEMPERATURE, kwargs.get("temperature", 1)
-                )
-                span.set_attribute(SpanAttributes.LLM_TOP_P, kwargs.get("top_p", 1))
-                span.set_attribute(
-                    SpanAttributes.LLM_FREQUENCY_PENALTY,
-                    kwargs.get("frequency_penalty", 0),
-                )
-                span.set_attribute(
-                    SpanAttributes.LLM_PRESENCE_PENALTY,
-                    kwargs.get("presence_penalty", 0),
-                )
+    )
 
-                max_tokens = kwargs.get("max_tokens")
-                if max_tokens:
-                    span.set_attribute(
-                        SpanAttributes.LLM_REQUEST_MAX_TOKENS, max_tokens
-                    )
+    # Activate the span in the current context, but don't end it automatically
+    with trace.use_span(span, end_on_exit=False):
+        # Capture request attributes
+        try:
+            span.set_attribute(SpanAttributes.OPENAI_API_BASE, openai.api_base)
+            span.set_attribute(SpanAttributes.OPENAI_API_TYPE, openai.api_type)
+            span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model"))
+            span.set_attribute(
+                SpanAttributes.LLM_TEMPERATURE, kwargs.get("temperature", 1)
+            )
+            span.set_attribute(SpanAttributes.LLM_TOP_P, kwargs.get("top_p", 1))
+            span.set_attribute(
+                SpanAttributes.LLM_FREQUENCY_PENALTY,
+                kwargs.get("frequency_penalty", 0),
+            )
+            span.set_attribute(
+                SpanAttributes.LLM_PRESENCE_PENALTY,
+                kwargs.get("presence_penalty", 0),
+            )
 
-                messages = kwargs.get("messages", [])
-                for i, message in enumerate(messages):
-                    prefix = f"{SpanAttributes.LLM_PROMPTS}.{i}"
-                    span.set_attribute(f"{prefix}.role", message.get("role"))
-                    span.set_attribute(f"{prefix}.content", message.get("content"))
+            max_tokens = kwargs.get("max_tokens")
+            if max_tokens:
+                span.set_attribute(SpanAttributes.LLM_REQUEST_MAX_TOKENS, max_tokens)
 
-            except Exception as ex:  # pylint: disable=broad-except
-                logger.warning(
-                    "Failed to set input attributes for openai span, error: %s", str(ex)
-                )
+            messages = kwargs.get("messages", [])
+            for i, message in enumerate(messages):
+                prefix = f"{SpanAttributes.LLM_PROMPTS}.{i}"
+                span.set_attribute(f"{prefix}.role", message.get("role"))
+                span.set_attribute(f"{prefix}.content", message.get("content"))
+
+        except Exception as ex:  # pylint: disable=broad-except
+            logger.warning(
+                "Failed to set input attributes for openai span, error: %s", str(ex)
+            )
 
         # Actually call the wrapped method
-
         response = wrapped(*args, **kwargs)
-        # Set response attributes
-        if response and span.is_recording():
+
+        # If this is a streaming response, wrap it so we can capture each chunk
+        if isinstance(response, GeneratorType):
+            wrapped_response = generator_wrapper(response, span)
+            return wrapped_response
+
+        # If it's a full response capture the response attributes
+        if response:
             try:
                 span.set_status(Status(StatusCode.OK))
                 choices = response.get("choices", [])
@@ -141,8 +170,15 @@ def instrumented_wrapper(tracer, to_wrap, wrapped, instance, args, kwargs):
                     "Failed to set response attributes for openai span, error: %s",
                     str(ex),
                 )
+        else:
+            # Not sure when this could happen?
+            span.set_status(
+                Status(description="No response received", status_code=StatusCode.UNSET)
+            )
 
-        return response
+    # End the span and return the response
+    span.end()
+    return response
 
 
 class OpenAIInstrumentor(BaseInstrumentor):
