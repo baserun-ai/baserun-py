@@ -10,24 +10,26 @@
 
 ## Quick Start
 
-### 1. Generate an API key
-Create an account at [https://baserun.ai](https://baserun.ai). Then generate an API key for your project in the [settings](https://baserun.ai/settings) tab and set it as an environment variable.
-
-```bash
-export BASERUN_API_KEY="your_api_key_here"
-```
-
-### 2. Install Baserun
+### 1. Install Baserun
 
 ```bash
 pip install baserun
 ```
 
-### 3. Start testing
+### 2. Generate an API key
+Create an account at [https://baserun.ai](https://baserun.ai). Then generate an API key for your project in the [settings](https://baserun.ai/settings) tab. Set it as an environment variable:
 
 ```bash
 export BASERUN_API_KEY="your_api_key_here"
 ```
+
+Or set `baserun.api_key` to its value:
+
+```python
+baserun.api_key = "br-..."
+```
+
+### 3. Start testing
 
 Use our [pytest](https://docs.pytest.org) plugin and start immediately testing with Baserun. By default all OpenAI and Anthropic requests will be automatically logged.
 
