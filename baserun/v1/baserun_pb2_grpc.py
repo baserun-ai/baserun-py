@@ -5,7 +5,7 @@ import grpc
 from baserun.v1 import baserun_pb2 as v1_dot_baserun__pb2
 
 
-class SpanSubmissionServiceStub(object):
+class SubmissionServiceStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -14,15 +14,42 @@ class SpanSubmissionServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.StartRun = channel.unary_unary(
+            "/baserun.v1.SubmissionService/StartRun",
+            request_serializer=v1_dot_baserun__pb2.StartRunRequest.SerializeToString,
+            response_deserializer=v1_dot_baserun__pb2.StartRunResponse.FromString,
+        )
+        self.SubmitLog = channel.unary_unary(
+            "/baserun.v1.SubmissionService/SubmitLog",
+            request_serializer=v1_dot_baserun__pb2.SubmitLogRequest.SerializeToString,
+            response_deserializer=v1_dot_baserun__pb2.SubmitLogResponse.FromString,
+        )
         self.SubmitSpan = channel.unary_unary(
-            "/baserun.v1.SpanSubmissionService/SubmitSpan",
+            "/baserun.v1.SubmissionService/SubmitSpan",
             request_serializer=v1_dot_baserun__pb2.SubmitSpanRequest.SerializeToString,
             response_deserializer=v1_dot_baserun__pb2.SubmitSpanResponse.FromString,
         )
+        self.EndRun = channel.unary_unary(
+            "/baserun.v1.SubmissionService/EndRun",
+            request_serializer=v1_dot_baserun__pb2.EndRunRequest.SerializeToString,
+            response_deserializer=v1_dot_baserun__pb2.EndRunResponse.FromString,
+        )
 
 
-class SpanSubmissionServiceServicer(object):
+class SubmissionServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
+
+    def StartRun(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
+
+    def SubmitLog(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def SubmitSpan(self, request, context):
         """Missing associated documentation comment in .proto file."""
@@ -30,24 +57,103 @@ class SpanSubmissionServiceServicer(object):
         context.set_details("Method not implemented!")
         raise NotImplementedError("Method not implemented!")
 
+    def EndRun(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
-def add_SpanSubmissionServiceServicer_to_server(servicer, server):
+
+def add_SubmissionServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
+        "StartRun": grpc.unary_unary_rpc_method_handler(
+            servicer.StartRun,
+            request_deserializer=v1_dot_baserun__pb2.StartRunRequest.FromString,
+            response_serializer=v1_dot_baserun__pb2.StartRunResponse.SerializeToString,
+        ),
+        "SubmitLog": grpc.unary_unary_rpc_method_handler(
+            servicer.SubmitLog,
+            request_deserializer=v1_dot_baserun__pb2.SubmitLogRequest.FromString,
+            response_serializer=v1_dot_baserun__pb2.SubmitLogResponse.SerializeToString,
+        ),
         "SubmitSpan": grpc.unary_unary_rpc_method_handler(
             servicer.SubmitSpan,
             request_deserializer=v1_dot_baserun__pb2.SubmitSpanRequest.FromString,
             response_serializer=v1_dot_baserun__pb2.SubmitSpanResponse.SerializeToString,
         ),
+        "EndRun": grpc.unary_unary_rpc_method_handler(
+            servicer.EndRun,
+            request_deserializer=v1_dot_baserun__pb2.EndRunRequest.FromString,
+            response_serializer=v1_dot_baserun__pb2.EndRunResponse.SerializeToString,
+        ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-        "baserun.v1.SpanSubmissionService", rpc_method_handlers
+        "baserun.v1.SubmissionService", rpc_method_handlers
     )
     server.add_generic_rpc_handlers((generic_handler,))
 
 
 # This class is part of an EXPERIMENTAL API.
-class SpanSubmissionService(object):
+class SubmissionService(object):
     """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def StartRun(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            "/baserun.v1.SubmissionService/StartRun",
+            v1_dot_baserun__pb2.StartRunRequest.SerializeToString,
+            v1_dot_baserun__pb2.StartRunResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
+
+    @staticmethod
+    def SubmitLog(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            "/baserun.v1.SubmissionService/SubmitLog",
+            v1_dot_baserun__pb2.SubmitLogRequest.SerializeToString,
+            v1_dot_baserun__pb2.SubmitLogResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
     def SubmitSpan(
@@ -65,9 +171,38 @@ class SpanSubmissionService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            "/baserun.v1.SpanSubmissionService/SubmitSpan",
+            "/baserun.v1.SubmissionService/SubmitSpan",
             v1_dot_baserun__pb2.SubmitSpanRequest.SerializeToString,
             v1_dot_baserun__pb2.SubmitSpanResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
+
+    @staticmethod
+    def EndRun(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            "/baserun.v1.SubmissionService/EndRun",
+            v1_dot_baserun__pb2.EndRunRequest.SerializeToString,
+            v1_dot_baserun__pb2.EndRunResponse.FromString,
             options,
             channel_credentials,
             insecure,

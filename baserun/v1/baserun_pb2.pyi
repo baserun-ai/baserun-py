@@ -48,6 +48,46 @@ class Message(_message.Message):
         finish_reason: _Optional[str] = ...,
     ) -> None: ...
 
+class Run(_message.Message):
+    __slots__ = ["run_id", "run_type", "metadata"]
+
+    class RunType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+        __slots__ = []
+        RUN_TYPE_TEST: _ClassVar[Run.RunType]
+        RUN_TYPE_PRODUCTION: _ClassVar[Run.RunType]
+    RUN_TYPE_TEST: Run.RunType
+    RUN_TYPE_PRODUCTION: Run.RunType
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    RUN_TYPE_FIELD_NUMBER: _ClassVar[int]
+    METADATA_FIELD_NUMBER: _ClassVar[int]
+    run_id: str
+    run_type: Run.RunType
+    metadata: str
+    def __init__(
+        self,
+        run_id: _Optional[str] = ...,
+        run_type: _Optional[_Union[Run.RunType, str]] = ...,
+        metadata: _Optional[str] = ...,
+    ) -> None: ...
+
+class Log(_message.Message):
+    __slots__ = ["run_id", "name", "payload", "timestamp"]
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    PAYLOAD_FIELD_NUMBER: _ClassVar[int]
+    TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    run_id: str
+    name: str
+    payload: str
+    timestamp: int
+    def __init__(
+        self,
+        run_id: _Optional[str] = ...,
+        name: _Optional[str] = ...,
+        payload: _Optional[str] = ...,
+        timestamp: _Optional[int] = ...,
+    ) -> None: ...
+
 class Span(_message.Message):
     __slots__ = [
         "run_id",
@@ -139,6 +179,30 @@ class Span(_message.Message):
         completions: _Optional[_Iterable[_Union[Message, _Mapping]]] = ...,
     ) -> None: ...
 
+class StartRunRequest(_message.Message):
+    __slots__ = ["run"]
+    RUN_FIELD_NUMBER: _ClassVar[int]
+    run: Run
+    def __init__(self, run: _Optional[_Union[Run, _Mapping]] = ...) -> None: ...
+
+class StartRunResponse(_message.Message):
+    __slots__ = ["message"]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    message: str
+    def __init__(self, message: _Optional[str] = ...) -> None: ...
+
+class SubmitLogRequest(_message.Message):
+    __slots__ = ["log"]
+    LOG_FIELD_NUMBER: _ClassVar[int]
+    log: Log
+    def __init__(self, log: _Optional[_Union[Log, _Mapping]] = ...) -> None: ...
+
+class SubmitLogResponse(_message.Message):
+    __slots__ = ["message"]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    message: str
+    def __init__(self, message: _Optional[str] = ...) -> None: ...
+
 class SubmitSpanRequest(_message.Message):
     __slots__ = ["span"]
     SPAN_FIELD_NUMBER: _ClassVar[int]
@@ -146,6 +210,18 @@ class SubmitSpanRequest(_message.Message):
     def __init__(self, span: _Optional[_Union[Span, _Mapping]] = ...) -> None: ...
 
 class SubmitSpanResponse(_message.Message):
+    __slots__ = ["message"]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    message: str
+    def __init__(self, message: _Optional[str] = ...) -> None: ...
+
+class EndRunRequest(_message.Message):
+    __slots__ = ["run_id"]
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    run_id: str
+    def __init__(self, run_id: _Optional[str] = ...) -> None: ...
+
+class EndRunResponse(_message.Message):
     __slots__ = ["message"]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     message: str

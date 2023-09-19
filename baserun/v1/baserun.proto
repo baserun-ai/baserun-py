@@ -20,6 +20,25 @@ message Message {
     string finish_reason = 3;
 }
 
+message Run {
+    string run_id = 1;
+    RunType run_type = 2;
+    // JSONified map<string, any>
+    string metadata = 3;
+
+    enum RunType {
+        RUN_TYPE_TEST = 0;
+        RUN_TYPE_PRODUCTION = 1;
+    }
+}
+
+message Log {
+    string run_id = 1;
+    string name = 2;
+    string payload = 3;
+    fixed64 timestamp = 4;
+}
+
 message Span {
     string run_id = 1;
     bytes trace_id = 2;
@@ -47,6 +66,22 @@ message Span {
     repeated Message completions = 21;
 }
 
+message StartRunRequest {
+    Run run = 1;
+}
+
+message StartRunResponse {
+    string message = 1;
+}
+
+message SubmitLogRequest {
+    Log log = 1;
+}
+
+message SubmitLogResponse {
+    string message = 1;
+}
+
 message SubmitSpanRequest {
     Span span = 1;
 }
@@ -55,6 +90,17 @@ message SubmitSpanResponse {
     string message = 1;
 }
 
-service SpanSubmissionService {
+message EndRunRequest {
+    string run_id = 1;
+}
+
+message EndRunResponse {
+    string message = 1;
+}
+
+service SubmissionService {
+    rpc StartRun (StartRunRequest) returns (StartRunResponse);
+    rpc SubmitLog (SubmitLogRequest) returns (SubmitLogResponse);
     rpc SubmitSpan (SubmitSpanRequest) returns (SubmitSpanResponse);
+    rpc EndRun (EndRunRequest) returns (EndRunResponse);
 }

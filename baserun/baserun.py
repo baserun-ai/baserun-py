@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 import grpc
 import requests
 from opentelemetry import trace
-from opentelemetry.context import set_value, attach
+from opentelemetry.context import set_value, attach, get_value
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import get_tracer, SpanKind
@@ -23,7 +23,8 @@ from .helpers import BaserunStepType, TraceType
 from .instrumentation.openai import OpenAIInstrumentor
 from .instrumentation.span_attributes import SpanAttributes
 from .patches.anthropic import AnthropicWrapper
-from .v1.baserun_pb2_grpc import SpanSubmissionServiceStub
+from .v1.baserun_pb2 import Log, SubmitLogRequest, Run
+from .v1.baserun_pb2_grpc import SubmissionServiceStub
 
 
 class BaserunEvaluationFailedException(Exception):
@@ -45,7 +46,7 @@ class Baserun:
     _api_key = None
 
     _grpc_channel: grpc.Channel = None
-    _submit_span_stub: SpanSubmissionServiceStub = None
+    _submission_service: SubmissionServiceStub = None
 
     evals = Evals
 
@@ -82,7 +83,7 @@ class Baserun:
         )
         Baserun._grpc_channel = grpc.secure_channel(grpc_base, channel_credentials)
 
-        Baserun._submit_span_stub = SpanSubmissionServiceStub(Baserun._grpc_channel)
+        Baserun._submission_service = SubmissionServiceStub(Baserun._grpc_channel)
 
         Baserun.evals.init(Baserun._append_to_evals)
 
@@ -104,7 +105,8 @@ class Baserun:
                 instrumentor.instrument()
 
     @staticmethod
-    def _finish_trace(trace_type: TraceType):
+    def _finish_trace(trace_type: TraceType, run_id: str):
+        Baserun._submission_service.EndRun(run_id=run_id)
         if trace_type == TraceType.PRODUCTION:
             Baserun.flush()
 
@@ -118,7 +120,14 @@ class Baserun:
         func: Callable,
         kwargs: Dict,
         metadata: Optional[Dict] = None,
+        run_id: str = None,
     ):
+        run_id = run_id or uuid.uuid4()
+        run = Run(
+            run_id=run_id, run_type=trace_type.value, metadata=json.dumps(metadata)
+        )
+        Baserun._submission_service.StartRun(run=run)
+
         trace_name = func.__name__
         trace_inputs = []
         for input_name, input_value in kwargs.items():
@@ -150,7 +159,8 @@ class Baserun:
             "baserun_run",
             kind=SpanKind.CLIENT,
         ) as span:
-            attach(set_value(SpanAttributes.BASERUN_RUN_ID, str(uuid.uuid4())))
+            run_id = str(uuid.uuid4())
+            attach(set_value(SpanAttributes.BASERUN_RUN_ID, run_id))
             if inspect.iscoroutinefunction(func):
 
                 async def wrapper(*args, **kwargs):
@@ -158,7 +168,7 @@ class Baserun:
                         return await func(*args, **kwargs)
 
                     trace_data = Baserun._start_trace(
-                        trace_type, func, kwargs, metadata
+                        trace_type, func, kwargs, metadata, run_id
                     )
 
                     try:
@@ -179,7 +189,7 @@ class Baserun:
                         )
                         raise e
                     finally:
-                        Baserun._finish_trace(trace_type)
+                        Baserun._finish_trace(trace_type, run_id)
 
             elif inspect.isasyncgenfunction(func):
 
@@ -213,7 +223,7 @@ class Baserun:
                         )
                         raise e
                     finally:
-                        Baserun._finish_trace(trace_type)
+                        Baserun._finish_trace(trace_type, run_id)
 
             else:
 
@@ -243,7 +253,7 @@ class Baserun:
                         )
                         raise e
                     finally:
-                        Baserun._finish_trace(trace_type)
+                        Baserun._finish_trace(trace_type, run_id)
 
         return wrapper
 
@@ -266,12 +276,20 @@ class Baserun:
             )
             return
 
+        current_time = time.time()
         log_entry = {
             "stepType": BaserunStepType.LOG.name.lower(),
             "name": name,
             "payload": payload,
-            "timestamp": time.time(),
+            "timestamp": current_time,
         }
+
+        run_id = get_value(SpanAttributes.BASERUN_RUN_ID)
+        log_message = Log(
+            run_id=run_id, name=name, payload=payload, timestamp=int(current_time * 1e9)
+        )
+        log_request = SubmitLogRequest(log=log_message)
+        Baserun._submission_service.SubmitLog(log_request)
 
         Baserun._append_to_buffer(log_entry)
 

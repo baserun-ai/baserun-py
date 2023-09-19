@@ -85,7 +85,7 @@ class BaserunExporter(SpanExporter):
                 completions=completions,
             )
             span_request = SubmitSpanRequest(span=span_message)
-            Baserun._submit_span_stub.SubmitSpan(span_request)
+            Baserun._submission_service.SubmitSpan(span_request)
 
     def shutdown(self) -> None:
         pass
