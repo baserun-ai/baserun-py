@@ -52,6 +52,7 @@ class BaserunExporter(SpanExporter):
             )
 
             span_message = Span(
+                run_id=span.attributes.get(SpanAttributes.BASERUN_RUN_ID, ""),
                 trace_id=trace_id,
                 span_id=span.context.span_id,
                 name=span.name,

@@ -50,6 +50,7 @@ class Message(_message.Message):
 
 class Span(_message.Message):
     __slots__ = [
+        "run_id",
         "trace_id",
         "span_id",
         "name",
@@ -71,6 +72,7 @@ class Span(_message.Message):
         "prompt_messages",
         "completions",
     ]
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
     TRACE_ID_FIELD_NUMBER: _ClassVar[int]
     SPAN_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -91,6 +93,7 @@ class Span(_message.Message):
     PROMPT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     PROMPT_MESSAGES_FIELD_NUMBER: _ClassVar[int]
     COMPLETIONS_FIELD_NUMBER: _ClassVar[int]
+    run_id: str
     trace_id: bytes
     span_id: int
     name: str
@@ -113,6 +116,7 @@ class Span(_message.Message):
     completions: _containers.RepeatedCompositeFieldContainer[Message]
     def __init__(
         self,
+        run_id: _Optional[str] = ...,
         trace_id: _Optional[bytes] = ...,
         span_id: _Optional[int] = ...,
         name: _Optional[str] = ...,

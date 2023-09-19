@@ -12,13 +12,16 @@ from urllib.parse import urlparse
 import grpc
 import requests
 from opentelemetry import trace
+from opentelemetry.context import set_value, attach
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.trace import get_tracer, SpanKind
 
 from .evals.evals import Evals
 from .exporter import BaserunExporter
 from .helpers import BaserunStepType, TraceType
 from .instrumentation.openai import OpenAIInstrumentor
+from .instrumentation.span_attributes import SpanAttributes
 from .patches.anthropic import AnthropicWrapper
 from .v1.baserun_pb2_grpc import SpanSubmissionServiceStub
 
@@ -142,93 +145,105 @@ class Baserun:
 
     @staticmethod
     def _trace(func: Callable, trace_type: TraceType, metadata: Optional[Dict] = None):
-        if inspect.iscoroutinefunction(func):
+        tracer = get_tracer("baserun")
+        with tracer.start_as_current_span(
+            "baserun_run",
+            kind=SpanKind.CLIENT,
+        ) as span:
+            attach(set_value(SpanAttributes.BASERUN_RUN_ID, str(uuid.uuid4())))
+            if inspect.iscoroutinefunction(func):
 
-            async def wrapper(*args, **kwargs):
-                if not Baserun._initialized or Baserun._trace_id:
-                    return await func(*args, **kwargs)
+                async def wrapper(*args, **kwargs):
+                    if not Baserun._initialized or Baserun._trace_id:
+                        return await func(*args, **kwargs)
 
-                trace_data = Baserun._start_trace(trace_type, func, kwargs, metadata)
-
-                try:
-                    result = await func(*args, **kwargs)
-                    Baserun.store_trace(
-                        {
-                            **trace_data,
-                            "result": str(result) if result is not None else "",
-                        }
+                    trace_data = Baserun._start_trace(
+                        trace_type, func, kwargs, metadata
                     )
-                    return result
-                except Exception as e:
-                    Baserun.store_trace(
-                        {
-                            **trace_data,
-                            "error": str(e),
-                        }
+
+                    try:
+                        result = await func(*args, **kwargs)
+                        Baserun.store_trace(
+                            {
+                                **trace_data,
+                                "result": str(result) if result is not None else "",
+                            }
+                        )
+                        return result
+                    except Exception as e:
+                        Baserun.store_trace(
+                            {
+                                **trace_data,
+                                "error": str(e),
+                            }
+                        )
+                        raise e
+                    finally:
+                        Baserun._finish_trace(trace_type)
+
+            elif inspect.isasyncgenfunction(func):
+
+                async def wrapper(*args, **kwargs):
+                    if not Baserun._initialized or Baserun._trace_id:
+                        async for item in func(*args, **kwargs):
+                            yield item
+
+                    trace_data = Baserun._start_trace(
+                        trace_type, func, kwargs, metadata
                     )
-                    raise e
-                finally:
-                    Baserun._finish_trace(trace_type)
 
-        elif inspect.isasyncgenfunction(func):
+                    try:
+                        result = []
+                        async for item in func(*args, **kwargs):
+                            result.append(item)
+                            yield item
 
-            async def wrapper(*args, **kwargs):
-                if not Baserun._initialized or Baserun._trace_id:
-                    async for item in func(*args, **kwargs):
-                        yield item
+                        Baserun.store_trace(
+                            {
+                                **trace_data,
+                                "result": str(result) if result is not None else "",
+                            }
+                        )
+                    except Exception as e:
+                        Baserun.store_trace(
+                            {
+                                **trace_data,
+                                "error": str(e),
+                            }
+                        )
+                        raise e
+                    finally:
+                        Baserun._finish_trace(trace_type)
 
-                trace_data = Baserun._start_trace(trace_type, func, kwargs, metadata)
+            else:
 
-                try:
-                    result = []
-                    async for item in func(*args, **kwargs):
-                        result.append(item)
-                        yield item
+                def wrapper(*args, **kwargs):
+                    if not Baserun._initialized or Baserun._trace_id:
+                        return func(*args, **kwargs)
 
-                    Baserun.store_trace(
-                        {
-                            **trace_data,
-                            "result": str(result) if result is not None else "",
-                        }
+                    trace_data = Baserun._start_trace(
+                        trace_type, func, kwargs, metadata
                     )
-                except Exception as e:
-                    Baserun.store_trace(
-                        {
-                            **trace_data,
-                            "error": str(e),
-                        }
-                    )
-                    raise e
-                finally:
-                    Baserun._finish_trace(trace_type)
 
-        else:
-
-            def wrapper(*args, **kwargs):
-                if not Baserun._initialized or Baserun._trace_id:
-                    return func(*args, **kwargs)
-
-                trace_data = Baserun._start_trace(trace_type, func, kwargs, metadata)
-
-                try:
-                    result = func(*args, **kwargs)
-                    Baserun.store_trace(
-                        {
-                            **trace_data,
-                            "result": str(result) if result is not None else "",
-                        }
-                    )
-                    return result
-                except Exception as e:
-                    Baserun.store_trace(
-                        {
-                            **trace_data,
-                            "error": str(e),
-                        }
-                    )
-                    raise e
-                finally:
-                    Baserun._finish_trace(trace_type)
+                    try:
+                        result = func(*args, **kwargs)
+                        Baserun.store_trace(
+                            {
+                                **trace_data,
+                                "result": str(result) if result is not None else "",
+                            }
+                        )
+                        return result
+                    except Exception as e:
+                        Baserun.store_trace(
+                            {
+                                **trace_data,
+                                "error": str(e),
+                            }
+                        )
+                        raise e
+                    finally:
+                        Baserun._finish_trace(trace_type)
 
         return wrapper
 

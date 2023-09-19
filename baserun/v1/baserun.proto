@@ -21,29 +21,30 @@ message Message {
 }
 
 message Span {
-    bytes trace_id = 1;
-    uint64 span_id = 2;
-    string name = 3;
-    fixed64 start_time = 4;
-    fixed64 end_time = 5;
-    Status status = 6;
+    string run_id = 1;
+    bytes trace_id = 2;
+    uint64 span_id = 3;
+    string name = 4;
+    fixed64 start_time = 5;
+    fixed64 end_time = 6;
+    Status status = 7;
 
     // Attributes
-    string vendor = 7;
-    string request_type = 8;
-    string api_base = 9;
-    string api_type = 10;
-    string model = 11;
-    float temperature = 12;
-    float top_p = 13;
-    float frequency_penalty = 14;
-    float presence_penalty = 15;
-    int32 total_tokens = 16;
-    int32 completion_tokens = 17;
-    int32 prompt_tokens = 18;
+    string vendor = 8;
+    string request_type = 9;
+    string api_base = 10;
+    string api_type = 11;
+    string model = 12;
+    float temperature = 13;
+    float top_p = 14;
+    float frequency_penalty = 15;
+    float presence_penalty = 16;
+    int32 total_tokens = 17;
+    int32 completion_tokens = 18;
+    int32 prompt_tokens = 19;
 
-    repeated Message prompt_messages = 19;
-    repeated Message completions = 20;
+    repeated Message prompt_messages = 20;
+    repeated Message completions = 21;
 }
 
 message SubmitSpanRequest {

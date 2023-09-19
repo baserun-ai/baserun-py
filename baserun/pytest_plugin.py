@@ -5,11 +5,20 @@ logger = logging.getLogger(__name__)
 
 run_url = None
 
+
 def pytest_addoption(parser):
-    parser.addoption("--baserun", action="store_true", help="Enable baserun functionality")
-    parser.addoption("--baserun-api-url", default="https://baserun.ai/api/v1", help="Baserun API URL")
-    parser.addoption("--no-flush", action="store_true", default=False,
-                     help="do not flush to baserun, even if --baserun is used")
+    parser.addoption(
+        "--baserun", action="store_true", help="Enable baserun functionality"
+    )
+    parser.addoption(
+        "--baserun-api-url", default="https://baserun.ai/api/v1", help="Baserun API URL"
+    )
+    parser.addoption(
+        "--no-flush",
+        action="store_true",
+        default=False,
+        help="do not flush to baserun, even if --baserun is used",
+    )
 
 
 def pytest_sessionstart(session):

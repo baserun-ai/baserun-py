@@ -5,6 +5,7 @@ from typing import Collection
 
 import openai
 from opentelemetry import context as context_api, trace
+from opentelemetry.context import get_value
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.utils import (
     _SUPPRESS_INSTRUMENTATION_KEY,
@@ -91,6 +92,10 @@ def instrumented_wrapper(tracer, to_wrap, wrapped, instance, args, kwargs):
 
     # Activate the span in the current context, but don't end it automatically
     with trace.use_span(span, end_on_exit=False):
+        span.set_attribute(
+            SpanAttributes.BASERUN_RUN_ID, get_value(SpanAttributes.BASERUN_RUN_ID)
+        )
+
         # Capture request attributes
         try:
             span.set_attribute(SpanAttributes.OPENAI_API_BASE, openai.api_base)

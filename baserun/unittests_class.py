@@ -4,7 +4,6 @@ from baserun import Baserun
 
 
 class BaserunTestCase(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         api_url = os.environ.get("BASERUN_API_URL", "https://baserun.ai/api/v1")
