@@ -114,9 +114,10 @@ class Baserun:
                 instrumentor.instrument()
 
     @staticmethod
-    def _finish_trace(_trace_type: Run.RunType, run_id: str):
+    def _finish_trace(_trace_type: Run.RunType, run: Run):
         try:
-            Baserun._submission_service.EndRun(EndRunRequest(run_id=run_id))
+            run.completion_timestamp = {"seconds": int(time.time())}
+            Baserun._submission_service.EndRun(EndRunRequest(run=run))
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
 
@@ -129,26 +130,21 @@ class Baserun:
         trace_type: Run.RunType,
         func: Callable,
         kwargs: Dict,
+        run: Run,
         metadata: Optional[Dict] = None,
-        run_id: str = None,
     ):
-        run_id = run_id or str(uuid.uuid4())
-        run = Run(
-            run_id=run_id, run_type=trace_type, metadata=json.dumps(metadata)
-        )
-        try:
-            Baserun._submission_service.StartRun(StartRunRequest(run=run))
-        except Exception as e:
-            logger.warning(f"Failed to submit run start to Baserun: {e}")
-
-        trace_name = func.__name__
-        trace_inputs = []
+        run.name = func.__name__
         for input_name, input_value in kwargs.items():
             if inspect.iscoroutine(input_value):
                 input_result = input_value.__name__
             else:
                 input_result = input_value
-            trace_inputs.append(f"{input_name}: {input_result}")
+            run.inputs.append(f"{input_name}: {input_result}")
+
+        try:
+            Baserun._submission_service.StartRun(StartRunRequest(run=run))
+        except Exception as e:
+            logger.warning(f"Failed to submit run start to Baserun: {e}")
 
         trace_execution_id = str(uuid.uuid4())
         Baserun._trace_id = trace_execution_id
@@ -158,21 +154,29 @@ class Baserun:
 
         return {
             "type": trace_type,
-            "testName": trace_name,
-            "testInputs": trace_inputs,
+            "testName": run.name,
+            "testInputs": run.inputs,
             "id": trace_execution_id,
             "startTimestamp": start_time,
             "metadata": metadata,
         }
 
     @staticmethod
-    def _trace(func: Callable, trace_type: Run.RunType, metadata: Optional[Dict] = None):
+    def _trace(
+        func: Callable, trace_type: Run.RunType, metadata: Optional[Dict] = None
+    ):
         tracer = get_tracer("baserun")
         with tracer.start_as_current_span(
             "baserun_run",
             kind=SpanKind.CLIENT,
         ) as _span:
             run_id = str(uuid.uuid4())
+            run = Run(
+                run_id=run_id,
+                run_type=trace_type,
+                metadata=json.dumps(metadata),
+                start_timestamp={"seconds": int(time.time())},
+            )
             attach(set_value(SpanAttributes.BASERUN_RUN_ID, run_id))
             if inspect.iscoroutinefunction(func):
 
@@ -181,7 +185,11 @@ class Baserun:
                         return await func(*args, **kwargs)
 
                     trace_data = Baserun._start_trace(
-                        trace_type, func, kwargs, metadata, run_id
+                        trace_type=trace_type,
+                        func=func,
+                        kwargs=kwargs,
+                        metadata=metadata,
+                        run=run,
                     )
 
                     try:
@@ -192,6 +200,8 @@ class Baserun:
                                 "result": str(result) if result is not None else "",
                             }
                         )
+
+                        run.result = str(result) if result is not None else ""
                         return result
                     except Exception as e:
                         Baserun.store_trace(
@@ -200,9 +210,10 @@ class Baserun:
                                 "error": str(e),
                             }
                         )
+                        run.error = str(e)
                         raise e
                     finally:
-                        Baserun._finish_trace(trace_type, run_id)
+                        Baserun._finish_trace(trace_type, run)
 
             elif inspect.isasyncgenfunction(func):
 
@@ -212,7 +223,11 @@ class Baserun:
                             yield item
 
                     trace_data = Baserun._start_trace(
-                        trace_type, func, kwargs, metadata, run_id
+                        trace_type=trace_type,
+                        func=func,
+                        kwargs=kwargs,
+                        metadata=metadata,
+                        run=run,
                     )
 
                     try:
@@ -227,6 +242,7 @@ class Baserun:
                                 "result": str(result) if result is not None else "",
                             }
                         )
+                        run.result = str(result) if result is not None else ""
                     except Exception as e:
                         Baserun.store_trace(
                             {
@@ -234,9 +250,10 @@ class Baserun:
                                 "error": str(e),
                             }
                         )
+                        run.error = str(e)
                         raise e
                     finally:
-                        Baserun._finish_trace(trace_type, run_id)
+                        Baserun._finish_trace(trace_type, run)
 
             else:
 
@@ -245,7 +262,11 @@ class Baserun:
                         return func(*args, **kwargs)
 
                     trace_data = Baserun._start_trace(
-                        trace_type, func, kwargs, metadata, run_id
+                        trace_type=trace_type,
+                        func=func,
+                        kwargs=kwargs,
+                        metadata=metadata,
+                        run=run,
                     )
 
                     try:
@@ -256,6 +277,7 @@ class Baserun:
                                 "result": str(result) if result is not None else "",
                             }
                         )
+                        run.result = str(result) if result is not None else ""
                         return result
                     except Exception as e:
                         Baserun.store_trace(
@@ -264,9 +286,10 @@ class Baserun:
                                 "error": str(e),
                             }
                         )
+                        run.error = str(e)
                         raise e
                     finally:
-                        Baserun._finish_trace(trace_type, run_id)
+                        Baserun._finish_trace(trace_type, run)
 
         return wrapper
 

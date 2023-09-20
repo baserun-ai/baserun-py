@@ -50,7 +50,17 @@ class Message(_message.Message):
     ) -> None: ...
 
 class Run(_message.Message):
-    __slots__ = ["run_id", "run_type", "metadata"]
+    __slots__ = [
+        "run_id",
+        "name",
+        "inputs",
+        "run_type",
+        "metadata",
+        "start_timestamp",
+        "completion_timestamp",
+        "result",
+        "error",
+    ]
 
     class RunType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = []
@@ -59,16 +69,36 @@ class Run(_message.Message):
     RUN_TYPE_TEST: Run.RunType
     RUN_TYPE_PRODUCTION: Run.RunType
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    INPUTS_FIELD_NUMBER: _ClassVar[int]
     RUN_TYPE_FIELD_NUMBER: _ClassVar[int]
     METADATA_FIELD_NUMBER: _ClassVar[int]
+    START_TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    COMPLETION_TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    RESULT_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
     run_id: str
+    name: str
+    inputs: _containers.RepeatedScalarFieldContainer[str]
     run_type: Run.RunType
     metadata: str
+    start_timestamp: _timestamp_pb2.Timestamp
+    completion_timestamp: _timestamp_pb2.Timestamp
+    result: str
+    error: str
     def __init__(
         self,
         run_id: _Optional[str] = ...,
+        name: _Optional[str] = ...,
+        inputs: _Optional[_Iterable[str]] = ...,
         run_type: _Optional[_Union[Run.RunType, str]] = ...,
         metadata: _Optional[str] = ...,
+        start_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
+        completion_timestamp: _Optional[
+            _Union[_timestamp_pb2.Timestamp, _Mapping]
+        ] = ...,
+        result: _Optional[str] = ...,
+        error: _Optional[str] = ...,
     ) -> None: ...
 
 class Log(_message.Message):
@@ -245,10 +275,10 @@ class SubmitSpanResponse(_message.Message):
     def __init__(self, message: _Optional[str] = ...) -> None: ...
 
 class EndRunRequest(_message.Message):
-    __slots__ = ["run_id"]
-    RUN_ID_FIELD_NUMBER: _ClassVar[int]
-    run_id: str
-    def __init__(self, run_id: _Optional[str] = ...) -> None: ...
+    __slots__ = ["run"]
+    RUN_FIELD_NUMBER: _ClassVar[int]
+    run: Run
+    def __init__(self, run: _Optional[_Union[Run, _Mapping]] = ...) -> None: ...
 
 class EndRunResponse(_message.Message):
     __slots__ = ["message"]

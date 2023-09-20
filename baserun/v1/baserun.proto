@@ -24,9 +24,15 @@ message Message {
 
 message Run {
     string run_id = 1;
-    RunType run_type = 2;
+    string name = 2;
+    repeated string inputs = 3;
+    RunType run_type = 4;
     // JSONified map<string, any>
-    string metadata = 3;
+    string metadata = 5;
+    google.protobuf.Timestamp start_timestamp = 6;
+    google.protobuf.Timestamp completion_timestamp = 7;
+    string result = 8;
+    string error = 9;
 
     enum RunType {
         RUN_TYPE_TEST = 0;
@@ -108,7 +114,7 @@ message SubmitSpanResponse {
 }
 
 message EndRunRequest {
-    string run_id = 1;
+    Run run = 1;
 }
 
 message EndRunResponse {
