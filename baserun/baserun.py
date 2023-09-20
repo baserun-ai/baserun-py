@@ -6,14 +6,12 @@ import threading
 import time
 import uuid
 import warnings
-from datetime import datetime
 from importlib.util import find_spec
 from typing import Callable, Dict, Optional, Union
 from urllib.parse import urlparse
 
 import grpc
 import requests
-from google.protobuf.internal.well_known_types import Timestamp
 from opentelemetry import trace
 from opentelemetry.context import set_value, attach, get_value
 from opentelemetry.sdk.trace import TracerProvider
@@ -294,18 +292,20 @@ class Baserun:
             )
             return
 
+        timestamp = time.time()
         log_entry = {
             "stepType": BaserunStepType.LOG.name.lower(),
             "name": name,
             "payload": payload,
-            "timestamp": time.time(),
+            "timestamp": timestamp,
         }
 
         run_id = get_value(SpanAttributes.BASERUN_RUN_ID)
-        timestamp = Timestamp()
-        timestamp.FromDatetime(datetime.now())
         log_message = Log(
-            run_id=run_id, name=name, payload=payload, timestamp=timestamp
+            run_id=run_id,
+            name=name,
+            payload=payload,
+            timestamp={"seconds": int(timestamp)},
         )
         log_request = SubmitLogRequest(log=log_message)
 
