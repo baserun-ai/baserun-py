@@ -86,46 +86,54 @@ class BaserunExporter(SpanExporter):
             )
 
             if vendor == ANTHROPIC_VENDOR_NAME:
-                span.log_id = span.attributes.get(SpanAttributes.ANTHROPIC_LOG_ID, "")
+                span_message.log_id = span.attributes.get(
+                    SpanAttributes.ANTHROPIC_LOG_ID, ""
+                )
             else:
-                span.request_type = span.attributes.get(
+                span_message.request_type = span.attributes.get(
                     SpanAttributes.LLM_REQUEST_TYPE, ""
                 )
-                span.api_base = span.attributes.get(SpanAttributes.OPENAI_API_BASE, "")
-                span.api_type = span.attributes.get(SpanAttributes.OPENAI_API_TYPE, "")
+                span_message.api_base = span.attributes.get(
+                    SpanAttributes.OPENAI_API_BASE, ""
+                )
+                span_message.api_type = span.attributes.get(
+                    SpanAttributes.OPENAI_API_TYPE, ""
+                )
 
                 if functions := span.attributes.get(SpanAttributes.LLM_FUNCTIONS):
-                    span.functions = functions
+                    span_message.functions = functions
                 if function_call := span.attributes.get(
                     SpanAttributes.LLM_FUNCTION_CALL
                 ):
-                    span.function_call = function_call
+                    span_message.function_call = function_call
 
-                span.temperature = span.attributes.get(
+                span_message.temperature = span.attributes.get(
                     SpanAttributes.LLM_TEMPERATURE, 1
                 )
-                span.top_p = span.attributes.get(SpanAttributes.LLM_TOP_P, 1)
-                span.n = span.attributes.get(SpanAttributes.LLM_N, 1)
-                span.stream = span.attributes.get(SpanAttributes.LLM_STREAM, False)
+                span_message.top_p = span.attributes.get(SpanAttributes.LLM_TOP_P, 1)
+                span_message.n = span.attributes.get(SpanAttributes.LLM_N, 1)
+                span_message.stream = span.attributes.get(
+                    SpanAttributes.LLM_STREAM, False
+                )
 
                 if stop := span.attributes.get(SpanAttributes.LLM_STOP):
-                    span.stop = stop
+                    span_message.stop = stop
 
-                span.max_tokens = span.attributes.get(
+                span_message.max_tokens = span.attributes.get(
                     SpanAttributes.LLM_REQUEST_MAX_TOKENS, 0
                 )
-                span.frequency_penalty = span.attributes.get(
+                span_message.frequency_penalty = span.attributes.get(
                     SpanAttributes.LLM_FREQUENCY_PENALTY, 0
                 )
-                span.presence_penalty = span.attributes.get(
+                span_message.presence_penalty = span.attributes.get(
                     SpanAttributes.LLM_PRESENCE_PENALTY, 0
                 )
 
                 if logit_bias := span.attributes.get(SpanAttributes.LLM_LOGIT_BIAS):
-                    span.logit_bias = logit_bias
+                    span_message.logit_bias = logit_bias
 
                 if user := span.attributes.get(SpanAttributes.LLM_USER):
-                    span.user = user
+                    span_message.user = user
 
             span_request = SubmitSpanRequest(span=span_message)
             try:

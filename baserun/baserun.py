@@ -116,7 +116,7 @@ class Baserun:
     @staticmethod
     def _finish_trace(_trace_type: Run.RunType, run: Run):
         try:
-            run.completion_timestamp = {"seconds": int(time.time())}
+            run.completion_timestamp.FromSeconds(int(time.time()))
             Baserun._submission_service.EndRun(EndRunRequest(run=run))
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
