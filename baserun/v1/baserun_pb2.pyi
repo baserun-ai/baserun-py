@@ -131,10 +131,6 @@ class Span(_message.Message):
         "vendor",
         "request_type",
         "model",
-        "temperature",
-        "top_p",
-        "frequency_penalty",
-        "presence_penalty",
         "total_tokens",
         "completion_tokens",
         "prompt_tokens",
@@ -142,6 +138,18 @@ class Span(_message.Message):
         "completions",
         "api_base",
         "api_type",
+        "functions",
+        "function_call",
+        "temperature",
+        "top_p",
+        "n",
+        "stream",
+        "stop",
+        "max_tokens",
+        "presence_penalty",
+        "frequency_penalty",
+        "logit_bias",
+        "user",
         "log_id",
     ]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
@@ -154,10 +162,6 @@ class Span(_message.Message):
     VENDOR_FIELD_NUMBER: _ClassVar[int]
     REQUEST_TYPE_FIELD_NUMBER: _ClassVar[int]
     MODEL_FIELD_NUMBER: _ClassVar[int]
-    TEMPERATURE_FIELD_NUMBER: _ClassVar[int]
-    TOP_P_FIELD_NUMBER: _ClassVar[int]
-    FREQUENCY_PENALTY_FIELD_NUMBER: _ClassVar[int]
-    PRESENCE_PENALTY_FIELD_NUMBER: _ClassVar[int]
     TOTAL_TOKENS_FIELD_NUMBER: _ClassVar[int]
     COMPLETION_TOKENS_FIELD_NUMBER: _ClassVar[int]
     PROMPT_TOKENS_FIELD_NUMBER: _ClassVar[int]
@@ -165,6 +169,18 @@ class Span(_message.Message):
     COMPLETIONS_FIELD_NUMBER: _ClassVar[int]
     API_BASE_FIELD_NUMBER: _ClassVar[int]
     API_TYPE_FIELD_NUMBER: _ClassVar[int]
+    FUNCTIONS_FIELD_NUMBER: _ClassVar[int]
+    FUNCTION_CALL_FIELD_NUMBER: _ClassVar[int]
+    TEMPERATURE_FIELD_NUMBER: _ClassVar[int]
+    TOP_P_FIELD_NUMBER: _ClassVar[int]
+    N_FIELD_NUMBER: _ClassVar[int]
+    STREAM_FIELD_NUMBER: _ClassVar[int]
+    STOP_FIELD_NUMBER: _ClassVar[int]
+    MAX_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    PRESENCE_PENALTY_FIELD_NUMBER: _ClassVar[int]
+    FREQUENCY_PENALTY_FIELD_NUMBER: _ClassVar[int]
+    LOGIT_BIAS_FIELD_NUMBER: _ClassVar[int]
+    USER_FIELD_NUMBER: _ClassVar[int]
     LOG_ID_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     trace_id: bytes
@@ -176,10 +192,6 @@ class Span(_message.Message):
     vendor: str
     request_type: str
     model: str
-    temperature: float
-    top_p: float
-    frequency_penalty: float
-    presence_penalty: float
     total_tokens: int
     completion_tokens: int
     prompt_tokens: int
@@ -187,6 +199,18 @@ class Span(_message.Message):
     completions: _containers.RepeatedCompositeFieldContainer[Message]
     api_base: str
     api_type: str
+    functions: str
+    function_call: str
+    temperature: float
+    top_p: float
+    n: int
+    stream: bool
+    stop: str
+    max_tokens: int
+    presence_penalty: float
+    frequency_penalty: float
+    logit_bias: str
+    user: str
     log_id: str
     def __init__(
         self,
@@ -200,10 +224,6 @@ class Span(_message.Message):
         vendor: _Optional[str] = ...,
         request_type: _Optional[str] = ...,
         model: _Optional[str] = ...,
-        temperature: _Optional[float] = ...,
-        top_p: _Optional[float] = ...,
-        frequency_penalty: _Optional[float] = ...,
-        presence_penalty: _Optional[float] = ...,
         total_tokens: _Optional[int] = ...,
         completion_tokens: _Optional[int] = ...,
         prompt_tokens: _Optional[int] = ...,
@@ -211,6 +231,18 @@ class Span(_message.Message):
         completions: _Optional[_Iterable[_Union[Message, _Mapping]]] = ...,
         api_base: _Optional[str] = ...,
         api_type: _Optional[str] = ...,
+        functions: _Optional[str] = ...,
+        function_call: _Optional[str] = ...,
+        temperature: _Optional[float] = ...,
+        top_p: _Optional[float] = ...,
+        n: _Optional[int] = ...,
+        stream: bool = ...,
+        stop: _Optional[str] = ...,
+        max_tokens: _Optional[int] = ...,
+        presence_penalty: _Optional[float] = ...,
+        frequency_penalty: _Optional[float] = ...,
+        logit_bias: _Optional[str] = ...,
+        user: _Optional[str] = ...,
         log_id: _Optional[str] = ...,
     ) -> None: ...
 

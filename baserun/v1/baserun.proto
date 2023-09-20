@@ -27,8 +27,7 @@ message Run {
     string name = 2;
     repeated string inputs = 3;
     RunType run_type = 4;
-    // JSONified map<string, any>
-    string metadata = 5;
+    string metadata = 5; // JSONified map<string, any>
     google.protobuf.Timestamp start_timestamp = 6;
     google.protobuf.Timestamp completion_timestamp = 7;
     string result = 8;
@@ -56,27 +55,35 @@ message Span {
     google.protobuf.Timestamp end_time = 6;
     Status status = 7;
 
-    // Attributes
+    // Common Attributes
     string vendor = 8;
     string request_type = 9;
     string model = 10;
-    float temperature = 11;
-    float top_p = 12;
-    float frequency_penalty = 13;
-    float presence_penalty = 14;
-    int32 total_tokens = 15;
-    int32 completion_tokens = 16;
-    int32 prompt_tokens = 17;
+    int32 total_tokens = 11;
+    int32 completion_tokens = 12;
+    int32 prompt_tokens = 13;
 
-    repeated Message prompt_messages = 18;
-    repeated Message completions = 19;
+    repeated Message prompt_messages = 14;
+    repeated Message completions = 15;
 
-    // OpenAI
-    string api_base = 20;
-    string api_type = 21;
+    // OpenAI-specific attributes
+    string api_base = 16;
+    string api_type = 17;
+    string functions = 18; // JSONified array<map<str, any>>
+    string function_call = 19;
+    float temperature = 20;
+    float top_p = 21;
+    int32 n = 22;
+    bool stream = 23;
+    string stop = 24;
+    int32 max_tokens = 25;
+    float presence_penalty = 26;
+    float frequency_penalty = 27;
+    string logit_bias = 28; // JSONified map<str, int>
+    string user = 29;
 
-    // Anthropic
-    string log_id = 22;
+    // Anthropic-specific attributes
+    string log_id = 30;
 }
 
 message Eval {
@@ -85,8 +92,7 @@ message Eval {
     string result = 3;
     float score = 4;
     string submission = 5;
-    // JSONified map<string, any>
-    string payload = 6;
+    string payload = 6; // JSONified map<string, any>
 }
 
 message StartRunRequest {

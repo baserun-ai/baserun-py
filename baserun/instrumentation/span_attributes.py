@@ -16,9 +16,20 @@ class SpanAttributes:
     LLM_PROMPTS = "llm.prompts"
     LLM_COMPLETIONS = "llm.completions"
     LLM_CHAT_STOP_SEQUENCES = "llm.chat.stop_sequences"
+    LLM_FUNCTION_CALL = "llm.function_call"
+    LLM_FUNCTIONS = "llm.functions"
+    LLM_N = "llm.n"
+    LLM_STREAM = "llm.stream"
+    LLM_STOP = "llm.stop"
+    LLM_LOGIT_BIAS = "llm.logit_bias"
+    LLM_USER = "llm.user"
 
     OPENAI_API_VERSION = "openai.api_version"
     OPENAI_API_BASE = "openai.api_base"
     OPENAI_API_TYPE = "openai.api_type"
 
     ANTHROPIC_LOG_ID = "anthropic.log_id"
+
+
+ANTHROPIC_VENDOR_NAME = "Anthropic"
+OPENAI_VENDOR_NAME = "OpenAI"

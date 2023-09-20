@@ -5,7 +5,10 @@ from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter
 
 from baserun.instrumentation.openai import WRAPPED_METHODS
-from baserun.instrumentation.span_attributes import SpanAttributes
+from baserun.instrumentation.span_attributes import (
+    SpanAttributes,
+    ANTHROPIC_VENDOR_NAME,
+)
 from baserun.v1.baserun_pb2 import Status, Message, Span, SubmitSpanRequest
 
 logger = logging.getLogger(__name__)
@@ -54,11 +57,13 @@ class BaserunExporter(SpanExporter):
                 (trace_id_int.bit_length() + 7) // 8, "big"
             )
 
+            vendor = span.attributes.get(SpanAttributes.LLM_VENDOR)
             span_message = Span(
                 run_id=span.attributes.get(SpanAttributes.BASERUN_RUN_ID, ""),
                 trace_id=trace_id,
                 span_id=span.context.span_id,
                 name=span.name,
+                vendor=vendor,
                 start_time={
                     "seconds": int(span.start_time / 1_000_000),
                 },
@@ -66,20 +71,6 @@ class BaserunExporter(SpanExporter):
                     "seconds": int(span.end_time / 1_000_000),
                 },
                 status=status,
-                vendor=span.attributes.get(SpanAttributes.LLM_VENDOR, ""),
-                request_type=span.attributes.get(SpanAttributes.LLM_REQUEST_TYPE, ""),
-                api_base=span.attributes.get(SpanAttributes.OPENAI_API_BASE, ""),
-                log_id=span.attributes.get(SpanAttributes.ANTHROPIC_LOG_ID, ""),
-                api_type=span.attributes.get(SpanAttributes.OPENAI_API_TYPE, ""),
-                model=span.attributes.get(SpanAttributes.LLM_REQUEST_MODEL, ""),
-                temperature=span.attributes.get(SpanAttributes.LLM_TEMPERATURE, 1),
-                top_p=span.attributes.get(SpanAttributes.LLM_TOP_P, 1),
-                frequency_penalty=span.attributes.get(
-                    SpanAttributes.LLM_FREQUENCY_PENALTY, 0
-                ),
-                presence_penalty=span.attributes.get(
-                    SpanAttributes.LLM_PRESENCE_PENALTY, 0
-                ),
                 total_tokens=span.attributes.get(
                     SpanAttributes.LLM_USAGE_TOTAL_TOKENS, 0
                 ),
@@ -90,8 +81,52 @@ class BaserunExporter(SpanExporter):
                     SpanAttributes.LLM_USAGE_PROMPT_TOKENS, 0
                 ),
                 prompt_messages=prompt_messages,
+                model=span.attributes.get(SpanAttributes.LLM_REQUEST_MODEL, ""),
                 completions=completions,
             )
+
+            if vendor == ANTHROPIC_VENDOR_NAME:
+                span.log_id = span.attributes.get(SpanAttributes.ANTHROPIC_LOG_ID, "")
+            else:
+                span.request_type = span.attributes.get(
+                    SpanAttributes.LLM_REQUEST_TYPE, ""
+                )
+                span.api_base = span.attributes.get(SpanAttributes.OPENAI_API_BASE, "")
+                span.api_type = span.attributes.get(SpanAttributes.OPENAI_API_TYPE, "")
+
+                if functions := span.attributes.get(SpanAttributes.LLM_FUNCTIONS):
+                    span.functions = functions
+                if function_call := span.attributes.get(
+                    SpanAttributes.LLM_FUNCTION_CALL
+                ):
+                    span.function_call = function_call
+
+                span.temperature = span.attributes.get(
+                    SpanAttributes.LLM_TEMPERATURE, 1
+                )
+                span.top_p = span.attributes.get(SpanAttributes.LLM_TOP_P, 1)
+                span.n = span.attributes.get(SpanAttributes.LLM_N, 1)
+                span.stream = span.attributes.get(SpanAttributes.LLM_STREAM, False)
+
+                if stop := span.attributes.get(SpanAttributes.LLM_STOP):
+                    span.stop = stop
+
+                span.max_tokens = span.attributes.get(
+                    SpanAttributes.LLM_REQUEST_MAX_TOKENS, 0
+                )
+                span.frequency_penalty = span.attributes.get(
+                    SpanAttributes.LLM_FREQUENCY_PENALTY, 0
+                )
+                span.presence_penalty = span.attributes.get(
+                    SpanAttributes.LLM_PRESENCE_PENALTY, 0
+                )
+
+                if logit_bias := span.attributes.get(SpanAttributes.LLM_LOGIT_BIAS):
+                    span.logit_bias = logit_bias
+
+                if user := span.attributes.get(SpanAttributes.LLM_USER):
+                    span.user = user
+
             span_request = SubmitSpanRequest(span=span_message)
             try:
                 # noinspection PyProtectedMember

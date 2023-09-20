@@ -11,7 +11,10 @@ from opentelemetry.sdk.trace import Span
 from opentelemetry.trace import get_tracer
 from wrapt import wrap_function_wrapper
 
-from baserun.instrumentation.span_attributes import SpanAttributes
+from baserun.instrumentation.span_attributes import (
+    SpanAttributes,
+    ANTHROPIC_VENDOR_NAME,
+)
 from baserun.instrumentation.wrappers import instrumented_wrapper
 
 logger = logging.getLogger(__name__)
@@ -40,7 +43,7 @@ class AnthropicInstrumentor(BaseInstrumentor):
         return _instruments
 
     def set_request_attributes(self, span: Span, kwargs: dict[str, Any]):
-        span.set_attribute(SpanAttributes.LLM_VENDOR, "Anthropic")
+        span.set_attribute(SpanAttributes.LLM_VENDOR, ANTHROPIC_VENDOR_NAME)
         prefix = f"{SpanAttributes.LLM_PROMPTS}.0"
         span.set_attribute(f"{prefix}.content", kwargs.get("prompt"))
 

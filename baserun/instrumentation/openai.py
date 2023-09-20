@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import json
 import logging
 from typing import Collection, Any
 
@@ -12,7 +13,7 @@ from opentelemetry.sdk.trace import Span
 from opentelemetry.trace import get_tracer
 from wrapt import wrap_function_wrapper
 
-from baserun.instrumentation.span_attributes import SpanAttributes
+from baserun.instrumentation.span_attributes import SpanAttributes, OPENAI_VENDOR_NAME
 from baserun.instrumentation.wrappers import instrumented_wrapper
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
         return _instruments
 
     def set_request_attributes(self, span: Span, kwargs: dict[str, Any]):
-        span.set_attribute(SpanAttributes.LLM_VENDOR, "OpenAI")
+        span.set_attribute(SpanAttributes.LLM_VENDOR, OPENAI_VENDOR_NAME)
         span.set_attribute(SpanAttributes.OPENAI_API_BASE, openai.api_base)
         span.set_attribute(SpanAttributes.OPENAI_API_TYPE, openai.api_type)
 
@@ -55,6 +56,27 @@ class OpenAIInstrumentor(BaseInstrumentor):
             SpanAttributes.LLM_PRESENCE_PENALTY,
             kwargs.get("presence_penalty", 0),
         )
+
+        if functions := kwargs.get("functions"):
+            span.set_attribute(SpanAttributes.LLM_FUNCTIONS, json.dumps(functions))
+
+        if function_call := kwargs.get("function_call"):
+            span.set_attribute(
+                SpanAttributes.LLM_FUNCTION_CALL,
+                json.dumps(function_call),
+            )
+
+        span.set_attribute(SpanAttributes.LLM_N, kwargs.get("n", 1))
+        span.set_attribute(SpanAttributes.LLM_STREAM, kwargs.get("stream", False))
+
+        if stop := kwargs.get("stop"):
+            span.set_attribute(SpanAttributes.LLM_STOP, str(stop))
+
+        if logit_bias := kwargs.get("logit_bias"):
+            span.set_attribute(SpanAttributes.LLM_LOGIT_BIAS, json.dumps(logit_bias))
+
+        if user := kwargs.get("user"):
+            span.set_attribute(SpanAttributes.LLM_USER, user)
 
         messages = kwargs.get("messages", [])
         for i, message in enumerate(messages):
