@@ -1,7 +1,6 @@
 import logging
 from typing import Sequence, Any
 
-from google.protobuf.internal.well_known_types import Timestamp
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter
 
@@ -55,22 +54,22 @@ class BaserunExporter(SpanExporter):
                 (trace_id_int.bit_length() + 7) // 8, "big"
             )
 
-            start_time = Timestamp()
-            start_time.FromNanoseconds(span.start_time)
-            end_time = Timestamp()
-            end_time.FromNanoseconds(span.end_time)
-
             span_message = Span(
                 run_id=span.attributes.get(SpanAttributes.BASERUN_RUN_ID, ""),
                 trace_id=trace_id,
                 span_id=span.context.span_id,
                 name=span.name,
-                start_time=start_time,
-                end_time=end_time,
+                start_time={
+                    "seconds": int(span.start_time / 1_000_000),
+                },
+                end_time={
+                    "seconds": int(span.end_time / 1_000_000),
+                },
                 status=status,
                 vendor=span.attributes.get(SpanAttributes.LLM_VENDOR, ""),
                 request_type=span.attributes.get(SpanAttributes.LLM_REQUEST_TYPE, ""),
                 api_base=span.attributes.get(SpanAttributes.OPENAI_API_BASE, ""),
+                log_id=span.attributes.get(SpanAttributes.ANTHROPIC_LOG_ID, ""),
                 api_type=span.attributes.get(SpanAttributes.OPENAI_API_TYPE, ""),
                 model=span.attributes.get(SpanAttributes.LLM_REQUEST_MODEL, ""),
                 temperature=span.attributes.get(SpanAttributes.LLM_TEMPERATURE, 1),

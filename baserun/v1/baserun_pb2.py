@@ -16,7 +16,7 @@ from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__
 
 
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
-    b'\n\x10v1/baserun.proto\x12\nbaserun.v1\x1a\x1fgoogle/protobuf/timestamp.proto"\x9c\x01\n\x06Status\x12\x0f\n\x07message\x18\x01 \x01(\t\x12+\n\x04\x63ode\x18\x02 \x01(\x0e\x32\x1d.baserun.v1.Status.StatusCode"T\n\nStatusCode\x12\x1b\n\x17STATUS_CODE_UNSPECIFIED\x10\x00\x12\x12\n\x0eSTATUS_CODE_OK\x10\x01\x12\x15\n\x11STATUS_CODE_ERROR\x10\x02"?\n\x07Message\x12\x0c\n\x04role\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x15\n\rfinish_reason\x18\x03 \x01(\t"\x89\x01\n\x03Run\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12)\n\x08run_type\x18\x02 \x01(\x0e\x32\x17.baserun.v1.Run.RunType\x12\x10\n\x08metadata\x18\x03 \x01(\t"5\n\x07RunType\x12\x11\n\rRUN_TYPE_TEST\x10\x00\x12\x17\n\x13RUN_TYPE_PRODUCTION\x10\x01"c\n\x03Log\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0f\n\x07payload\x18\x03 \x01(\t\x12-\n\ttimestamp\x18\x04 \x01(\x0b\x32\x1a.google.protobuf.Timestamp"\x9b\x04\n\x04Span\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\x10\n\x08trace_id\x18\x02 \x01(\x0c\x12\x0f\n\x07span_id\x18\x03 \x01(\x04\x12\x0c\n\x04name\x18\x04 \x01(\t\x12.\n\nstart_time\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12,\n\x08\x65nd_time\x18\x06 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12"\n\x06status\x18\x07 \x01(\x0b\x32\x12.baserun.v1.Status\x12\x0e\n\x06vendor\x18\x08 \x01(\t\x12\x14\n\x0crequest_type\x18\t \x01(\t\x12\x10\n\x08\x61pi_base\x18\n \x01(\t\x12\x10\n\x08\x61pi_type\x18\x0b \x01(\t\x12\r\n\x05model\x18\x0c \x01(\t\x12\x13\n\x0btemperature\x18\r \x01(\x02\x12\r\n\x05top_p\x18\x0e \x01(\x02\x12\x19\n\x11\x66requency_penalty\x18\x0f \x01(\x02\x12\x18\n\x10presence_penalty\x18\x10 \x01(\x02\x12\x14\n\x0ctotal_tokens\x18\x11 \x01(\x05\x12\x19\n\x11\x63ompletion_tokens\x18\x12 \x01(\x05\x12\x15\n\rprompt_tokens\x18\x13 \x01(\x05\x12,\n\x0fprompt_messages\x18\x14 \x03(\x0b\x32\x13.baserun.v1.Message\x12(\n\x0b\x63ompletions\x18\x15 \x03(\x0b\x32\x13.baserun.v1.Message"f\n\x04\x45val\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x0e\n\x06result\x18\x03 \x01(\t\x12\r\n\x05score\x18\x04 \x01(\x02\x12\x12\n\nsubmission\x18\x05 \x01(\t\x12\x0f\n\x07payload\x18\x06 \x01(\t"/\n\x0fStartRunRequest\x12\x1c\n\x03run\x18\x01 \x01(\x0b\x32\x0f.baserun.v1.Run"#\n\x10StartRunResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"0\n\x10SubmitLogRequest\x12\x1c\n\x03log\x18\x01 \x01(\x0b\x32\x0f.baserun.v1.Log"$\n\x11SubmitLogResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"3\n\x11SubmitSpanRequest\x12\x1e\n\x04span\x18\x01 \x01(\x0b\x32\x10.baserun.v1.Span"%\n\x12SubmitSpanResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"\x1f\n\rEndRunRequest\x12\x0e\n\x06run_id\x18\x01 \x01(\t"!\n\x0e\x45ndRunResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"3\n\x11SubmitEvalRequest\x12\x1e\n\x04\x65val\x18\x01 \x01(\x0b\x32\x10.baserun.v1.Eval"%\n\x12SubmitEvalResponse\x12\x0f\n\x07message\x18\x01 \x01(\t2\xff\x02\n\x11SubmissionService\x12\x45\n\x08StartRun\x12\x1b.baserun.v1.StartRunRequest\x1a\x1c.baserun.v1.StartRunResponse\x12H\n\tSubmitLog\x12\x1c.baserun.v1.SubmitLogRequest\x1a\x1d.baserun.v1.SubmitLogResponse\x12K\n\nSubmitSpan\x12\x1d.baserun.v1.SubmitSpanRequest\x1a\x1e.baserun.v1.SubmitSpanResponse\x12?\n\x06\x45ndRun\x12\x19.baserun.v1.EndRunRequest\x1a\x1a.baserun.v1.EndRunResponse\x12K\n\nSubmitEval\x12\x1d.baserun.v1.SubmitEvalRequest\x1a\x1e.baserun.v1.SubmitEvalResponseb\x06proto3'
+    b'\n\x10v1/baserun.proto\x12\nbaserun.v1\x1a\x1fgoogle/protobuf/timestamp.proto"\x9c\x01\n\x06Status\x12\x0f\n\x07message\x18\x01 \x01(\t\x12+\n\x04\x63ode\x18\x02 \x01(\x0e\x32\x1d.baserun.v1.Status.StatusCode"T\n\nStatusCode\x12\x1b\n\x17STATUS_CODE_UNSPECIFIED\x10\x00\x12\x12\n\x0eSTATUS_CODE_OK\x10\x01\x12\x15\n\x11STATUS_CODE_ERROR\x10\x02"?\n\x07Message\x12\x0c\n\x04role\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x15\n\rfinish_reason\x18\x03 \x01(\t"\x89\x01\n\x03Run\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12)\n\x08run_type\x18\x02 \x01(\x0e\x32\x17.baserun.v1.Run.RunType\x12\x10\n\x08metadata\x18\x03 \x01(\t"5\n\x07RunType\x12\x11\n\rRUN_TYPE_TEST\x10\x00\x12\x17\n\x13RUN_TYPE_PRODUCTION\x10\x01"c\n\x03Log\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0f\n\x07payload\x18\x03 \x01(\t\x12-\n\ttimestamp\x18\x04 \x01(\x0b\x32\x1a.google.protobuf.Timestamp"\xab\x04\n\x04Span\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\x10\n\x08trace_id\x18\x02 \x01(\x0c\x12\x0f\n\x07span_id\x18\x03 \x01(\x04\x12\x0c\n\x04name\x18\x04 \x01(\t\x12.\n\nstart_time\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12,\n\x08\x65nd_time\x18\x06 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12"\n\x06status\x18\x07 \x01(\x0b\x32\x12.baserun.v1.Status\x12\x0e\n\x06vendor\x18\x08 \x01(\t\x12\x14\n\x0crequest_type\x18\t \x01(\t\x12\r\n\x05model\x18\n \x01(\t\x12\x13\n\x0btemperature\x18\x0b \x01(\x02\x12\r\n\x05top_p\x18\x0c \x01(\x02\x12\x19\n\x11\x66requency_penalty\x18\r \x01(\x02\x12\x18\n\x10presence_penalty\x18\x0e \x01(\x02\x12\x14\n\x0ctotal_tokens\x18\x0f \x01(\x05\x12\x19\n\x11\x63ompletion_tokens\x18\x10 \x01(\x05\x12\x15\n\rprompt_tokens\x18\x11 \x01(\x05\x12,\n\x0fprompt_messages\x18\x12 \x03(\x0b\x32\x13.baserun.v1.Message\x12(\n\x0b\x63ompletions\x18\x13 \x03(\x0b\x32\x13.baserun.v1.Message\x12\x10\n\x08\x61pi_base\x18\x14 \x01(\t\x12\x10\n\x08\x61pi_type\x18\x15 \x01(\t\x12\x0e\n\x06log_id\x18\x16 \x01(\t"f\n\x04\x45val\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x0e\n\x06result\x18\x03 \x01(\t\x12\r\n\x05score\x18\x04 \x01(\x02\x12\x12\n\nsubmission\x18\x05 \x01(\t\x12\x0f\n\x07payload\x18\x06 \x01(\t"/\n\x0fStartRunRequest\x12\x1c\n\x03run\x18\x01 \x01(\x0b\x32\x0f.baserun.v1.Run"#\n\x10StartRunResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"0\n\x10SubmitLogRequest\x12\x1c\n\x03log\x18\x01 \x01(\x0b\x32\x0f.baserun.v1.Log"$\n\x11SubmitLogResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"3\n\x11SubmitSpanRequest\x12\x1e\n\x04span\x18\x01 \x01(\x0b\x32\x10.baserun.v1.Span"%\n\x12SubmitSpanResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"\x1f\n\rEndRunRequest\x12\x0e\n\x06run_id\x18\x01 \x01(\t"!\n\x0e\x45ndRunResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"3\n\x11SubmitEvalRequest\x12\x1e\n\x04\x65val\x18\x01 \x01(\x0b\x32\x10.baserun.v1.Eval"%\n\x12SubmitEvalResponse\x12\x0f\n\x07message\x18\x01 \x01(\t2\xff\x02\n\x11SubmissionService\x12\x45\n\x08StartRun\x12\x1b.baserun.v1.StartRunRequest\x1a\x1c.baserun.v1.StartRunResponse\x12H\n\tSubmitLog\x12\x1c.baserun.v1.SubmitLogRequest\x1a\x1d.baserun.v1.SubmitLogResponse\x12K\n\nSubmitSpan\x12\x1d.baserun.v1.SubmitSpanRequest\x1a\x1e.baserun.v1.SubmitSpanResponse\x12?\n\x06\x45ndRun\x12\x19.baserun.v1.EndRunRequest\x1a\x1a.baserun.v1.EndRunResponse\x12K\n\nSubmitEval\x12\x1d.baserun.v1.SubmitEvalRequest\x1a\x1e.baserun.v1.SubmitEvalResponseb\x06proto3'
 )
 
 _globals = globals()
@@ -37,29 +37,29 @@ if _descriptor._USE_C_DESCRIPTORS == False:
     _globals["_LOG"]._serialized_start = 429
     _globals["_LOG"]._serialized_end = 528
     _globals["_SPAN"]._serialized_start = 531
-    _globals["_SPAN"]._serialized_end = 1070
-    _globals["_EVAL"]._serialized_start = 1072
-    _globals["_EVAL"]._serialized_end = 1174
-    _globals["_STARTRUNREQUEST"]._serialized_start = 1176
-    _globals["_STARTRUNREQUEST"]._serialized_end = 1223
-    _globals["_STARTRUNRESPONSE"]._serialized_start = 1225
-    _globals["_STARTRUNRESPONSE"]._serialized_end = 1260
-    _globals["_SUBMITLOGREQUEST"]._serialized_start = 1262
-    _globals["_SUBMITLOGREQUEST"]._serialized_end = 1310
-    _globals["_SUBMITLOGRESPONSE"]._serialized_start = 1312
-    _globals["_SUBMITLOGRESPONSE"]._serialized_end = 1348
-    _globals["_SUBMITSPANREQUEST"]._serialized_start = 1350
-    _globals["_SUBMITSPANREQUEST"]._serialized_end = 1401
-    _globals["_SUBMITSPANRESPONSE"]._serialized_start = 1403
-    _globals["_SUBMITSPANRESPONSE"]._serialized_end = 1440
-    _globals["_ENDRUNREQUEST"]._serialized_start = 1442
-    _globals["_ENDRUNREQUEST"]._serialized_end = 1473
-    _globals["_ENDRUNRESPONSE"]._serialized_start = 1475
-    _globals["_ENDRUNRESPONSE"]._serialized_end = 1508
-    _globals["_SUBMITEVALREQUEST"]._serialized_start = 1510
-    _globals["_SUBMITEVALREQUEST"]._serialized_end = 1561
-    _globals["_SUBMITEVALRESPONSE"]._serialized_start = 1563
-    _globals["_SUBMITEVALRESPONSE"]._serialized_end = 1600
-    _globals["_SUBMISSIONSERVICE"]._serialized_start = 1603
-    _globals["_SUBMISSIONSERVICE"]._serialized_end = 1986
+    _globals["_SPAN"]._serialized_end = 1086
+    _globals["_EVAL"]._serialized_start = 1088
+    _globals["_EVAL"]._serialized_end = 1190
+    _globals["_STARTRUNREQUEST"]._serialized_start = 1192
+    _globals["_STARTRUNREQUEST"]._serialized_end = 1239
+    _globals["_STARTRUNRESPONSE"]._serialized_start = 1241
+    _globals["_STARTRUNRESPONSE"]._serialized_end = 1276
+    _globals["_SUBMITLOGREQUEST"]._serialized_start = 1278
+    _globals["_SUBMITLOGREQUEST"]._serialized_end = 1326
+    _globals["_SUBMITLOGRESPONSE"]._serialized_start = 1328
+    _globals["_SUBMITLOGRESPONSE"]._serialized_end = 1364
+    _globals["_SUBMITSPANREQUEST"]._serialized_start = 1366
+    _globals["_SUBMITSPANREQUEST"]._serialized_end = 1417
+    _globals["_SUBMITSPANRESPONSE"]._serialized_start = 1419
+    _globals["_SUBMITSPANRESPONSE"]._serialized_end = 1456
+    _globals["_ENDRUNREQUEST"]._serialized_start = 1458
+    _globals["_ENDRUNREQUEST"]._serialized_end = 1489
+    _globals["_ENDRUNRESPONSE"]._serialized_start = 1491
+    _globals["_ENDRUNRESPONSE"]._serialized_end = 1524
+    _globals["_SUBMITEVALREQUEST"]._serialized_start = 1526
+    _globals["_SUBMITEVALREQUEST"]._serialized_end = 1577
+    _globals["_SUBMITEVALRESPONSE"]._serialized_start = 1579
+    _globals["_SUBMITEVALRESPONSE"]._serialized_end = 1616
+    _globals["_SUBMISSIONSERVICE"]._serialized_start = 1619
+    _globals["_SUBMISSIONSERVICE"]._serialized_end = 2002
 # @@protoc_insertion_point(module_scope)

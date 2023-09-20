@@ -100,8 +100,6 @@ class Span(_message.Message):
         "status",
         "vendor",
         "request_type",
-        "api_base",
-        "api_type",
         "model",
         "temperature",
         "top_p",
@@ -112,6 +110,9 @@ class Span(_message.Message):
         "prompt_tokens",
         "prompt_messages",
         "completions",
+        "api_base",
+        "api_type",
+        "log_id",
     ]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     TRACE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -122,8 +123,6 @@ class Span(_message.Message):
     STATUS_FIELD_NUMBER: _ClassVar[int]
     VENDOR_FIELD_NUMBER: _ClassVar[int]
     REQUEST_TYPE_FIELD_NUMBER: _ClassVar[int]
-    API_BASE_FIELD_NUMBER: _ClassVar[int]
-    API_TYPE_FIELD_NUMBER: _ClassVar[int]
     MODEL_FIELD_NUMBER: _ClassVar[int]
     TEMPERATURE_FIELD_NUMBER: _ClassVar[int]
     TOP_P_FIELD_NUMBER: _ClassVar[int]
@@ -134,6 +133,9 @@ class Span(_message.Message):
     PROMPT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     PROMPT_MESSAGES_FIELD_NUMBER: _ClassVar[int]
     COMPLETIONS_FIELD_NUMBER: _ClassVar[int]
+    API_BASE_FIELD_NUMBER: _ClassVar[int]
+    API_TYPE_FIELD_NUMBER: _ClassVar[int]
+    LOG_ID_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     trace_id: bytes
     span_id: int
@@ -143,8 +145,6 @@ class Span(_message.Message):
     status: Status
     vendor: str
     request_type: str
-    api_base: str
-    api_type: str
     model: str
     temperature: float
     top_p: float
@@ -155,6 +155,9 @@ class Span(_message.Message):
     prompt_tokens: int
     prompt_messages: _containers.RepeatedCompositeFieldContainer[Message]
     completions: _containers.RepeatedCompositeFieldContainer[Message]
+    api_base: str
+    api_type: str
+    log_id: str
     def __init__(
         self,
         run_id: _Optional[str] = ...,
@@ -166,8 +169,6 @@ class Span(_message.Message):
         status: _Optional[_Union[Status, _Mapping]] = ...,
         vendor: _Optional[str] = ...,
         request_type: _Optional[str] = ...,
-        api_base: _Optional[str] = ...,
-        api_type: _Optional[str] = ...,
         model: _Optional[str] = ...,
         temperature: _Optional[float] = ...,
         top_p: _Optional[float] = ...,
@@ -178,6 +179,9 @@ class Span(_message.Message):
         prompt_tokens: _Optional[int] = ...,
         prompt_messages: _Optional[_Iterable[_Union[Message, _Mapping]]] = ...,
         completions: _Optional[_Iterable[_Union[Message, _Mapping]]] = ...,
+        api_base: _Optional[str] = ...,
+        api_type: _Optional[str] = ...,
+        log_id: _Optional[str] = ...,
     ) -> None: ...
 
 class Eval(_message.Message):

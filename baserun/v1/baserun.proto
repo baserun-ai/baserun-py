@@ -53,19 +53,24 @@ message Span {
     // Attributes
     string vendor = 8;
     string request_type = 9;
-    string api_base = 10;
-    string api_type = 11;
-    string model = 12;
-    float temperature = 13;
-    float top_p = 14;
-    float frequency_penalty = 15;
-    float presence_penalty = 16;
-    int32 total_tokens = 17;
-    int32 completion_tokens = 18;
-    int32 prompt_tokens = 19;
+    string model = 10;
+    float temperature = 11;
+    float top_p = 12;
+    float frequency_penalty = 13;
+    float presence_penalty = 14;
+    int32 total_tokens = 15;
+    int32 completion_tokens = 16;
+    int32 prompt_tokens = 17;
 
-    repeated Message prompt_messages = 20;
-    repeated Message completions = 21;
+    repeated Message prompt_messages = 18;
+    repeated Message completions = 19;
+
+    // OpenAI
+    string api_base = 20;
+    string api_type = 21;
+
+    // Anthropic
+    string log_id = 22;
 }
 
 message Eval {

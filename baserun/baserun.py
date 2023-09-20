@@ -23,10 +23,11 @@ from opentelemetry.trace import get_tracer, SpanKind
 from .evals.evals import Evals
 from .exporter import BaserunExporter
 from .helpers import BaserunStepType, TraceType
+from .instrumentation.anthropic import AnthropicInstrumentor
 from .instrumentation.openai import OpenAIInstrumentor
 from .instrumentation.span_attributes import SpanAttributes
 from .patches.anthropic import AnthropicWrapper
-from .v1.baserun_pb2 import Log, SubmitLogRequest, Run, StartRunRequest
+from .v1.baserun_pb2 import Log, SubmitLogRequest, Run, StartRunRequest, EndRunRequest
 from .v1.baserun_pb2_grpc import SubmissionServiceStub
 
 logger = logging.getLogger(__name__)
@@ -109,10 +110,15 @@ class Baserun:
             if not instrumentor.is_instrumented_by_opentelemetry:
                 instrumentor.instrument()
 
+        if find_spec("anthropic") is not None:
+            instrumentor = AnthropicInstrumentor()
+            if not instrumentor.is_instrumented_by_opentelemetry:
+                instrumentor.instrument()
+
     @staticmethod
     def _finish_trace(trace_type: TraceType, run_id: str):
         try:
-            Baserun._submission_service.EndRun(run_id=run_id)
+            Baserun._submission_service.EndRun(EndRunRequest(run_id=run_id))
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
 

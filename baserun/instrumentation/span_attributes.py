@@ -20,3 +20,5 @@ class SpanAttributes:
     OPENAI_API_VERSION = "openai.api_version"
     OPENAI_API_BASE = "openai.api_base"
     OPENAI_API_TYPE = "openai.api_type"
+
+    ANTHROPIC_LOG_ID = "anthropic.log_id"
