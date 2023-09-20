@@ -136,9 +136,7 @@ class Baserun:
         run_id: str = None,
     ):
         run_id = run_id or str(uuid.uuid4())
-        run = Run(
-            run_id=run_id, run_type=trace_type.value, metadata=json.dumps(metadata)
-        )
+        run = Run(run_id=run_id, run_type=trace_type, metadata=json.dumps(metadata))
         try:
             Baserun._submission_service.StartRun(StartRunRequest(run=run))
         except Exception as e:
