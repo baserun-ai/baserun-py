@@ -97,6 +97,7 @@ def instrumented_wrapper(tracer, to_wrap, wrapped, instance, args, kwargs):
         )
 
         # Capture request attributes
+        # noinspection PyBroadException
         try:
             span.set_attribute(SpanAttributes.OPENAI_API_BASE, openai.api_base)
             span.set_attribute(SpanAttributes.OPENAI_API_TYPE, openai.api_type)
@@ -124,9 +125,9 @@ def instrumented_wrapper(tracer, to_wrap, wrapped, instance, args, kwargs):
                 span.set_attribute(f"{prefix}.role", message.get("role"))
                 span.set_attribute(f"{prefix}.content", message.get("content"))
 
-        except Exception as ex:  # pylint: disable=broad-except
+        except Exception as e:
             logger.warning(
-                "Failed to set input attributes for openai span, error: %s", str(ex)
+                f"Failed to set input attributes for openai span, error: {e}"
             )
 
         # Actually call the wrapped method
@@ -139,6 +140,7 @@ def instrumented_wrapper(tracer, to_wrap, wrapped, instance, args, kwargs):
 
         # If it's a full response capture the response attributes
         if response:
+            # noinspection PyBroadException
             try:
                 span.set_status(Status(StatusCode.OK))
                 choices = response.get("choices", [])
@@ -169,11 +171,9 @@ def instrumented_wrapper(tracer, to_wrap, wrapped, instance, args, kwargs):
                         SpanAttributes.LLM_USAGE_PROMPT_TOKENS,
                         usage.get("prompt_tokens"),
                     )
-
-            except Exception as ex:  # pylint: disable=broad-except
+            except Exception as e:
                 logger.warning(
-                    "Failed to set response attributes for openai span, error: %s",
-                    str(ex),
+                    f"Failed to set response attributes for openai span, error: {e}"
                 )
         else:
             # Not sure when this could happen?

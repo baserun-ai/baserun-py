@@ -1,5 +1,6 @@
 import inspect
 import json
+import logging
 import os
 import threading
 import time
@@ -27,6 +28,8 @@ from .instrumentation.span_attributes import SpanAttributes
 from .patches.anthropic import AnthropicWrapper
 from .v1.baserun_pb2 import Log, SubmitLogRequest, Run, StartRunRequest
 from .v1.baserun_pb2_grpc import SubmissionServiceStub
+
+logger = logging.getLogger(__name__)
 
 
 class BaserunEvaluationFailedException(Exception):
@@ -108,7 +111,11 @@ class Baserun:
 
     @staticmethod
     def _finish_trace(trace_type: TraceType, run_id: str):
-        Baserun._submission_service.EndRun(run_id=run_id)
+        try:
+            Baserun._submission_service.EndRun(run_id=run_id)
+        except Exception as e:
+            logger.warning(f"Failed to submit run end to Baserun: {e}")
+
         if trace_type == TraceType.PRODUCTION:
             Baserun.flush()
 
@@ -128,7 +135,10 @@ class Baserun:
         run = Run(
             run_id=run_id, run_type=trace_type.value, metadata=json.dumps(metadata)
         )
-        Baserun._submission_service.StartRun(StartRunRequest(run=run))
+        try:
+            Baserun._submission_service.StartRun(StartRunRequest(run=run))
+        except Exception as e:
+            logger.warning(f"Failed to submit run start to Baserun: {e}")
 
         trace_name = func.__name__
         trace_inputs = []
@@ -292,7 +302,12 @@ class Baserun:
             run_id=run_id, name=name, payload=payload, timestamp=timestamp
         )
         log_request = SubmitLogRequest(log=log_message)
-        Baserun._submission_service.SubmitLog(log_request)
+
+        # noinspection PyBroadException
+        try:
+            Baserun._submission_service.SubmitLog(log_request)
+        except Exception as e:
+            logger.warning(f"Failed to submit log to Baserun: {e}")
 
         Baserun._append_to_buffer(log_entry)
 

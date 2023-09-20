@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
@@ -6,6 +7,8 @@ from baserun.evals.json import is_valid_json
 from baserun.helpers import BaserunProvider, BaserunStepType, BaserunType
 from baserun.patches.openai import OpenAIWrapper
 from baserun.v1.baserun_pb2 import SubmitEvalRequest, Eval
+
+logger = logging.getLogger(__name__)
 
 
 def get_answer_prompt(choices: List[str]) -> str:
@@ -76,8 +79,11 @@ class Evals:
             submission=submission,
             payload=json.dumps(payload),
         )
-        # noinspection PyProtectedMember
-        Baserun._submission_service.SubmitEval(SubmitEvalRequest(eval_message))
+        try:
+            # noinspection PyProtectedMember
+            Baserun._submission_service.SubmitEval(SubmitEvalRequest(eval_message))
+        except Exception as e:
+            logger.warning(f"Failed to submit eval to Baserun: {e}")
 
         if Evals._log_eval:
             data = {

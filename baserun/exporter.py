@@ -1,3 +1,4 @@
+import logging
 from typing import Sequence, Any
 
 from google.protobuf.internal.well_known_types import Timestamp
@@ -7,6 +8,8 @@ from opentelemetry.sdk.trace.export import SpanExporter
 from baserun.instrumentation.openai import WRAPPED_METHODS
 from baserun.instrumentation.span_attributes import SpanAttributes
 from baserun.v1.baserun_pb2 import Status, Message, Span, SubmitSpanRequest
+
+logger = logging.getLogger(__name__)
 
 
 class BaserunExporter(SpanExporter):
@@ -91,8 +94,11 @@ class BaserunExporter(SpanExporter):
                 completions=completions,
             )
             span_request = SubmitSpanRequest(span=span_message)
-            # noinspection PyProtectedMember
-            Baserun._submission_service.SubmitSpan(span_request)
+            try:
+                # noinspection PyProtectedMember
+                Baserun._submission_service.SubmitSpan(span_request)
+            except Exception as e:
+                logger.warning(f"Failed to submit span to Baserun: {e}")
 
     def shutdown(self) -> None:
         pass
