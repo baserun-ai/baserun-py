@@ -114,14 +114,11 @@ class Baserun:
                 instrumentor.instrument()
 
     @staticmethod
-    def _finish_trace(trace_type: TraceType, run_id: str):
+    def _finish_trace(_trace_type: Run.RunType, run_id: str):
         try:
             Baserun._submission_service.EndRun(EndRunRequest(run_id=run_id))
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
-
-        if trace_type == TraceType.PRODUCTION:
-            Baserun.flush()
 
         Baserun._buffer = []
         Baserun._evals = []
@@ -129,14 +126,16 @@ class Baserun:
 
     @staticmethod
     def _start_trace(
-        trace_type: TraceType,
+        trace_type: Run.RunType,
         func: Callable,
         kwargs: Dict,
         metadata: Optional[Dict] = None,
         run_id: str = None,
     ):
         run_id = run_id or str(uuid.uuid4())
-        run = Run(run_id=run_id, run_type=trace_type, metadata=json.dumps(metadata))
+        run = Run(
+            run_id=run_id, run_type=trace_type, metadata=json.dumps(metadata)
+        )
         try:
             Baserun._submission_service.StartRun(StartRunRequest(run=run))
         except Exception as e:
@@ -167,7 +166,7 @@ class Baserun:
         }
 
     @staticmethod
-    def _trace(func: Callable, trace_type: TraceType, metadata: Optional[Dict] = None):
+    def _trace(func: Callable, trace_type: Run.RunType, metadata: Optional[Dict] = None):
         tracer = get_tracer("baserun")
         with tracer.start_as_current_span(
             "baserun_run",
@@ -213,7 +212,7 @@ class Baserun:
                             yield item
 
                     trace_data = Baserun._start_trace(
-                        trace_type, func, kwargs, metadata
+                        trace_type, func, kwargs, metadata, run_id
                     )
 
                     try:
@@ -246,7 +245,7 @@ class Baserun:
                         return func(*args, **kwargs)
 
                     trace_data = Baserun._start_trace(
-                        trace_type, func, kwargs, metadata
+                        trace_type, func, kwargs, metadata, run_id
                     )
 
                     try:
@@ -273,11 +272,11 @@ class Baserun:
 
     @staticmethod
     def trace(func: Callable, metadata: Optional[Dict] = None):
-        return Baserun._trace(func, TraceType.PRODUCTION, metadata)
+        return Baserun._trace(func, Run.RunType.RUN_TYPE_PRODUCTION, metadata)
 
     @staticmethod
     def test(func: Callable, metadata: Optional[Dict] = None):
-        return Baserun._trace(func, TraceType.TEST, metadata)
+        return Baserun._trace(func, Run.RunType.RUN_TYPE_TEST, metadata)
 
     @staticmethod
     def log(name: str, payload: Union[str, Dict]):
