@@ -1,4 +1,3 @@
-import importlib
 import inspect
 import json
 import os
@@ -6,11 +5,14 @@ import threading
 import time
 import uuid
 import warnings
+from datetime import datetime
+from importlib.util import find_spec
 from typing import Callable, Dict, Optional, Union
 from urllib.parse import urlparse
 
 import grpc
 import requests
+from google.protobuf.internal.well_known_types import Timestamp
 from opentelemetry import trace
 from opentelemetry.context import set_value, attach, get_value
 from opentelemetry.sdk.trace import TracerProvider
@@ -23,7 +25,7 @@ from .helpers import BaserunStepType, TraceType
 from .instrumentation.openai import OpenAIInstrumentor
 from .instrumentation.span_attributes import SpanAttributes
 from .patches.anthropic import AnthropicWrapper
-from .v1.baserun_pb2 import Log, SubmitLogRequest, Run
+from .v1.baserun_pb2 import Log, SubmitLogRequest, Run, StartRunRequest
 from .v1.baserun_pb2_grpc import SubmissionServiceStub
 
 
@@ -99,7 +101,7 @@ class Baserun:
         processor = BatchSpanProcessor(BaserunExporter())
         tracer_provider.add_span_processor(processor)
 
-        if importlib.util.find_spec("openai") is not None:
+        if find_spec("openai") is not None:
             instrumentor = OpenAIInstrumentor()
             if not instrumentor.is_instrumented_by_opentelemetry:
                 instrumentor.instrument()
@@ -122,11 +124,11 @@ class Baserun:
         metadata: Optional[Dict] = None,
         run_id: str = None,
     ):
-        run_id = run_id or uuid.uuid4()
+        run_id = run_id or str(uuid.uuid4())
         run = Run(
             run_id=run_id, run_type=trace_type.value, metadata=json.dumps(metadata)
         )
-        Baserun._submission_service.StartRun(run=run)
+        Baserun._submission_service.StartRun(StartRunRequest(run=run))
 
         trace_name = func.__name__
         trace_inputs = []
@@ -158,7 +160,7 @@ class Baserun:
         with tracer.start_as_current_span(
             "baserun_run",
             kind=SpanKind.CLIENT,
-        ) as span:
+        ) as _span:
             run_id = str(uuid.uuid4())
             attach(set_value(SpanAttributes.BASERUN_RUN_ID, run_id))
             if inspect.iscoroutinefunction(func):
@@ -276,17 +278,18 @@ class Baserun:
             )
             return
 
-        current_time = time.time()
         log_entry = {
             "stepType": BaserunStepType.LOG.name.lower(),
             "name": name,
             "payload": payload,
-            "timestamp": current_time,
+            "timestamp": time.time(),
         }
 
         run_id = get_value(SpanAttributes.BASERUN_RUN_ID)
+        timestamp = Timestamp()
+        timestamp.FromDatetime(datetime.now())
         log_message = Log(
-            run_id=run_id, name=name, payload=payload, timestamp=int(current_time * 1e9)
+            run_id=run_id, name=name, payload=payload, timestamp=timestamp
         )
         log_request = SubmitLogRequest(log=log_message)
         Baserun._submission_service.SubmitLog(log_request)
@@ -316,7 +319,7 @@ class Baserun:
         headers = {"Authorization": f"Bearer {Baserun._api_key}"}
 
         try:
-            if all(trace.get("type") == TraceType.TEST for trace in Baserun._traces):
+            if all(t.get("type") == TraceType.TEST for t in Baserun._traces):
                 response = requests.post(
                     f"{Baserun._api_base_url}/runs",
                     json=json.loads(
@@ -331,9 +334,7 @@ class Baserun:
                 parsed_url = urlparse(Baserun._api_base_url)
                 url = f"{parsed_url.scheme}://{parsed_url.netloc}/runs/{test_run_id}"
                 return url
-            elif all(
-                trace.get("type") == TraceType.PRODUCTION for trace in Baserun._traces
-            ):
+            elif all(t.get("type") == TraceType.PRODUCTION for t in Baserun._traces):
                 response = requests.post(
                     f"{Baserun._api_base_url}/traces",
                     json=json.loads(

@@ -1,5 +1,6 @@
 from typing import Sequence, Any
 
+from google.protobuf.internal.well_known_types import Timestamp
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter
 
@@ -45,19 +46,24 @@ class BaserunExporter(SpanExporter):
                 )
             ]
 
-            # Trace IDs are huge integers so they must be encoded as bytes
+            # Trace IDs are huge integers, so they must be encoded as bytes
             trace_id_int = span.context.trace_id
             trace_id = trace_id_int.to_bytes(
                 (trace_id_int.bit_length() + 7) // 8, "big"
             )
+
+            start_time = Timestamp()
+            start_time.FromNanoseconds(span.start_time)
+            end_time = Timestamp()
+            end_time.FromNanoseconds(span.end_time)
 
             span_message = Span(
                 run_id=span.attributes.get(SpanAttributes.BASERUN_RUN_ID, ""),
                 trace_id=trace_id,
                 span_id=span.context.span_id,
                 name=span.name,
-                start_time=span.start_time,
-                end_time=span.end_time,
+                start_time=start_time,
+                end_time=end_time,
                 status=status,
                 vendor=span.attributes.get(SpanAttributes.LLM_VENDOR, ""),
                 request_type=span.attributes.get(SpanAttributes.LLM_REQUEST_TYPE, ""),
@@ -85,6 +91,7 @@ class BaserunExporter(SpanExporter):
                 completions=completions,
             )
             span_request = SubmitSpanRequest(span=span_message)
+            # noinspection PyProtectedMember
             Baserun._submission_service.SubmitSpan(span_request)
 
     def shutdown(self) -> None:

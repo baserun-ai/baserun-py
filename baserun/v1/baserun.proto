@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package baserun.v1;
 
+import "google/protobuf/timestamp.proto";
+
 message Status {
     string message = 1;
 
@@ -36,7 +38,7 @@ message Log {
     string run_id = 1;
     string name = 2;
     string payload = 3;
-    fixed64 timestamp = 4;
+    google.protobuf.Timestamp timestamp = 4;
 }
 
 message Span {
@@ -44,8 +46,8 @@ message Span {
     bytes trace_id = 2;
     uint64 span_id = 3;
     string name = 4;
-    fixed64 start_time = 5;
-    fixed64 end_time = 6;
+    google.protobuf.Timestamp start_time = 5;
+    google.protobuf.Timestamp end_time = 6;
     Status status = 7;
 
     // Attributes
@@ -64,6 +66,16 @@ message Span {
 
     repeated Message prompt_messages = 20;
     repeated Message completions = 21;
+}
+
+message Eval {
+    string name = 1;
+    string type = 2;
+    string result = 3;
+    float score = 4;
+    string submission = 5;
+    // JSONified map<string, any>
+    string payload = 6;
 }
 
 message StartRunRequest {
@@ -98,9 +110,17 @@ message EndRunResponse {
     string message = 1;
 }
 
+message SubmitEvalRequest {
+    Eval eval = 1;
+}
+message SubmitEvalResponse {
+    string message = 1;
+}
+
 service SubmissionService {
     rpc StartRun (StartRunRequest) returns (StartRunResponse);
     rpc SubmitLog (SubmitLogRequest) returns (SubmitLogResponse);
     rpc SubmitSpan (SubmitSpanRequest) returns (SubmitSpanResponse);
     rpc EndRun (EndRunRequest) returns (EndRunResponse);
+    rpc SubmitEval (SubmitEvalRequest) returns (SubmitEvalResponse);
 }

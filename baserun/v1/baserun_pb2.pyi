@@ -1,3 +1,4 @@
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -79,13 +80,13 @@ class Log(_message.Message):
     run_id: str
     name: str
     payload: str
-    timestamp: int
+    timestamp: _timestamp_pb2.Timestamp
     def __init__(
         self,
         run_id: _Optional[str] = ...,
         name: _Optional[str] = ...,
         payload: _Optional[str] = ...,
-        timestamp: _Optional[int] = ...,
+        timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
     ) -> None: ...
 
 class Span(_message.Message):
@@ -137,8 +138,8 @@ class Span(_message.Message):
     trace_id: bytes
     span_id: int
     name: str
-    start_time: int
-    end_time: int
+    start_time: _timestamp_pb2.Timestamp
+    end_time: _timestamp_pb2.Timestamp
     status: Status
     vendor: str
     request_type: str
@@ -160,8 +161,8 @@ class Span(_message.Message):
         trace_id: _Optional[bytes] = ...,
         span_id: _Optional[int] = ...,
         name: _Optional[str] = ...,
-        start_time: _Optional[int] = ...,
-        end_time: _Optional[int] = ...,
+        start_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
+        end_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
         status: _Optional[_Union[Status, _Mapping]] = ...,
         vendor: _Optional[str] = ...,
         request_type: _Optional[str] = ...,
@@ -177,6 +178,30 @@ class Span(_message.Message):
         prompt_tokens: _Optional[int] = ...,
         prompt_messages: _Optional[_Iterable[_Union[Message, _Mapping]]] = ...,
         completions: _Optional[_Iterable[_Union[Message, _Mapping]]] = ...,
+    ) -> None: ...
+
+class Eval(_message.Message):
+    __slots__ = ["name", "type", "result", "score", "submission", "payload"]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    TYPE_FIELD_NUMBER: _ClassVar[int]
+    RESULT_FIELD_NUMBER: _ClassVar[int]
+    SCORE_FIELD_NUMBER: _ClassVar[int]
+    SUBMISSION_FIELD_NUMBER: _ClassVar[int]
+    PAYLOAD_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    type: str
+    result: str
+    score: float
+    submission: str
+    payload: str
+    def __init__(
+        self,
+        name: _Optional[str] = ...,
+        type: _Optional[str] = ...,
+        result: _Optional[str] = ...,
+        score: _Optional[float] = ...,
+        submission: _Optional[str] = ...,
+        payload: _Optional[str] = ...,
     ) -> None: ...
 
 class StartRunRequest(_message.Message):
@@ -222,6 +247,18 @@ class EndRunRequest(_message.Message):
     def __init__(self, run_id: _Optional[str] = ...) -> None: ...
 
 class EndRunResponse(_message.Message):
+    __slots__ = ["message"]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    message: str
+    def __init__(self, message: _Optional[str] = ...) -> None: ...
+
+class SubmitEvalRequest(_message.Message):
+    __slots__ = ["eval"]
+    EVAL_FIELD_NUMBER: _ClassVar[int]
+    eval: Eval
+    def __init__(self, eval: _Optional[_Union[Eval, _Mapping]] = ...) -> None: ...
+
+class SubmitEvalResponse(_message.Message):
     __slots__ = ["message"]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     message: str
