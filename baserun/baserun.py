@@ -389,9 +389,9 @@ class Baserun:
         log_message = Log(
             run_id=run.run_id,
             name=name,
-            payload=payload,
-            timestamp={"seconds": int(timestamp)},
+            payload=json.dumps(payload),
         )
+        log_message.timestamp.FromSeconds(int(time.time()))
         log_request = SubmitLogRequest(log=log_message, run=run)
 
         # noinspection PyBroadException
