@@ -61,8 +61,6 @@ def pytest_sessionfinish(session):
             logger.info("Baserun flush disabled by --no-flush option.")
             return
 
-        run_url = Baserun.flush()
-
 
 def pytest_collection_modifyitems(config, items):
     if config.getoption("--baserun"):

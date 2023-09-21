@@ -54,12 +54,6 @@ def get_choice_and_score(choice_scores: Dict[str, float]):
 
 
 class Evals:
-    _log_eval = None
-
-    @staticmethod
-    def init(log_eval: Callable):
-        Evals._log_eval = log_eval
-
     @staticmethod
     def _store_eval_data(
         name: str,
@@ -86,16 +80,6 @@ class Evals:
             )
         except Exception as e:
             logger.warning(f"Failed to submit eval to Baserun: {e}")
-
-        if Evals._log_eval:
-            data = {
-                "name": name,
-                "type": eval_type,
-                "eval": result,
-                "score": score,
-                "payload": payload,
-            }
-            Evals._log_eval(data)
 
     @staticmethod
     def match(name: str, submission: str, expected: Union[str, List[str]]) -> bool:

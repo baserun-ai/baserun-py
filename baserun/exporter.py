@@ -149,9 +149,3 @@ class BaserunExporter(SpanExporter):
                 Baserun.submission_service.SubmitSpan(span_request)
             except Exception as e:
                 logger.warning(f"Failed to submit span to Baserun: {e}")
-
-    def shutdown(self) -> None:
-        pass
-
-    def force_flush(self, timeout_millis: int = 30000) -> bool:
-        pass
