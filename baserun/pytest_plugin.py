@@ -2,6 +2,8 @@ import logging
 import time
 import uuid
 
+from opentelemetry.context import get_current
+
 from baserun import Baserun
 from baserun.v1.baserun_pb2 import TestSuite, StartTestSuiteRequest, EndTestSuiteRequest
 
@@ -73,3 +75,8 @@ def pytest_terminal_summary(terminalreporter):
     if run_url:
         terminalreporter.write_sep("=", "Baserun summary", blue=True)
         terminalreporter.write_line(f"Test results available at: {run_url}")
+
+
+def pytest_runtest_teardown(*args):
+    context = get_current()
+    context.clear()
