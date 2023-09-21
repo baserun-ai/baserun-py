@@ -1,5 +1,5 @@
 class SpanAttributes:
-    BASERUN_RUN_ID = "baserun.run_id"
+    BASERUN_RUN = "baserun.run"
     # Matches opentelemetry-semconv-llm
     LLM_VENDOR = "llm.vendor"
     LLM_REQUEST_TYPE = "llm.request.type"

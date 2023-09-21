@@ -113,6 +113,7 @@ message StartRunResponse {
 
 message SubmitLogRequest {
     Log log = 1;
+    Run run = 2;
 }
 
 message SubmitLogResponse {

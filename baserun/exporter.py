@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Sequence, Any
 
@@ -9,7 +10,7 @@ from baserun.instrumentation.span_attributes import (
     SpanAttributes,
     ANTHROPIC_VENDOR_NAME,
 )
-from baserun.v1.baserun_pb2 import Status, Message, Span, SubmitSpanRequest
+from baserun.v1.baserun_pb2 import Status, Message, Span, SubmitSpanRequest, Run
 
 logger = logging.getLogger(__name__)
 
@@ -58,11 +59,16 @@ class BaserunExporter(SpanExporter):
             )
 
             vendor = span.attributes.get(SpanAttributes.LLM_VENDOR)
-            run_id = span.attributes.get(SpanAttributes.BASERUN_RUN_ID, "")
-            run = Baserun.runs.get(run_id)
+
+            # Try to get the run data from the span itself, if not found then get it from span context
+            span_run_data = span.attributes.get(SpanAttributes.BASERUN_RUN)
+            if span_run_data:
+                run = Run(**json.loads(span_run_data))
+            else:
+                run = Baserun.current_run()
 
             span_message = Span(
-                run_id=run_id,
+                run_id=run.run_id,
                 trace_id=trace_id,
                 span_id=span.context.span_id,
                 name=span.name,

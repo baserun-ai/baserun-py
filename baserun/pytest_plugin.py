@@ -33,6 +33,7 @@ def pytest_sessionstart(session):
         suite = TestSuite(id=str(uuid.uuid4()))
         suite.start_timestamp.FromSeconds(int(time.time()))
         session.suite = suite
+        Baserun.current_test_suite = suite
         try:
             Baserun.submission_service.StartTestSuite(
                 StartTestSuiteRequest(test_suite=suite)
@@ -45,12 +46,14 @@ def pytest_sessionfinish(session):
     global run_url
     if session.config.getoption("--baserun"):
         if hasattr(session, "suite"):
+            session.suite.completion_timestamp.FromSeconds(int(time.time()))
+
             try:
                 Baserun.submission_service.EndTestSuite(
                     EndTestSuiteRequest(test_suite=session.suite)
                 )
             except Exception as e:
-                logger.warning(f"Failed to start test suite for Baserun, error: {e}")
+                logger.warning(f"Failed to end test suite for Baserun, error: {e}")
 
         if session.config.getoption("--no-flush"):
             logger.info("Baserun flush disabled by --no-flush option.")

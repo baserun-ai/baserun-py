@@ -307,10 +307,16 @@ class StartRunResponse(_message.Message):
     def __init__(self, message: _Optional[str] = ...) -> None: ...
 
 class SubmitLogRequest(_message.Message):
-    __slots__ = ["log"]
+    __slots__ = ["log", "run"]
     LOG_FIELD_NUMBER: _ClassVar[int]
+    RUN_FIELD_NUMBER: _ClassVar[int]
     log: Log
-    def __init__(self, log: _Optional[_Union[Log, _Mapping]] = ...) -> None: ...
+    run: Run
+    def __init__(
+        self,
+        log: _Optional[_Union[Log, _Mapping]] = ...,
+        run: _Optional[_Union[Run, _Mapping]] = ...,
+    ) -> None: ...
 
 class SubmitLogResponse(_message.Message):
     __slots__ = ["message"]

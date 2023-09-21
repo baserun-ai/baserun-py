@@ -1,8 +1,9 @@
+import json
 import logging
 from types import GeneratorType
 
 from opentelemetry import context as context_api, trace
-from opentelemetry.context import _SUPPRESS_INSTRUMENTATION_KEY, get_value
+from opentelemetry.context import _SUPPRESS_INSTRUMENTATION_KEY
 from opentelemetry.sdk.trace import Span
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
@@ -68,8 +69,19 @@ def instrumented_wrapper(
 
     # Activate the span in the current context, but don't end it automatically
     with trace.use_span(span, end_on_exit=False):
+        from baserun import Baserun
+
+        run = Baserun.current_run()
         span.set_attribute(
-            SpanAttributes.BASERUN_RUN_ID, get_value(SpanAttributes.BASERUN_RUN_ID)
+            SpanAttributes.BASERUN_RUN,
+            json.dumps(
+                {
+                    "run_id": run.run_id,
+                    "run_type": run.run_type,
+                    "metadata": run.metadata,
+                    "start_timestamp": {"seconds": run.start_timestamp.seconds},
+                }
+            ),
         )
 
         # Capture request attributes
