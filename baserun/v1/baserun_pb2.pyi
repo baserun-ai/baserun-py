@@ -52,6 +52,7 @@ class Message(_message.Message):
 class Run(_message.Message):
     __slots__ = [
         "run_id",
+        "suite_id",
         "name",
         "inputs",
         "run_type",
@@ -69,6 +70,7 @@ class Run(_message.Message):
     RUN_TYPE_TEST: Run.RunType
     RUN_TYPE_PRODUCTION: Run.RunType
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    SUITE_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     INPUTS_FIELD_NUMBER: _ClassVar[int]
     RUN_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -78,6 +80,7 @@ class Run(_message.Message):
     RESULT_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
     run_id: str
+    suite_id: str
     name: str
     inputs: _containers.RepeatedScalarFieldContainer[str]
     run_type: Run.RunType
@@ -89,6 +92,7 @@ class Run(_message.Message):
     def __init__(
         self,
         run_id: _Optional[str] = ...,
+        suite_id: _Optional[str] = ...,
         name: _Optional[str] = ...,
         inputs: _Optional[_Iterable[str]] = ...,
         run_type: _Optional[_Union[Run.RunType, str]] = ...,
@@ -270,6 +274,26 @@ class Eval(_message.Message):
         payload: _Optional[str] = ...,
     ) -> None: ...
 
+class TestSuite(_message.Message):
+    __slots__ = ["id", "name", "start_timestamp", "completion_timestamp"]
+    ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    START_TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    COMPLETION_TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    name: str
+    start_timestamp: _timestamp_pb2.Timestamp
+    completion_timestamp: _timestamp_pb2.Timestamp
+    def __init__(
+        self,
+        id: _Optional[str] = ...,
+        name: _Optional[str] = ...,
+        start_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
+        completion_timestamp: _Optional[
+            _Union[_timestamp_pb2.Timestamp, _Mapping]
+        ] = ...,
+    ) -> None: ...
+
 class StartRunRequest(_message.Message):
     __slots__ = ["run"]
     RUN_FIELD_NUMBER: _ClassVar[int]
@@ -295,10 +319,16 @@ class SubmitLogResponse(_message.Message):
     def __init__(self, message: _Optional[str] = ...) -> None: ...
 
 class SubmitSpanRequest(_message.Message):
-    __slots__ = ["span"]
+    __slots__ = ["span", "run"]
     SPAN_FIELD_NUMBER: _ClassVar[int]
+    RUN_FIELD_NUMBER: _ClassVar[int]
     span: Span
-    def __init__(self, span: _Optional[_Union[Span, _Mapping]] = ...) -> None: ...
+    run: Run
+    def __init__(
+        self,
+        span: _Optional[_Union[Span, _Mapping]] = ...,
+        run: _Optional[_Union[Run, _Mapping]] = ...,
+    ) -> None: ...
 
 class SubmitSpanResponse(_message.Message):
     __slots__ = ["message"]
@@ -325,6 +355,34 @@ class SubmitEvalRequest(_message.Message):
     def __init__(self, eval: _Optional[_Union[Eval, _Mapping]] = ...) -> None: ...
 
 class SubmitEvalResponse(_message.Message):
+    __slots__ = ["message"]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    message: str
+    def __init__(self, message: _Optional[str] = ...) -> None: ...
+
+class StartTestSuiteRequest(_message.Message):
+    __slots__ = ["test_suite"]
+    TEST_SUITE_FIELD_NUMBER: _ClassVar[int]
+    test_suite: TestSuite
+    def __init__(
+        self, test_suite: _Optional[_Union[TestSuite, _Mapping]] = ...
+    ) -> None: ...
+
+class StartTestSuiteResponse(_message.Message):
+    __slots__ = ["message"]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    message: str
+    def __init__(self, message: _Optional[str] = ...) -> None: ...
+
+class EndTestSuiteRequest(_message.Message):
+    __slots__ = ["test_suite"]
+    TEST_SUITE_FIELD_NUMBER: _ClassVar[int]
+    test_suite: TestSuite
+    def __init__(
+        self, test_suite: _Optional[_Union[TestSuite, _Mapping]] = ...
+    ) -> None: ...
+
+class EndTestSuiteResponse(_message.Message):
     __slots__ = ["message"]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     message: str

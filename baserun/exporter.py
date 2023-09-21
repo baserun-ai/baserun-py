@@ -58,8 +58,11 @@ class BaserunExporter(SpanExporter):
             )
 
             vendor = span.attributes.get(SpanAttributes.LLM_VENDOR)
+            run_id = span.attributes.get(SpanAttributes.BASERUN_RUN_ID, "")
+            run = Baserun.runs.get(run_id)
+
             span_message = Span(
-                run_id=span.attributes.get(SpanAttributes.BASERUN_RUN_ID, ""),
+                run_id=run_id,
                 trace_id=trace_id,
                 span_id=span.context.span_id,
                 name=span.name,
@@ -135,10 +138,10 @@ class BaserunExporter(SpanExporter):
                 if user := span.attributes.get(SpanAttributes.LLM_USER):
                     span_message.user = user
 
-            span_request = SubmitSpanRequest(span=span_message)
+            span_request = SubmitSpanRequest(span=span_message, run=run)
             try:
                 # noinspection PyProtectedMember
-                Baserun._submission_service.SubmitSpan(span_request)
+                Baserun.submission_service.SubmitSpan(span_request)
             except Exception as e:
                 logger.warning(f"Failed to submit span to Baserun: {e}")
 

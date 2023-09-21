@@ -39,6 +39,16 @@ class SubmissionServiceStub(object):
             request_serializer=v1_dot_baserun__pb2.SubmitEvalRequest.SerializeToString,
             response_deserializer=v1_dot_baserun__pb2.SubmitEvalResponse.FromString,
         )
+        self.StartTestSuite = channel.unary_unary(
+            "/baserun.v1.SubmissionService/StartTestSuite",
+            request_serializer=v1_dot_baserun__pb2.StartTestSuiteRequest.SerializeToString,
+            response_deserializer=v1_dot_baserun__pb2.StartTestSuiteResponse.FromString,
+        )
+        self.EndTestSuite = channel.unary_unary(
+            "/baserun.v1.SubmissionService/EndTestSuite",
+            request_serializer=v1_dot_baserun__pb2.EndTestSuiteRequest.SerializeToString,
+            response_deserializer=v1_dot_baserun__pb2.EndTestSuiteResponse.FromString,
+        )
 
 
 class SubmissionServiceServicer(object):
@@ -74,6 +84,18 @@ class SubmissionServiceServicer(object):
         context.set_details("Method not implemented!")
         raise NotImplementedError("Method not implemented!")
 
+    def StartTestSuite(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
+
+    def EndTestSuite(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
+
 
 def add_SubmissionServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -101,6 +123,16 @@ def add_SubmissionServiceServicer_to_server(servicer, server):
             servicer.SubmitEval,
             request_deserializer=v1_dot_baserun__pb2.SubmitEvalRequest.FromString,
             response_serializer=v1_dot_baserun__pb2.SubmitEvalResponse.SerializeToString,
+        ),
+        "StartTestSuite": grpc.unary_unary_rpc_method_handler(
+            servicer.StartTestSuite,
+            request_deserializer=v1_dot_baserun__pb2.StartTestSuiteRequest.FromString,
+            response_serializer=v1_dot_baserun__pb2.StartTestSuiteResponse.SerializeToString,
+        ),
+        "EndTestSuite": grpc.unary_unary_rpc_method_handler(
+            servicer.EndTestSuite,
+            request_deserializer=v1_dot_baserun__pb2.EndTestSuiteRequest.FromString,
+            response_serializer=v1_dot_baserun__pb2.EndTestSuiteResponse.SerializeToString,
         ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -248,6 +280,64 @@ class SubmissionService(object):
             "/baserun.v1.SubmissionService/SubmitEval",
             v1_dot_baserun__pb2.SubmitEvalRequest.SerializeToString,
             v1_dot_baserun__pb2.SubmitEvalResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
+
+    @staticmethod
+    def StartTestSuite(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            "/baserun.v1.SubmissionService/StartTestSuite",
+            v1_dot_baserun__pb2.StartTestSuiteRequest.SerializeToString,
+            v1_dot_baserun__pb2.StartTestSuiteResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
+
+    @staticmethod
+    def EndTestSuite(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            "/baserun.v1.SubmissionService/EndTestSuite",
+            v1_dot_baserun__pb2.EndTestSuiteRequest.SerializeToString,
+            v1_dot_baserun__pb2.EndTestSuiteResponse.FromString,
             options,
             channel_credentials,
             insecure,

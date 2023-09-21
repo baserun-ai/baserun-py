@@ -24,14 +24,15 @@ message Message {
 
 message Run {
     string run_id = 1;
-    string name = 2;
-    repeated string inputs = 3;
-    RunType run_type = 4;
-    string metadata = 5; // JSONified map<string, any>
-    google.protobuf.Timestamp start_timestamp = 6;
-    google.protobuf.Timestamp completion_timestamp = 7;
-    string result = 8;
-    string error = 9;
+    string suite_id = 2;
+    string name = 3;
+    repeated string inputs = 4;
+    RunType run_type = 5;
+    string metadata = 6; // JSONified map<string, any>
+    google.protobuf.Timestamp start_timestamp = 7;
+    google.protobuf.Timestamp completion_timestamp = 8;
+    string result = 9;
+    string error = 10;
 
     enum RunType {
         RUN_TYPE_TEST = 0;
@@ -95,6 +96,13 @@ message Eval {
     string payload = 6; // JSONified map<string, any>
 }
 
+message TestSuite {
+    string id = 1;
+    string name = 2;
+    google.protobuf.Timestamp start_timestamp = 3;
+    google.protobuf.Timestamp completion_timestamp = 4;
+}
+
 message StartRunRequest {
     Run run = 1;
 }
@@ -113,6 +121,7 @@ message SubmitLogResponse {
 
 message SubmitSpanRequest {
     Span span = 1;
+    Run run = 2;
 }
 
 message SubmitSpanResponse {
@@ -134,10 +143,28 @@ message SubmitEvalResponse {
     string message = 1;
 }
 
+message StartTestSuiteRequest {
+    TestSuite test_suite = 1;
+}
+
+message StartTestSuiteResponse {
+    string message = 1;
+}
+
+message EndTestSuiteRequest {
+    TestSuite test_suite = 1;
+}
+
+message EndTestSuiteResponse {
+    string message = 1;
+}
+
 service SubmissionService {
     rpc StartRun (StartRunRequest) returns (StartRunResponse);
     rpc SubmitLog (SubmitLogRequest) returns (SubmitLogResponse);
     rpc SubmitSpan (SubmitSpanRequest) returns (SubmitSpanResponse);
     rpc EndRun (EndRunRequest) returns (EndRunResponse);
     rpc SubmitEval (SubmitEvalRequest) returns (SubmitEvalResponse);
+    rpc StartTestSuite (StartTestSuiteRequest) returns (StartTestSuiteResponse);
+    rpc EndTestSuite (EndTestSuiteRequest) returns (EndTestSuiteResponse);
 }

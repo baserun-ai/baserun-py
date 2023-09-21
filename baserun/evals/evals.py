@@ -81,7 +81,7 @@ class Evals:
         )
         try:
             # noinspection PyProtectedMember
-            Baserun._submission_service.SubmitEval(SubmitEvalRequest(eval_message))
+            Baserun.submission_service.SubmitEval(SubmitEvalRequest(eval_message))
         except Exception as e:
             logger.warning(f"Failed to submit eval to Baserun: {e}")
 

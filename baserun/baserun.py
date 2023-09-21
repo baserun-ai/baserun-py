@@ -50,7 +50,9 @@ class Baserun:
     _api_key = None
 
     _grpc_channel: grpc.Channel = None
-    _submission_service: SubmissionServiceStub = None
+    submission_service: SubmissionServiceStub = None
+
+    runs: dict[str, Run] = None
 
     evals = Evals
 
@@ -73,6 +75,7 @@ class Baserun:
         Baserun._api_base_url = api_base_url
         Baserun._api_key = api_key
         Baserun._initialized = True
+        Baserun.runs = {}
 
         if key_chain := os.environ.get("SSL_KEY_CHAIN"):
             ssl_creds = grpc.ssl_channel_credentials(
@@ -87,7 +90,7 @@ class Baserun:
         )
         Baserun._grpc_channel = grpc.secure_channel(grpc_base, channel_credentials)
 
-        Baserun._submission_service = SubmissionServiceStub(Baserun._grpc_channel)
+        Baserun.submission_service = SubmissionServiceStub(Baserun._grpc_channel)
 
         Baserun.evals.init(Baserun._append_to_evals)
 
@@ -117,7 +120,7 @@ class Baserun:
     def _finish_trace(_trace_type: Run.RunType, run: Run):
         try:
             run.completion_timestamp.FromSeconds(int(time.time()))
-            Baserun._submission_service.EndRun(EndRunRequest(run=run))
+            Baserun.submission_service.EndRun(EndRunRequest(run=run))
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
 
@@ -142,7 +145,7 @@ class Baserun:
             run.inputs.append(f"{input_name}: {input_result}")
 
         try:
-            Baserun._submission_service.StartRun(StartRunRequest(run=run))
+            Baserun.submission_service.StartRun(StartRunRequest(run=run))
         except Exception as e:
             logger.warning(f"Failed to submit run start to Baserun: {e}")
 
@@ -177,6 +180,10 @@ class Baserun:
                 metadata=json.dumps(metadata),
                 start_timestamp={"seconds": int(time.time())},
             )
+            if not Baserun.runs:
+                Baserun.runs = {}
+
+            Baserun.runs[run.run_id] = run
             attach(set_value(SpanAttributes.BASERUN_RUN_ID, run_id))
             if inspect.iscoroutinefunction(func):
 
@@ -331,7 +338,7 @@ class Baserun:
 
         # noinspection PyBroadException
         try:
-            Baserun._submission_service.SubmitLog(log_request)
+            Baserun.submission_service.SubmitLog(log_request)
         except Exception as e:
             logger.warning(f"Failed to submit log to Baserun: {e}")
 
