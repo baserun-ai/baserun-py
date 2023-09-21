@@ -139,7 +139,9 @@ message EndRunResponse {
 
 message SubmitEvalRequest {
     Eval eval = 1;
+    Run run = 2;
 }
+
 message SubmitEvalResponse {
     string message = 1;
 }

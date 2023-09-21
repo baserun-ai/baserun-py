@@ -146,7 +146,6 @@ class BaserunExporter(SpanExporter):
 
             span_request = SubmitSpanRequest(span=span_message, run=run)
             try:
-                # noinspection PyProtectedMember
                 Baserun.submission_service.SubmitSpan(span_request)
             except Exception as e:
                 logger.warning(f"Failed to submit span to Baserun: {e}")

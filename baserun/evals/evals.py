@@ -79,9 +79,11 @@ class Evals:
             submission=submission,
             payload=json.dumps(payload),
         )
+        run = Baserun.get_or_create_current_run(name)
         try:
-            # noinspection PyProtectedMember
-            Baserun.submission_service.SubmitEval(SubmitEvalRequest(eval_message))
+            Baserun.submission_service.SubmitEval(
+                SubmitEvalRequest(eval=eval_message, run=run)
+            )
         except Exception as e:
             logger.warning(f"Failed to submit eval to Baserun: {e}")
 

@@ -355,10 +355,16 @@ class EndRunResponse(_message.Message):
     def __init__(self, message: _Optional[str] = ...) -> None: ...
 
 class SubmitEvalRequest(_message.Message):
-    __slots__ = ["eval"]
+    __slots__ = ["eval", "run"]
     EVAL_FIELD_NUMBER: _ClassVar[int]
+    RUN_FIELD_NUMBER: _ClassVar[int]
     eval: Eval
-    def __init__(self, eval: _Optional[_Union[Eval, _Mapping]] = ...) -> None: ...
+    run: Run
+    def __init__(
+        self,
+        eval: _Optional[_Union[Eval, _Mapping]] = ...,
+        run: _Optional[_Union[Run, _Mapping]] = ...,
+    ) -> None: ...
 
 class SubmitEvalResponse(_message.Message):
     __slots__ = ["message"]
