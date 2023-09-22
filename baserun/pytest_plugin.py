@@ -1,6 +1,6 @@
 import logging
-import time
 import uuid
+from datetime import datetime
 
 from opentelemetry.context import get_current
 
@@ -33,7 +33,7 @@ def pytest_sessionstart(session):
         Baserun.init(api_url)
 
         suite = TestSuite(id=str(uuid.uuid4()))
-        suite.start_timestamp.FromSeconds(int(time.time()))
+        suite.start_timestamp.FromDatetime(datetime.utcnow())
         session.suite = suite
         Baserun.current_test_suite = suite
         try:
@@ -48,7 +48,7 @@ def pytest_sessionfinish(session):
     global run_url
     if session.config.getoption("--baserun"):
         if hasattr(session, "suite"):
-            session.suite.completion_timestamp.FromSeconds(int(time.time()))
+            session.suite.completion_timestamp.FromDatetime(datetime.utcnow())
 
             try:
                 Baserun.submission_service.EndTestSuite(

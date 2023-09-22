@@ -1,9 +1,8 @@
-import json
 import logging
 from types import GeneratorType
 
 from opentelemetry import context as context_api, trace
-from opentelemetry.context import _SUPPRESS_INSTRUMENTATION_KEY
+from opentelemetry.context import _SUPPRESS_INSTRUMENTATION_KEY, get_value
 from opentelemetry.sdk.trace import Span
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
@@ -67,65 +66,67 @@ def instrumented_wrapper(
         },
     )
 
-    # Activate the span in the current context, but don't end it automatically
-    with trace.use_span(span, end_on_exit=False):
-        from baserun import Baserun
-
-        run = Baserun.current_run()
-        span.set_attribute(
-            SpanAttributes.BASERUN_RUN,
-            json.dumps(
-                {
-                    "run_id": run.run_id,
-                    "run_type": run.run_type,
-                    "metadata": run.metadata,
-                    "start_timestamp": {"seconds": run.start_timestamp.seconds},
-                }
-            ),
-        )
-
-        # Capture request attributes
-        # noinspection PyBroadException
-        try:
-            instrumentor.set_request_attributes(span, kwargs)
-
-            span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model"))
-
-            max_tokens = kwargs.get("max_tokens", kwargs.get("max_tokens_to_sample"))
-            if max_tokens is not None:
-                span.set_attribute(SpanAttributes.LLM_REQUEST_MAX_TOKENS, max_tokens)
-        except Exception as e:
-            logger.warning(
-                f"Failed to set input attributes for Baserun span, error: {e}"
-            )
-
-        # Actually call the wrapped method
-        response = wrapped(*args, **kwargs)
-
-        # If this is a streaming response, wrap it, so we can capture each chunk
-        if isinstance(response, GeneratorType):
-            wrapped_response = generator_wrapper(response, span)
-            return wrapped_response
-
-        # If it's a full response capture the response attributes
-        if response:
+    try:
+        # Activate the span in the current context, but don't end it automatically
+        with trace.use_span(span, end_on_exit=False):
+            # Capture request attributes
             # noinspection PyBroadException
             try:
-                span.set_status(Status(StatusCode.OK))
-                instrumentor.set_response_attributes(span, response)
-            except Exception as e:
-                import pdb
+                instrumentor.set_request_attributes(span, kwargs)
 
-                pdb.set_trace()
-                logger.warning(
-                    f"Failed to set response attributes for Baserun span, error: {e}"
+                span.set_attribute(
+                    SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model")
                 )
-        else:
-            # Not sure when this could happen?
-            span.set_status(
-                Status(description="No response received", status_code=StatusCode.UNSET)
-            )
 
-    # End the span and return the response
-    span.end()
+                max_tokens = kwargs.get(
+                    "max_tokens", kwargs.get("max_tokens_to_sample")
+                )
+                if max_tokens is not None:
+                    span.set_attribute(
+                        SpanAttributes.LLM_REQUEST_MAX_TOKENS, max_tokens
+                    )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to set input attributes for Baserun span, error: {e}"
+                )
+
+                # Actually call the wrapped method
+            response = wrapped(*args, **kwargs)
+
+            # If this is a streaming response, wrap it, so we can capture each chunk
+            if isinstance(response, GeneratorType):
+                wrapped_response = generator_wrapper(response, span)
+                return wrapped_response
+
+            run = get_value(SpanAttributes.BASERUN_RUN)
+            if not run:
+                logger.warning(
+                    "Baserun data not propagated correctly, cannot send data"
+                )
+                span.end()
+                return response
+
+            from baserun import Baserun
+
+            span.set_attribute(SpanAttributes.BASERUN_RUN, Baserun.serialize_run(run))
+
+            # If it's a full response capture the response attributes
+            if response:
+                # noinspection PyBroadException
+                try:
+                    span.set_status(Status(StatusCode.OK))
+                    instrumentor.set_response_attributes(span, response)
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to set response attributes for Baserun span, error: {e}"
+                    )
+            else:
+                # Not sure when this could happen?
+                span.set_status(
+                    Status(
+                        description="No response received", status_code=StatusCode.UNSET
+                    )
+                )
+    finally:
+        span.end()
     return response

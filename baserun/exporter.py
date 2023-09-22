@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Sequence, Any
 
@@ -10,7 +9,7 @@ from baserun.instrumentation.span_attributes import (
     SpanAttributes,
     ANTHROPIC_VENDOR_NAME,
 )
-from baserun.v1.baserun_pb2 import Status, Message, Span, SubmitSpanRequest, Run
+from baserun.v1.baserun_pb2 import Status, Message, Span, SubmitSpanRequest
 
 logger = logging.getLogger(__name__)
 
@@ -60,12 +59,9 @@ class BaserunExporter(SpanExporter):
 
             vendor = span.attributes.get(SpanAttributes.LLM_VENDOR)
 
-            # Try to get the run data from the span itself, if not found then get it from span context
-            span_run_data = span.attributes.get(SpanAttributes.BASERUN_RUN)
-            if span_run_data:
-                run = Run(**json.loads(span_run_data))
-            else:
-                run = Baserun.current_run()
+            run = Baserun.deserialize_run(
+                span.attributes.get(SpanAttributes.BASERUN_RUN)
+            )
 
             span_message = Span(
                 run_id=run.run_id,
@@ -73,12 +69,6 @@ class BaserunExporter(SpanExporter):
                 span_id=span.context.span_id,
                 name=span.name,
                 vendor=vendor,
-                start_time={
-                    "seconds": int(span.start_time / 1_000_000),
-                },
-                end_time={
-                    "seconds": int(span.end_time / 1_000_000),
-                },
                 status=status,
                 total_tokens=span.attributes.get(
                     SpanAttributes.LLM_USAGE_TOTAL_TOKENS, 0
@@ -93,6 +83,19 @@ class BaserunExporter(SpanExporter):
                 model=span.attributes.get(SpanAttributes.LLM_REQUEST_MODEL, ""),
                 completions=completions,
             )
+
+            if run.start_timestamp:
+                # You can't assign to a timestamp field, so we do this junk
+                span_message.start_time.FromDatetime(run.start_timestamp.ToDatetime())
+            else:
+                span_message.start_time.FromSeconds(span.start_time)
+
+            if run.completion_timestamp:
+                span_message.end_time.FromDatetime(
+                    run.completion_timestamp.ToDatetime()
+                )
+            else:
+                span_message.end_time.FromSeconds(span.end_time)
 
             if vendor == ANTHROPIC_VENDOR_NAME:
                 span_message.log_id = span.attributes.get(
@@ -148,4 +151,7 @@ class BaserunExporter(SpanExporter):
             try:
                 Baserun.submission_service.SubmitSpan(span_request)
             except Exception as e:
-                logger.warning(f"Failed to submit span to Baserun: {e}")
+                if hasattr(e, "details"):
+                    logger.warning(f"Failed to submit span to Baserun: {e.details()}")
+                else:
+                    logger.warning(f"Failed to submit span to Baserun: {e}")
