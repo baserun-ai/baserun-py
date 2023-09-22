@@ -83,19 +83,8 @@ class BaserunExporter(SpanExporter):
                 model=span.attributes.get(SpanAttributes.LLM_REQUEST_MODEL, ""),
                 completions=completions,
             )
-
-            if run.start_timestamp:
-                # You can't assign to a timestamp field, so we do this junk
-                span_message.start_time.FromDatetime(run.start_timestamp.ToDatetime())
-            else:
-                span_message.start_time.FromSeconds(span.start_time)
-
-            if run.completion_timestamp:
-                span_message.end_time.FromDatetime(
-                    run.completion_timestamp.ToDatetime()
-                )
-            else:
-                span_message.end_time.FromSeconds(span.end_time)
+            span_message.start_time.FromNanoseconds(span.start_time)
+            span_message.end_time.FromNanoseconds(span.end_time)
 
             if vendor == ANTHROPIC_VENDOR_NAME:
                 span_message.log_id = span.attributes.get(
