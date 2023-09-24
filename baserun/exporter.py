@@ -85,6 +85,7 @@ class BaserunExporter(SpanExporter):
                 prompt_messages=prompt_messages,
                 model=span.attributes.get(SpanAttributes.LLM_REQUEST_MODEL, ""),
                 completions=completions,
+                request_type=span.attributes.get(SpanAttributes.LLM_REQUEST_TYPE, ""),
             )
             span_message.start_time.FromNanoseconds(span.start_time)
             span_message.end_time.FromNanoseconds(span.end_time)
@@ -94,9 +95,6 @@ class BaserunExporter(SpanExporter):
                     SpanAttributes.ANTHROPIC_LOG_ID, ""
                 )
             else:
-                span_message.request_type = span.attributes.get(
-                    SpanAttributes.LLM_REQUEST_TYPE, ""
-                )
                 span_message.api_base = span.attributes.get(
                     SpanAttributes.OPENAI_API_BASE, ""
                 )

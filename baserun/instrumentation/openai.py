@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import json
 import logging
 from types import GeneratorType
@@ -11,23 +10,38 @@ from opentelemetry.sdk.trace import Span
 
 from baserun.instrumentation.base_instrumentor import BaseInstrumentor
 from baserun.instrumentation.span_attributes import SpanAttributes, OPENAI_VENDOR_NAME
-from baserun.instrumentation.wrappers import instrumented_wrapper
 
 logger = logging.getLogger(__name__)
 
 _instruments = ("openai >= 0.27.0",)
 __version__ = "0.1.0"
 
-WRAPPED_METHODS = {
-    ChatCompletion.create: "openai.chat",
-    ChatCompletion.acreate: "openai.chat",
-    Completion.create: "openai.completion",
-    Completion.acreate: "openai.completion",
-}
-
 
 class OpenAIInstrumentor(BaseInstrumentor):
     """An instrumentor for OpenAI's client library."""
+
+    WRAPPED_METHODS = [
+        {
+            "class": ChatCompletion,
+            "function": ChatCompletion.create,
+            "span_name": "openai.chat",
+        },
+        {
+            "class": ChatCompletion,
+            "function": ChatCompletion.acreate,
+            "span_name": "openai.chat",
+        },
+        {
+            "class": Completion,
+            "function": ChatCompletion.create,
+            "span_name": "openai.chat",
+        },
+        {
+            "class": Completion,
+            "function": ChatCompletion.acreate,
+            "span_name": "openai.chat",
+        },
+    ]
 
     def instrumentation_dependencies(self) -> Collection[str]:
         return _instruments
@@ -104,21 +118,6 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 SpanAttributes.LLM_USAGE_PROMPT_TOKENS,
                 usage.get("prompt_tokens"),
             )
-
-    def _instrument(self, **kwargs):
-        for original_method, span_name in WRAPPED_METHODS.items():
-            wrapper = instrumented_wrapper(original_method, self, span_name)
-            setattr(original_method.__self__, original_method.__name__, wrapper)
-            setattr(original_method.__self__, "_original_fn", original_method)
-            wrapper._original_fn = original_method
-
-    def _uninstrument(self, **kwargs):
-        for wrapped_method in WRAPPED_METHODS.keys():
-            original_method = getattr(wrapped_method, "_original_fn")
-            if original_method:
-                setattr(
-                    wrapped_method.__self__, wrapped_method.__name__, original_method
-                )
 
     @staticmethod
     def generator_wrapper(original_generator: GeneratorType, span: Span):

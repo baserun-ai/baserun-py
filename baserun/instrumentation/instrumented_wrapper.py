@@ -1,6 +1,6 @@
 import logging
 from types import GeneratorType
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
 
 from opentelemetry import context as context_api, trace
 from opentelemetry.context import _SUPPRESS_INSTRUMENTATION_KEY
@@ -12,14 +12,16 @@ from opentelemetry.trace import (
     get_current_span,
 )
 
-from baserun.instrumentation.base_instrumentor import BaseInstrumentor
 from baserun.instrumentation.span_attributes import SpanAttributes
+
+if TYPE_CHECKING:
+    from baserun.instrumentation.base_instrumentor import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
 
 
 def instrumented_wrapper(
-    wrapped_fn: Callable, instrumentor: BaseInstrumentor, span_name: str
+    wrapped_fn: Callable, instrumentor: "BaseInstrumentor", span_name: str
 ):
     """Generates a function (`instrumented_function`) which instruments the original function (`wrapped_fn`)"""
 
