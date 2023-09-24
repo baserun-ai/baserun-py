@@ -74,7 +74,7 @@ class Evals:
             submission=submission,
             payload=json.dumps(payload),
         )
-        run = Baserun.get_or_create_current_run(name)
+        run = Baserun.current_run()
         try:
             Baserun.submission_service.SubmitEval(
                 SubmitEvalRequest(eval=eval_message, run=run)

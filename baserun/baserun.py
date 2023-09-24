@@ -11,15 +11,14 @@ from typing import Callable, Dict, Optional, Union, Any
 
 import grpc
 from opentelemetry import trace
-from opentelemetry.context import set_value, attach, get_value
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.context import set_value, attach
+from opentelemetry.sdk.trace import TracerProvider, _Span
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import get_tracer, SpanKind
+from opentelemetry.trace import SpanKind, get_current_span
 
 from .evals.evals import Evals
 from .exporter import BaserunExporter
-from .instrumentation.anthropic import AnthropicInstrumentor
-from .instrumentation.openai import OpenAIInstrumentor
+from .instrumentation.base_instrumentor import BaseInstrumentor
 from .instrumentation.span_attributes import SpanAttributes
 from .v1.baserun_pb2 import (
     Log,
@@ -43,6 +42,8 @@ class Baserun:
 
     _api_base_url = None
     _api_key = None
+
+    _instrumentors: list[BaseInstrumentor] = None
 
     submission_service: SubmissionServiceStub = None
 
@@ -94,20 +95,35 @@ class Baserun:
         processor = BatchSpanProcessor(BaserunExporter())
         tracer_provider.add_span_processor(processor)
 
+        Baserun.instrument()
+
+    @staticmethod
+    def instrument():
+        if not Baserun._instrumentors:
+            Baserun._instrumentors = []
+
         if find_spec("openai") is not None:
+            from .instrumentation.openai import OpenAIInstrumentor
+
             instrumentor = OpenAIInstrumentor()
             if not instrumentor.is_instrumented_by_opentelemetry:
                 instrumentor.instrument()
+            Baserun._instrumentors.append(instrumentor)
 
         if find_spec("anthropic") is not None:
+            from .instrumentation.anthropic import AnthropicInstrumentor
+
             instrumentor = AnthropicInstrumentor()
             if not instrumentor.is_instrumented_by_opentelemetry:
                 instrumentor.instrument()
+            Baserun._instrumentors.append(instrumentor)
 
     @staticmethod
-    def current_run() -> Union[Run, None]:
-        """Gets the current run"""
-        return get_value(SpanAttributes.BASERUN_RUN)
+    def uninstrument():
+        for instrumentor in Baserun._instrumentors:
+            instrumentor.uninstrument()
+
+        Baserun._instrumentors = []
 
     @staticmethod
     def serialize_run(run: Run) -> str:
@@ -124,6 +140,23 @@ class Baserun:
         run = Run()
         run.ParseFromString(decoded)
         return run
+
+    @staticmethod
+    def current_run() -> Union[Run, None]:
+        """Gets the current run"""
+        current_span: _Span = get_current_span()
+        if not current_span.is_recording():
+            return None
+
+        current_run_str = current_span.attributes.get(SpanAttributes.BASERUN_RUN)
+        if not current_run_str:
+            return None
+
+        return Baserun.deserialize_run(current_run_str)
+
+    @staticmethod
+    def clear_run():
+        attach(set_value(SpanAttributes.BASERUN_RUN, None))
 
     @staticmethod
     def get_or_create_current_run(
@@ -166,11 +199,6 @@ class Baserun:
         if completion_timestamp:
             run.completion_timestamp.FromDatetime(completion_timestamp)
 
-        if suite_id:
-            run_data["suite_id"] = suite_id
-
-        attach(set_value(SpanAttributes.BASERUN_RUN, run))
-
         try:
             Baserun.submission_service.StartRun(StartRunRequest(run=run))
         except Exception as e:
@@ -200,29 +228,31 @@ class Baserun:
 
     @staticmethod
     def _trace(func: Callable, run_type: Run.RunType, metadata: Optional[Dict] = None):
-        tracer = get_tracer("baserun")
-        with tracer.start_as_current_span(
-            "baserun_run",
-            kind=SpanKind.CLIENT,
-        ) as _span:
-            run_name = func.__name__
-            if Baserun.current_test_suite:
-                suite_id = Baserun.current_test_suite.id
-            else:
-                suite_id = None
+        tracer_provider = trace.get_tracer_provider()
+        tracer = tracer_provider.get_tracer("baserun")
+        run_name = func.__name__
+        if Baserun.current_test_suite:
+            suite_id = Baserun.current_test_suite.id
+        else:
+            suite_id = None
 
-            if inspect.iscoroutinefunction(func):
+        if inspect.iscoroutinefunction(func):
 
-                async def wrapper(*args, **kwargs):
-                    if not Baserun._initialized:
-                        return await func(*args, **kwargs)
+            async def wrapper(*args, **kwargs):
+                if not Baserun._initialized:
+                    return await func(*args, **kwargs)
 
-                    run = Baserun.get_or_create_current_run(
-                        name=run_name,
-                        trace_type=run_type,
-                        metadata=metadata,
-                        suite_id=suite_id,
-                    )
+                run = Baserun.get_or_create_current_run(
+                    name=run_name,
+                    trace_type=run_type,
+                    metadata=metadata,
+                    suite_id=suite_id,
+                )
+                with tracer.start_as_current_span(
+                    f"baserun.parent.{func.__name__}",
+                    kind=SpanKind.CLIENT,
+                    attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
+                ):
                     try:
                         result = await func(*args, **kwargs)
                         run.result = str(result) if result is not None else ""
@@ -233,20 +263,25 @@ class Baserun:
                     finally:
                         Baserun._finish_run(run)
 
-            elif inspect.isasyncgenfunction(func):
+        elif inspect.isasyncgenfunction(func):
 
-                async def wrapper(*args, **kwargs):
-                    if not Baserun._initialized:
-                        async for item in func(*args, **kwargs):
-                            yield item
+            async def wrapper(*args, **kwargs):
+                if not Baserun._initialized:
+                    async for item in func(*args, **kwargs):
+                        yield item
 
-                    run = Baserun.get_or_create_current_run(
-                        name=run_name,
-                        trace_type=run_type,
-                        metadata=metadata,
-                        suite_id=suite_id,
-                    )
+                run = Baserun.get_or_create_current_run(
+                    name=run_name,
+                    trace_type=run_type,
+                    metadata=metadata,
+                    suite_id=suite_id,
+                )
 
+                with tracer.start_as_current_span(
+                    f"baserun.parent.{func.__name__}",
+                    kind=SpanKind.CLIENT,
+                    attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
+                ):
                     try:
                         result = []
                         async for item in func(*args, **kwargs):
@@ -260,19 +295,25 @@ class Baserun:
                     finally:
                         Baserun._finish_run(run)
 
-            else:
+        else:
 
-                def wrapper(*args, **kwargs):
-                    if not Baserun._initialized:
-                        return func(*args, **kwargs)
+            def wrapper(*args, **kwargs):
+                if not Baserun._initialized:
+                    return func(*args, **kwargs)
 
-                    run = Baserun.get_or_create_current_run(
-                        name=run_name,
-                        trace_type=run_type,
-                        metadata=metadata,
-                        suite_id=suite_id,
-                    )
+                run = Baserun.get_or_create_current_run(
+                    name=run_name,
+                    trace_type=run_type,
+                    metadata=metadata,
+                    suite_id=suite_id,
+                )
 
+                # Create a parent span so we can attach the run to it, all child spans are part of this run.
+                with tracer.start_as_current_span(
+                    f"baserun.parent.{func.__name__}",
+                    kind=SpanKind.CLIENT,
+                    attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
+                ) as span:
                     try:
                         result = func(*args, **kwargs)
                         run.result = str(result) if result is not None else ""

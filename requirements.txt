@@ -1,7 +1,6 @@
 requests>=2.31.0
 pytest>=7.4.0
 openai>=0.27.2
-wrapt~=1.15.0
 opentelemetry-instrumentation~=0.41b0
 opentelemetry-sdk~=1.20.0
 grpcio~=1.58.0

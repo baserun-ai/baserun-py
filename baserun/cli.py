@@ -1,5 +1,6 @@
 import argparse
 import runpy
+
 from baserun import Baserun
 
 
@@ -11,12 +12,9 @@ def main():
     parser.add_argument("module", help="Python module to run")
     args = parser.parse_args()
 
-    Baserun.init(api_url=args.api_url)
+    Baserun.init(api_base_url=args.api_url)
 
-    try:
-        runpy.run_module(args.module, run_name="__main__")
-    finally:
-        Baserun.flush()
+    runpy.run_module(args.module, run_name="__main__")
 
 
 if __name__ == "__main__":

@@ -1,18 +1,15 @@
 #!/usr/bin/env python
 import json
 import logging
+from types import GeneratorType
 from typing import Collection, Any
 
 import openai
+from openai import ChatCompletion, Completion
 from openai.openai_object import OpenAIObject
-from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-from opentelemetry.instrumentation.utils import (
-    unwrap,
-)
 from opentelemetry.sdk.trace import Span
-from opentelemetry.trace import get_tracer
-from wrapt import wrap_function_wrapper
 
+from baserun.instrumentation.base_instrumentor import BaseInstrumentor
 from baserun.instrumentation.span_attributes import SpanAttributes, OPENAI_VENDOR_NAME
 from baserun.instrumentation.wrappers import instrumented_wrapper
 
@@ -21,18 +18,12 @@ logger = logging.getLogger(__name__)
 _instruments = ("openai >= 0.27.0",)
 __version__ = "0.1.0"
 
-WRAPPED_METHODS = [
-    {
-        "object": "ChatCompletion",
-        "method": "create",
-        "span_name": "openai.chat",
-    },
-    {
-        "object": "Completion",
-        "method": "create",
-        "span_name": "openai.completion",
-    },
-]
+WRAPPED_METHODS = {
+    ChatCompletion.create: "openai.chat",
+    ChatCompletion.acreate: "openai.chat",
+    Completion.create: "openai.completion",
+    Completion.acreate: "openai.completion",
+}
 
 
 class OpenAIInstrumentor(BaseInstrumentor):
@@ -41,7 +32,8 @@ class OpenAIInstrumentor(BaseInstrumentor):
     def instrumentation_dependencies(self) -> Collection[str]:
         return _instruments
 
-    def set_request_attributes(self, span: Span, kwargs: dict[str, Any]):
+    @staticmethod
+    def set_request_attributes(span: Span, kwargs: dict[str, Any]):
         span.set_attribute(SpanAttributes.LLM_VENDOR, OPENAI_VENDOR_NAME)
         span.set_attribute(SpanAttributes.OPENAI_API_BASE, openai.api_base)
         span.set_attribute(SpanAttributes.OPENAI_API_TYPE, openai.api_type)
@@ -84,7 +76,8 @@ class OpenAIInstrumentor(BaseInstrumentor):
             span.set_attribute(f"{prefix}.role", message.get("role"))
             span.set_attribute(f"{prefix}.content", message.get("content"))
 
-    def set_response_attributes(self, span: Span, response: OpenAIObject):
+    @staticmethod
+    def set_response_attributes(span: Span, response: OpenAIObject):
         choices = response.get("choices", [])
         for i, choice in enumerate(choices):
             prefix = f"{SpanAttributes.LLM_COMPLETIONS}.{i}"
@@ -113,21 +106,38 @@ class OpenAIInstrumentor(BaseInstrumentor):
             )
 
     def _instrument(self, **kwargs):
-        tracer_provider = kwargs.get("tracer_provider")
-        tracer = get_tracer(__name__, __version__, tracer_provider)
-
-        for wrapped_method in WRAPPED_METHODS:
-            wrap_object = wrapped_method.get("object")
-            wrap_method = wrapped_method.get("method")
-            wrap_function_wrapper(
-                "openai",
-                f"{wrap_object}.{wrap_method}",
-                instrumented_wrapper(
-                    tracer=tracer, to_wrap=wrapped_method, instrumentor=self
-                ),
-            )
+        for original_method, span_name in WRAPPED_METHODS.items():
+            wrapper = instrumented_wrapper(original_method, self, span_name)
+            setattr(original_method.__self__, original_method.__name__, wrapper)
+            setattr(original_method.__self__, "_original_fn", original_method)
+            wrapper._original_fn = original_method
 
     def _uninstrument(self, **kwargs):
-        for wrapped_method in WRAPPED_METHODS:
-            wrap_object = wrapped_method.get("object")
-            unwrap(f"openai.{wrap_object}", wrapped_method.get("method"))
+        for wrapped_method in WRAPPED_METHODS.keys():
+            original_method = getattr(wrapped_method, "_original_fn")
+            if original_method:
+                setattr(
+                    wrapped_method.__self__, wrapped_method.__name__, original_method
+                )
+
+    @staticmethod
+    def generator_wrapper(original_generator: GeneratorType, span: Span):
+        for value in original_generator:
+            # Currently we only support one choice in streaming responses
+            prefix = f"{SpanAttributes.LLM_COMPLETIONS}.0"
+
+            role = value.choices[0].delta.get("role")
+            if role:
+                span.set_attribute(f"{prefix}.role", role)
+
+            new_content = value.choices[0].delta.get("content")
+            if new_content:
+                span.set_attribute(
+                    f"{prefix}.content",
+                    span.attributes.get(f"{prefix}.content", "") + new_content,
+                )
+
+            if new_content is None or value.choices[0].finish_reason:
+                span.end()
+
+            yield value

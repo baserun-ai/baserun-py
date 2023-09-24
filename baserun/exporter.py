@@ -4,7 +4,6 @@ from typing import Sequence, Any
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter
 
-from baserun.instrumentation.openai import WRAPPED_METHODS
 from baserun.instrumentation.span_attributes import (
     SpanAttributes,
     ANTHROPIC_VENDOR_NAME,
@@ -32,7 +31,9 @@ class BaserunExporter(SpanExporter):
         from baserun import Baserun
 
         for span in spans:
-            if span.name not in [method["span_name"] for method in WRAPPED_METHODS]:
+            if span.name.startswith("baserun.parent") or not span.name.startswith(
+                "baserun"
+            ):
                 continue
 
             status = Status(
@@ -59,9 +60,11 @@ class BaserunExporter(SpanExporter):
 
             vendor = span.attributes.get(SpanAttributes.LLM_VENDOR)
 
-            run = Baserun.deserialize_run(
-                span.attributes.get(SpanAttributes.BASERUN_RUN)
-            )
+            run_str = span.attributes.get(SpanAttributes.BASERUN_RUN)
+            if not run_str:
+                logger.warning("Baserun run attribute not set, cannot submit run")
+
+            run = Baserun.deserialize_run(run_str)
 
             span_message = Span(
                 run_id=run.run_id,
