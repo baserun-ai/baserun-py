@@ -209,7 +209,7 @@ class Span(_message.Message):
     top_p: float
     n: int
     stream: bool
-    stop: str
+    stop: _containers.RepeatedScalarFieldContainer[str]
     max_tokens: int
     presence_penalty: float
     frequency_penalty: float
@@ -241,7 +241,7 @@ class Span(_message.Message):
         top_p: _Optional[float] = ...,
         n: _Optional[int] = ...,
         stream: bool = ...,
-        stop: _Optional[str] = ...,
+        stop: _Optional[_Iterable[str]] = ...,
         max_tokens: _Optional[int] = ...,
         presence_penalty: _Optional[float] = ...,
         frequency_penalty: _Optional[float] = ...,

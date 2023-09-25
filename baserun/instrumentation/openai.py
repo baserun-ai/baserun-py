@@ -76,7 +76,10 @@ class OpenAIInstrumentor(BaseInstrumentor):
         span.set_attribute(SpanAttributes.LLM_STREAM, kwargs.get("stream", False))
 
         if stop := kwargs.get("stop"):
-            span.set_attribute(SpanAttributes.LLM_STOP, str(stop))
+            if isinstance(stop, str):
+                span.set_attribute(SpanAttributes.LLM_CHAT_STOP_SEQUENCES, [stop])
+            else:
+                span.set_attribute(SpanAttributes.LLM_CHAT_STOP_SEQUENCES, stop)
 
         if logit_bias := kwargs.get("logit_bias"):
             span.set_attribute(SpanAttributes.LLM_LOGIT_BIAS, json.dumps(logit_bias))

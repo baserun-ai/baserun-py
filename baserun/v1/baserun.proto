@@ -76,7 +76,7 @@ message Span {
     float top_p = 21;
     int32 n = 22;
     bool stream = 23;
-    string stop = 24;
+    repeated string stop = 24;
     int32 max_tokens = 25;
     float presence_penalty = 26;
     float frequency_penalty = 27;

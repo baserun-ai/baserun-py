@@ -118,8 +118,10 @@ class BaserunExporter(SpanExporter):
                     SpanAttributes.LLM_STREAM, False
                 )
 
-                if stop := span.attributes.get(SpanAttributes.LLM_STOP):
-                    span_message.stop = stop
+                if stop_sequences := span.attributes.get(
+                    SpanAttributes.LLM_CHAT_STOP_SEQUENCES
+                ):
+                    span_message.stop = stop_sequences
 
                 span_message.max_tokens = span.attributes.get(
                     SpanAttributes.LLM_REQUEST_MAX_TOKENS, 0
