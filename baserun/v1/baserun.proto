@@ -20,6 +20,7 @@ message Message {
     string role = 1;
     string content = 2;
     string finish_reason = 3;
+    string function_call = 4;
 }
 
 message Run {
@@ -71,7 +72,7 @@ message Span {
     string api_base = 16;
     string api_type = 17;
     string functions = 18; // JSONified array<map<str, any>>
-    string function_call = 19;
+    string function_call = 19; // Request attribute: response function_call is in each Message
     float temperature = 20;
     float top_p = 21;
     int32 n = 22;

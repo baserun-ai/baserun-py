@@ -160,15 +160,6 @@ def set_span_attr(
     span_attribute: str,
 ):
     """Sets a value on the span message only if it's not None"""
-    try:
-        value = span.attributes.get(span_attribute)
-        if value is not None:
-            setattr(span_message, span_message_attribute, value)
-    except Exception as e:
-        import traceback
-
-        traceback.print_exception(e)
-        import pdb
-
-        pdb.set_trace()
-        pass
+    value = span.attributes.get(span_attribute)
+    if value is not None:
+        setattr(span_message, span_message_attribute, value)

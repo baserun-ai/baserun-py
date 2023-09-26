@@ -35,18 +35,21 @@ class Status(_message.Message):
     ) -> None: ...
 
 class Message(_message.Message):
-    __slots__ = ["role", "content", "finish_reason"]
+    __slots__ = ["role", "content", "finish_reason", "function_call"]
     ROLE_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     FINISH_REASON_FIELD_NUMBER: _ClassVar[int]
+    FUNCTION_CALL_FIELD_NUMBER: _ClassVar[int]
     role: str
     content: str
     finish_reason: str
+    function_call: str
     def __init__(
         self,
         role: _Optional[str] = ...,
         content: _Optional[str] = ...,
         finish_reason: _Optional[str] = ...,
+        function_call: _Optional[str] = ...,
     ) -> None: ...
 
 class Run(_message.Message):
