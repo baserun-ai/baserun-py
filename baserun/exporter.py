@@ -141,6 +141,12 @@ class BaserunExporter(SpanExporter):
                 set_span_attr(
                     span_message, "logit_bias", span, SpanAttributes.LLM_LOGIT_BIAS
                 )
+                set_span_attr(
+                    span_message, "logprobs", span, SpanAttributes.LLM_LOGPROBS
+                )
+                set_span_attr(span_message, "echo", span, SpanAttributes.LLM_ECHO)
+                set_span_attr(span_message, "suffix", span, SpanAttributes.LLM_SUFFIX)
+                set_span_attr(span_message, "best_of", span, SpanAttributes.LLM_BEST_OF)
                 set_span_attr(span_message, "user", span, SpanAttributes.LLM_USER)
 
             span_request = SubmitSpanRequest(span=span_message, run=run)

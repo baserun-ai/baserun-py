@@ -23,6 +23,10 @@ class SpanAttributes:
     LLM_STOP = "llm.stop"
     LLM_LOGIT_BIAS = "llm.logit_bias"
     LLM_USER = "llm.user"
+    LLM_BEST_OF = "llm.best_of"
+    LLM_LOGPROBS = "llm.logprobs"
+    LLM_SUFFIX = "llm.suffix"
+    LLM_ECHO = "llm.echo"
 
     OPENAI_API_VERSION = "openai.api_version"
     OPENAI_API_BASE = "openai.api_base"

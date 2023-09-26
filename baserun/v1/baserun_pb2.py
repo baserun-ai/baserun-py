@@ -16,7 +16,7 @@ from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__
 
 
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
-    b'\n\x10v1/baserun.proto\x12\nbaserun.v1\x1a\x1fgoogle/protobuf/timestamp.proto"\x9c\x01\n\x06Status\x12\x0f\n\x07message\x18\x01 \x01(\t\x12+\n\x04\x63ode\x18\x02 \x01(\x0e\x32\x1d.baserun.v1.Status.StatusCode"T\n\nStatusCode\x12\x1b\n\x17STATUS_CODE_UNSPECIFIED\x10\x00\x12\x12\n\x0eSTATUS_CODE_OK\x10\x01\x12\x15\n\x11STATUS_CODE_ERROR\x10\x02"V\n\x07Message\x12\x0c\n\x04role\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x15\n\rfinish_reason\x18\x03 \x01(\t\x12\x15\n\rfunction_call\x18\x04 \x01(\t"\xc7\x02\n\x03Run\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\x10\n\x08suite_id\x18\x02 \x01(\t\x12\x0c\n\x04name\x18\x03 \x01(\t\x12\x0e\n\x06inputs\x18\x04 \x03(\t\x12)\n\x08run_type\x18\x05 \x01(\x0e\x32\x17.baserun.v1.Run.RunType\x12\x10\n\x08metadata\x18\x06 \x01(\t\x12\x33\n\x0fstart_timestamp\x18\x07 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x38\n\x14\x63ompletion_timestamp\x18\x08 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x0e\n\x06result\x18\t \x01(\t\x12\r\n\x05\x65rror\x18\n \x01(\t"5\n\x07RunType\x12\x11\n\rRUN_TYPE_TEST\x10\x00\x12\x17\n\x13RUN_TYPE_PRODUCTION\x10\x01"c\n\x03Log\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0f\n\x07payload\x18\x03 \x01(\t\x12-\n\ttimestamp\x18\x04 \x01(\x0b\x32\x1a.google.protobuf.Timestamp"\xb4\x05\n\x04Span\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\x10\n\x08trace_id\x18\x02 \x01(\x0c\x12\x0f\n\x07span_id\x18\x03 \x01(\x04\x12\x0c\n\x04name\x18\x04 \x01(\t\x12.\n\nstart_time\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12,\n\x08\x65nd_time\x18\x06 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12"\n\x06status\x18\x07 \x01(\x0b\x32\x12.baserun.v1.Status\x12\x0e\n\x06vendor\x18\x08 \x01(\t\x12\x14\n\x0crequest_type\x18\t \x01(\t\x12\r\n\x05model\x18\n \x01(\t\x12\x14\n\x0ctotal_tokens\x18\x0b \x01(\x05\x12\x19\n\x11\x63ompletion_tokens\x18\x0c \x01(\x05\x12\x15\n\rprompt_tokens\x18\r \x01(\x05\x12,\n\x0fprompt_messages\x18\x0e \x03(\x0b\x32\x13.baserun.v1.Message\x12(\n\x0b\x63ompletions\x18\x0f \x03(\x0b\x32\x13.baserun.v1.Message\x12\x10\n\x08\x61pi_base\x18\x10 \x01(\t\x12\x10\n\x08\x61pi_type\x18\x11 \x01(\t\x12\x11\n\tfunctions\x18\x12 \x01(\t\x12\x15\n\rfunction_call\x18\x13 \x01(\t\x12\x13\n\x0btemperature\x18\x14 \x01(\x02\x12\r\n\x05top_p\x18\x15 \x01(\x02\x12\t\n\x01n\x18\x16 \x01(\x05\x12\x0e\n\x06stream\x18\x17 \x01(\x08\x12\x0c\n\x04stop\x18\x18 \x03(\t\x12\x12\n\nmax_tokens\x18\x19 \x01(\x05\x12\x18\n\x10presence_penalty\x18\x1a \x01(\x02\x12\x19\n\x11\x66requency_penalty\x18\x1b \x01(\x02\x12\x12\n\nlogit_bias\x18\x1c \x01(\t\x12\x0c\n\x04user\x18\x1d \x01(\t\x12\x0e\n\x06log_id\x18\x1e \x01(\t"f\n\x04\x45val\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x0e\n\x06result\x18\x03 \x01(\t\x12\r\n\x05score\x18\x04 \x01(\x02\x12\x12\n\nsubmission\x18\x05 \x01(\t\x12\x0f\n\x07payload\x18\x06 \x01(\t"\x94\x01\n\tTestSuite\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x33\n\x0fstart_timestamp\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x38\n\x14\x63ompletion_timestamp\x18\x04 \x01(\x0b\x32\x1a.google.protobuf.Timestamp"/\n\x0fStartRunRequest\x12\x1c\n\x03run\x18\x01 \x01(\x0b\x32\x0f.baserun.v1.Run"#\n\x10StartRunResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"N\n\x10SubmitLogRequest\x12\x1c\n\x03log\x18\x01 \x01(\x0b\x32\x0f.baserun.v1.Log\x12\x1c\n\x03run\x18\x02 \x01(\x0b\x32\x0f.baserun.v1.Run"$\n\x11SubmitLogResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"Q\n\x11SubmitSpanRequest\x12\x1e\n\x04span\x18\x01 \x01(\x0b\x32\x10.baserun.v1.Span\x12\x1c\n\x03run\x18\x02 \x01(\x0b\x32\x0f.baserun.v1.Run"%\n\x12SubmitSpanResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"-\n\rEndRunRequest\x12\x1c\n\x03run\x18\x01 \x01(\x0b\x32\x0f.baserun.v1.Run"!\n\x0e\x45ndRunResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"Q\n\x11SubmitEvalRequest\x12\x1e\n\x04\x65val\x18\x01 \x01(\x0b\x32\x10.baserun.v1.Eval\x12\x1c\n\x03run\x18\x02 \x01(\x0b\x32\x0f.baserun.v1.Run"%\n\x12SubmitEvalResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"B\n\x15StartTestSuiteRequest\x12)\n\ntest_suite\x18\x01 \x01(\x0b\x32\x15.baserun.v1.TestSuite")\n\x16StartTestSuiteResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"@\n\x13\x45ndTestSuiteRequest\x12)\n\ntest_suite\x18\x01 \x01(\x0b\x32\x15.baserun.v1.TestSuite"\'\n\x14\x45ndTestSuiteResponse\x12\x0f\n\x07message\x18\x01 \x01(\t2\xab\x04\n\x11SubmissionService\x12\x45\n\x08StartRun\x12\x1b.baserun.v1.StartRunRequest\x1a\x1c.baserun.v1.StartRunResponse\x12H\n\tSubmitLog\x12\x1c.baserun.v1.SubmitLogRequest\x1a\x1d.baserun.v1.SubmitLogResponse\x12K\n\nSubmitSpan\x12\x1d.baserun.v1.SubmitSpanRequest\x1a\x1e.baserun.v1.SubmitSpanResponse\x12?\n\x06\x45ndRun\x12\x19.baserun.v1.EndRunRequest\x1a\x1a.baserun.v1.EndRunResponse\x12K\n\nSubmitEval\x12\x1d.baserun.v1.SubmitEvalRequest\x1a\x1e.baserun.v1.SubmitEvalResponse\x12W\n\x0eStartTestSuite\x12!.baserun.v1.StartTestSuiteRequest\x1a".baserun.v1.StartTestSuiteResponse\x12Q\n\x0c\x45ndTestSuite\x12\x1f.baserun.v1.EndTestSuiteRequest\x1a .baserun.v1.EndTestSuiteResponseb\x06proto3'
+    b'\n\x10v1/baserun.proto\x12\nbaserun.v1\x1a\x1fgoogle/protobuf/timestamp.proto"\x9c\x01\n\x06Status\x12\x0f\n\x07message\x18\x01 \x01(\t\x12+\n\x04\x63ode\x18\x02 \x01(\x0e\x32\x1d.baserun.v1.Status.StatusCode"T\n\nStatusCode\x12\x1b\n\x17STATUS_CODE_UNSPECIFIED\x10\x00\x12\x12\n\x0eSTATUS_CODE_OK\x10\x01\x12\x15\n\x11STATUS_CODE_ERROR\x10\x02"V\n\x07Message\x12\x0c\n\x04role\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x15\n\rfinish_reason\x18\x03 \x01(\t\x12\x15\n\rfunction_call\x18\x04 \x01(\t"\xc7\x02\n\x03Run\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\x10\n\x08suite_id\x18\x02 \x01(\t\x12\x0c\n\x04name\x18\x03 \x01(\t\x12\x0e\n\x06inputs\x18\x04 \x03(\t\x12)\n\x08run_type\x18\x05 \x01(\x0e\x32\x17.baserun.v1.Run.RunType\x12\x10\n\x08metadata\x18\x06 \x01(\t\x12\x33\n\x0fstart_timestamp\x18\x07 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x38\n\x14\x63ompletion_timestamp\x18\x08 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x0e\n\x06result\x18\t \x01(\t\x12\r\n\x05\x65rror\x18\n \x01(\t"5\n\x07RunType\x12\x11\n\rRUN_TYPE_TEST\x10\x00\x12\x17\n\x13RUN_TYPE_PRODUCTION\x10\x01"c\n\x03Log\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0f\n\x07payload\x18\x03 \x01(\t\x12-\n\ttimestamp\x18\x04 \x01(\x0b\x32\x1a.google.protobuf.Timestamp"\xf5\x05\n\x04Span\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\x10\n\x08trace_id\x18\x02 \x01(\x0c\x12\x0f\n\x07span_id\x18\x03 \x01(\x04\x12\x0c\n\x04name\x18\x04 \x01(\t\x12.\n\nstart_time\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12,\n\x08\x65nd_time\x18\x06 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12"\n\x06status\x18\x07 \x01(\x0b\x32\x12.baserun.v1.Status\x12\x0e\n\x06vendor\x18\x08 \x01(\t\x12\x14\n\x0crequest_type\x18\t \x01(\t\x12\r\n\x05model\x18\n \x01(\t\x12\x14\n\x0ctotal_tokens\x18\x0b \x01(\x05\x12\x19\n\x11\x63ompletion_tokens\x18\x0c \x01(\x05\x12\x15\n\rprompt_tokens\x18\r \x01(\x05\x12,\n\x0fprompt_messages\x18\x0e \x03(\x0b\x32\x13.baserun.v1.Message\x12(\n\x0b\x63ompletions\x18\x0f \x03(\x0b\x32\x13.baserun.v1.Message\x12\x10\n\x08\x61pi_base\x18\x10 \x01(\t\x12\x10\n\x08\x61pi_type\x18\x11 \x01(\t\x12\x11\n\tfunctions\x18\x12 \x01(\t\x12\x15\n\rfunction_call\x18\x13 \x01(\t\x12\x13\n\x0btemperature\x18\x14 \x01(\x02\x12\r\n\x05top_p\x18\x15 \x01(\x02\x12\t\n\x01n\x18\x16 \x01(\x05\x12\x0e\n\x06stream\x18\x17 \x01(\x08\x12\x0c\n\x04stop\x18\x18 \x03(\t\x12\x12\n\nmax_tokens\x18\x19 \x01(\x05\x12\x18\n\x10presence_penalty\x18\x1a \x01(\x02\x12\x19\n\x11\x66requency_penalty\x18\x1b \x01(\x02\x12\x12\n\nlogit_bias\x18\x1c \x01(\t\x12\x0c\n\x04user\x18\x1d \x01(\t\x12\x10\n\x08logprobs\x18\x1e \x01(\x05\x12\x0c\n\x04\x65\x63ho\x18\x1f \x01(\x08\x12\x0e\n\x06suffix\x18  \x01(\t\x12\x0f\n\x07\x62\x65st_of\x18! \x01(\x05\x12\x0e\n\x06log_id\x18" \x01(\t"f\n\x04\x45val\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x0e\n\x06result\x18\x03 \x01(\t\x12\r\n\x05score\x18\x04 \x01(\x02\x12\x12\n\nsubmission\x18\x05 \x01(\t\x12\x0f\n\x07payload\x18\x06 \x01(\t"\x94\x01\n\tTestSuite\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x33\n\x0fstart_timestamp\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x38\n\x14\x63ompletion_timestamp\x18\x04 \x01(\x0b\x32\x1a.google.protobuf.Timestamp"/\n\x0fStartRunRequest\x12\x1c\n\x03run\x18\x01 \x01(\x0b\x32\x0f.baserun.v1.Run"#\n\x10StartRunResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"N\n\x10SubmitLogRequest\x12\x1c\n\x03log\x18\x01 \x01(\x0b\x32\x0f.baserun.v1.Log\x12\x1c\n\x03run\x18\x02 \x01(\x0b\x32\x0f.baserun.v1.Run"$\n\x11SubmitLogResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"Q\n\x11SubmitSpanRequest\x12\x1e\n\x04span\x18\x01 \x01(\x0b\x32\x10.baserun.v1.Span\x12\x1c\n\x03run\x18\x02 \x01(\x0b\x32\x0f.baserun.v1.Run"%\n\x12SubmitSpanResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"-\n\rEndRunRequest\x12\x1c\n\x03run\x18\x01 \x01(\x0b\x32\x0f.baserun.v1.Run"!\n\x0e\x45ndRunResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"Q\n\x11SubmitEvalRequest\x12\x1e\n\x04\x65val\x18\x01 \x01(\x0b\x32\x10.baserun.v1.Eval\x12\x1c\n\x03run\x18\x02 \x01(\x0b\x32\x0f.baserun.v1.Run"%\n\x12SubmitEvalResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"B\n\x15StartTestSuiteRequest\x12)\n\ntest_suite\x18\x01 \x01(\x0b\x32\x15.baserun.v1.TestSuite")\n\x16StartTestSuiteResponse\x12\x0f\n\x07message\x18\x01 \x01(\t"@\n\x13\x45ndTestSuiteRequest\x12)\n\ntest_suite\x18\x01 \x01(\x0b\x32\x15.baserun.v1.TestSuite"\'\n\x14\x45ndTestSuiteResponse\x12\x0f\n\x07message\x18\x01 \x01(\t2\xab\x04\n\x11SubmissionService\x12\x45\n\x08StartRun\x12\x1b.baserun.v1.StartRunRequest\x1a\x1c.baserun.v1.StartRunResponse\x12H\n\tSubmitLog\x12\x1c.baserun.v1.SubmitLogRequest\x1a\x1d.baserun.v1.SubmitLogResponse\x12K\n\nSubmitSpan\x12\x1d.baserun.v1.SubmitSpanRequest\x1a\x1e.baserun.v1.SubmitSpanResponse\x12?\n\x06\x45ndRun\x12\x19.baserun.v1.EndRunRequest\x1a\x1a.baserun.v1.EndRunResponse\x12K\n\nSubmitEval\x12\x1d.baserun.v1.SubmitEvalRequest\x1a\x1e.baserun.v1.SubmitEvalResponse\x12W\n\x0eStartTestSuite\x12!.baserun.v1.StartTestSuiteRequest\x1a".baserun.v1.StartTestSuiteResponse\x12Q\n\x0c\x45ndTestSuite\x12\x1f.baserun.v1.EndTestSuiteRequest\x1a .baserun.v1.EndTestSuiteResponseb\x06proto3'
 )
 
 _globals = globals()
@@ -37,39 +37,39 @@ if _descriptor._USE_C_DESCRIPTORS == False:
     _globals["_LOG"]._serialized_start = 642
     _globals["_LOG"]._serialized_end = 741
     _globals["_SPAN"]._serialized_start = 744
-    _globals["_SPAN"]._serialized_end = 1436
-    _globals["_EVAL"]._serialized_start = 1438
-    _globals["_EVAL"]._serialized_end = 1540
-    _globals["_TESTSUITE"]._serialized_start = 1543
-    _globals["_TESTSUITE"]._serialized_end = 1691
-    _globals["_STARTRUNREQUEST"]._serialized_start = 1693
-    _globals["_STARTRUNREQUEST"]._serialized_end = 1740
-    _globals["_STARTRUNRESPONSE"]._serialized_start = 1742
-    _globals["_STARTRUNRESPONSE"]._serialized_end = 1777
-    _globals["_SUBMITLOGREQUEST"]._serialized_start = 1779
-    _globals["_SUBMITLOGREQUEST"]._serialized_end = 1857
-    _globals["_SUBMITLOGRESPONSE"]._serialized_start = 1859
-    _globals["_SUBMITLOGRESPONSE"]._serialized_end = 1895
-    _globals["_SUBMITSPANREQUEST"]._serialized_start = 1897
-    _globals["_SUBMITSPANREQUEST"]._serialized_end = 1978
-    _globals["_SUBMITSPANRESPONSE"]._serialized_start = 1980
-    _globals["_SUBMITSPANRESPONSE"]._serialized_end = 2017
-    _globals["_ENDRUNREQUEST"]._serialized_start = 2019
-    _globals["_ENDRUNREQUEST"]._serialized_end = 2064
-    _globals["_ENDRUNRESPONSE"]._serialized_start = 2066
-    _globals["_ENDRUNRESPONSE"]._serialized_end = 2099
-    _globals["_SUBMITEVALREQUEST"]._serialized_start = 2101
-    _globals["_SUBMITEVALREQUEST"]._serialized_end = 2182
-    _globals["_SUBMITEVALRESPONSE"]._serialized_start = 2184
-    _globals["_SUBMITEVALRESPONSE"]._serialized_end = 2221
-    _globals["_STARTTESTSUITEREQUEST"]._serialized_start = 2223
-    _globals["_STARTTESTSUITEREQUEST"]._serialized_end = 2289
-    _globals["_STARTTESTSUITERESPONSE"]._serialized_start = 2291
-    _globals["_STARTTESTSUITERESPONSE"]._serialized_end = 2332
-    _globals["_ENDTESTSUITEREQUEST"]._serialized_start = 2334
-    _globals["_ENDTESTSUITEREQUEST"]._serialized_end = 2398
-    _globals["_ENDTESTSUITERESPONSE"]._serialized_start = 2400
-    _globals["_ENDTESTSUITERESPONSE"]._serialized_end = 2439
-    _globals["_SUBMISSIONSERVICE"]._serialized_start = 2442
-    _globals["_SUBMISSIONSERVICE"]._serialized_end = 2997
+    _globals["_SPAN"]._serialized_end = 1501
+    _globals["_EVAL"]._serialized_start = 1503
+    _globals["_EVAL"]._serialized_end = 1605
+    _globals["_TESTSUITE"]._serialized_start = 1608
+    _globals["_TESTSUITE"]._serialized_end = 1756
+    _globals["_STARTRUNREQUEST"]._serialized_start = 1758
+    _globals["_STARTRUNREQUEST"]._serialized_end = 1805
+    _globals["_STARTRUNRESPONSE"]._serialized_start = 1807
+    _globals["_STARTRUNRESPONSE"]._serialized_end = 1842
+    _globals["_SUBMITLOGREQUEST"]._serialized_start = 1844
+    _globals["_SUBMITLOGREQUEST"]._serialized_end = 1922
+    _globals["_SUBMITLOGRESPONSE"]._serialized_start = 1924
+    _globals["_SUBMITLOGRESPONSE"]._serialized_end = 1960
+    _globals["_SUBMITSPANREQUEST"]._serialized_start = 1962
+    _globals["_SUBMITSPANREQUEST"]._serialized_end = 2043
+    _globals["_SUBMITSPANRESPONSE"]._serialized_start = 2045
+    _globals["_SUBMITSPANRESPONSE"]._serialized_end = 2082
+    _globals["_ENDRUNREQUEST"]._serialized_start = 2084
+    _globals["_ENDRUNREQUEST"]._serialized_end = 2129
+    _globals["_ENDRUNRESPONSE"]._serialized_start = 2131
+    _globals["_ENDRUNRESPONSE"]._serialized_end = 2164
+    _globals["_SUBMITEVALREQUEST"]._serialized_start = 2166
+    _globals["_SUBMITEVALREQUEST"]._serialized_end = 2247
+    _globals["_SUBMITEVALRESPONSE"]._serialized_start = 2249
+    _globals["_SUBMITEVALRESPONSE"]._serialized_end = 2286
+    _globals["_STARTTESTSUITEREQUEST"]._serialized_start = 2288
+    _globals["_STARTTESTSUITEREQUEST"]._serialized_end = 2354
+    _globals["_STARTTESTSUITERESPONSE"]._serialized_start = 2356
+    _globals["_STARTTESTSUITERESPONSE"]._serialized_end = 2397
+    _globals["_ENDTESTSUITEREQUEST"]._serialized_start = 2399
+    _globals["_ENDTESTSUITEREQUEST"]._serialized_end = 2463
+    _globals["_ENDTESTSUITERESPONSE"]._serialized_start = 2465
+    _globals["_ENDTESTSUITERESPONSE"]._serialized_end = 2504
+    _globals["_SUBMISSIONSERVICE"]._serialized_start = 2507
+    _globals["_SUBMISSIONSERVICE"]._serialized_end = 3062
 # @@protoc_insertion_point(module_scope)

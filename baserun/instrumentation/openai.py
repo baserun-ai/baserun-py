@@ -100,6 +100,18 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 SpanAttributes.LLM_LOGIT_BIAS, json.dumps(kwargs.get("logit_bias"))
             )
 
+        if "logprobs" in kwargs:
+            span.set_attribute(SpanAttributes.LLM_BEST_OF, kwargs.get("logprobs"))
+
+        if "echo" in kwargs:
+            span.set_attribute(SpanAttributes.LLM_ECHO, kwargs.get("echo"))
+
+        if "suffix" in kwargs:
+            span.set_attribute(SpanAttributes.LLM_SUFFIX, kwargs.get("suffix"))
+
+        if "best_of" in kwargs:
+            span.set_attribute(SpanAttributes.LLM_BEST_OF, kwargs.get("best_of"))
+
         if "user" in kwargs:
             span.set_attribute(SpanAttributes.LLM_USER, kwargs.get("user"))
 

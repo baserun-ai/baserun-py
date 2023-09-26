@@ -157,6 +157,10 @@ class Span(_message.Message):
         "frequency_penalty",
         "logit_bias",
         "user",
+        "logprobs",
+        "echo",
+        "suffix",
+        "best_of",
         "log_id",
     ]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
@@ -188,6 +192,10 @@ class Span(_message.Message):
     FREQUENCY_PENALTY_FIELD_NUMBER: _ClassVar[int]
     LOGIT_BIAS_FIELD_NUMBER: _ClassVar[int]
     USER_FIELD_NUMBER: _ClassVar[int]
+    LOGPROBS_FIELD_NUMBER: _ClassVar[int]
+    ECHO_FIELD_NUMBER: _ClassVar[int]
+    SUFFIX_FIELD_NUMBER: _ClassVar[int]
+    BEST_OF_FIELD_NUMBER: _ClassVar[int]
     LOG_ID_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     trace_id: bytes
@@ -218,6 +226,10 @@ class Span(_message.Message):
     frequency_penalty: float
     logit_bias: str
     user: str
+    logprobs: int
+    echo: bool
+    suffix: str
+    best_of: int
     log_id: str
     def __init__(
         self,
@@ -250,6 +262,10 @@ class Span(_message.Message):
         frequency_penalty: _Optional[float] = ...,
         logit_bias: _Optional[str] = ...,
         user: _Optional[str] = ...,
+        logprobs: _Optional[int] = ...,
+        echo: bool = ...,
+        suffix: _Optional[str] = ...,
+        best_of: _Optional[int] = ...,
         log_id: _Optional[str] = ...,
     ) -> None: ...
 
