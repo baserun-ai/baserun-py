@@ -52,28 +52,42 @@ class OpenAIInstrumentor(BaseInstrumentor):
         span.set_attribute(SpanAttributes.OPENAI_API_BASE, openai.api_base)
         span.set_attribute(SpanAttributes.OPENAI_API_TYPE, openai.api_type)
 
-        span.set_attribute(SpanAttributes.LLM_TEMPERATURE, kwargs.get("temperature", 1))
-        span.set_attribute(SpanAttributes.LLM_TOP_P, kwargs.get("top_p", 1))
-        span.set_attribute(
-            SpanAttributes.LLM_FREQUENCY_PENALTY,
-            kwargs.get("frequency_penalty", 0),
-        )
-        span.set_attribute(
-            SpanAttributes.LLM_PRESENCE_PENALTY,
-            kwargs.get("presence_penalty", 0),
-        )
-
-        if functions := kwargs.get("functions"):
-            span.set_attribute(SpanAttributes.LLM_FUNCTIONS, json.dumps(functions))
-
-        if function_call := kwargs.get("function_call"):
+        if "temperature" in kwargs:
             span.set_attribute(
-                SpanAttributes.LLM_FUNCTION_CALL,
-                json.dumps(function_call),
+                SpanAttributes.LLM_TEMPERATURE, kwargs.get("temperature")
             )
 
-        span.set_attribute(SpanAttributes.LLM_N, kwargs.get("n", 1))
-        span.set_attribute(SpanAttributes.LLM_STREAM, kwargs.get("stream", False))
+        if "top_p" in kwargs:
+            span.set_attribute(SpanAttributes.LLM_TOP_P, kwargs.get("top_p"))
+
+        if "frequency_penalty" in kwargs:
+            span.set_attribute(
+                SpanAttributes.LLM_FREQUENCY_PENALTY,
+                kwargs.get("frequency_penalty"),
+            )
+
+        if "presence_penalty" in kwargs:
+            span.set_attribute(
+                SpanAttributes.LLM_PRESENCE_PENALTY,
+                kwargs.get("presence_penalty"),
+            )
+
+        if "functions" in kwargs:
+            span.set_attribute(
+                SpanAttributes.LLM_FUNCTIONS, json.dumps(kwargs.get("functions"))
+            )
+
+        if "function_call" in kwargs:
+            span.set_attribute(
+                SpanAttributes.LLM_FUNCTION_CALL,
+                json.dumps(kwargs.get("function_call")),
+            )
+
+        if "n" in kwargs:
+            span.set_attribute(SpanAttributes.LLM_N, kwargs.get("n"))
+
+        if "stream" in kwargs:
+            span.set_attribute(SpanAttributes.LLM_STREAM, kwargs.get("stream"))
 
         if stop := kwargs.get("stop"):
             if isinstance(stop, str):
@@ -81,17 +95,21 @@ class OpenAIInstrumentor(BaseInstrumentor):
             else:
                 span.set_attribute(SpanAttributes.LLM_CHAT_STOP_SEQUENCES, stop)
 
-        if logit_bias := kwargs.get("logit_bias"):
-            span.set_attribute(SpanAttributes.LLM_LOGIT_BIAS, json.dumps(logit_bias))
+        if "logit_bias" in kwargs:
+            span.set_attribute(
+                SpanAttributes.LLM_LOGIT_BIAS, json.dumps(kwargs.get("logit_bias"))
+            )
 
-        if user := kwargs.get("user"):
-            span.set_attribute(SpanAttributes.LLM_USER, user)
+        if "user" in kwargs:
+            span.set_attribute(SpanAttributes.LLM_USER, kwargs.get("user"))
 
         messages = kwargs.get("messages", [])
         for i, message in enumerate(messages):
             prefix = f"{SpanAttributes.LLM_PROMPTS}.{i}"
             span.set_attribute(f"{prefix}.role", message.get("role"))
-            span.set_attribute(f"{prefix}.content", message.get("content"))
+
+            if content := message.get("content"):
+                span.set_attribute(f"{prefix}.content", content)
 
     @staticmethod
     def set_response_attributes(span: Span, response: OpenAIObject):
@@ -104,7 +122,16 @@ class OpenAIInstrumentor(BaseInstrumentor):
             text = choice.get("text")
             if message:
                 span.set_attribute(f"{prefix}.role", message.get("role"))
-                span.set_attribute(f"{prefix}.content", message.get("content"))
+
+                if content := message.get("content"):
+                    span.set_attribute(f"{prefix}.content", content)
+
+                if "function_call" in message:
+                    span.set_attribute(
+                        f"{prefix}.function_call",
+                        json.dumps(message.get("function_call").to_dict()),
+                    )
+
             elif text:
                 span.set_attribute(f"{prefix}.content", text)
 

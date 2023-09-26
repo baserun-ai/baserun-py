@@ -91,53 +91,57 @@ class BaserunExporter(SpanExporter):
             span_message.end_time.FromNanoseconds(span.end_time)
 
             if vendor == ANTHROPIC_VENDOR_NAME:
-                span_message.log_id = span.attributes.get(
-                    SpanAttributes.ANTHROPIC_LOG_ID, ""
+                set_span_attr(
+                    span_message, "log_id", span, SpanAttributes.ANTHROPIC_LOG_ID
                 )
             else:
-                span_message.api_base = span.attributes.get(
-                    SpanAttributes.OPENAI_API_BASE, ""
+                set_span_attr(
+                    span_message, "api_base", span, SpanAttributes.OPENAI_API_BASE
                 )
-                span_message.api_type = span.attributes.get(
-                    SpanAttributes.OPENAI_API_TYPE, ""
+                set_span_attr(
+                    span_message, "api_type", span, SpanAttributes.OPENAI_API_TYPE
                 )
-
-                if functions := span.attributes.get(SpanAttributes.LLM_FUNCTIONS):
-                    span_message.functions = functions
-                if function_call := span.attributes.get(
-                    SpanAttributes.LLM_FUNCTION_CALL
-                ):
-                    span_message.function_call = function_call
-
-                span_message.temperature = span.attributes.get(
-                    SpanAttributes.LLM_TEMPERATURE, 1
+                set_span_attr(
+                    span_message, "functions", span, SpanAttributes.LLM_FUNCTIONS
                 )
-                span_message.top_p = span.attributes.get(SpanAttributes.LLM_TOP_P, 1)
-                span_message.n = span.attributes.get(SpanAttributes.LLM_N, 1)
-                span_message.stream = span.attributes.get(
-                    SpanAttributes.LLM_STREAM, False
+                set_span_attr(
+                    span_message,
+                    "function_call",
+                    span,
+                    SpanAttributes.LLM_FUNCTION_CALL,
                 )
-
-                if stop_sequences := span.attributes.get(
-                    SpanAttributes.LLM_CHAT_STOP_SEQUENCES
-                ):
-                    span_message.stop = stop_sequences
-
-                span_message.max_tokens = span.attributes.get(
-                    SpanAttributes.LLM_REQUEST_MAX_TOKENS, 0
+                set_span_attr(
+                    span_message, "temperature", span, SpanAttributes.LLM_TEMPERATURE
                 )
-                span_message.frequency_penalty = span.attributes.get(
-                    SpanAttributes.LLM_FREQUENCY_PENALTY, 0
+                set_span_attr(span_message, "top_p", span, SpanAttributes.LLM_TOP_P)
+                set_span_attr(span_message, "n", span, SpanAttributes.LLM_N)
+                set_span_attr(span_message, "stream", span, SpanAttributes.LLM_STREAM)
+                set_span_attr(
+                    span_message, "api_base", span, SpanAttributes.OPENAI_API_BASE
                 )
-                span_message.presence_penalty = span.attributes.get(
-                    SpanAttributes.LLM_PRESENCE_PENALTY, 0
+                set_span_attr(span_message, "n", span, SpanAttributes.LLM_N)
+                set_span_attr(
+                    span_message,
+                    "max_tokens",
+                    span,
+                    SpanAttributes.LLM_REQUEST_MAX_TOKENS,
                 )
-
-                if logit_bias := span.attributes.get(SpanAttributes.LLM_LOGIT_BIAS):
-                    span_message.logit_bias = logit_bias
-
-                if user := span.attributes.get(SpanAttributes.LLM_USER):
-                    span_message.user = user
+                set_span_attr(
+                    span_message,
+                    "frequency_penalty",
+                    span,
+                    SpanAttributes.LLM_FREQUENCY_PENALTY,
+                )
+                set_span_attr(
+                    span_message,
+                    "presence_penalty",
+                    span,
+                    SpanAttributes.LLM_PRESENCE_PENALTY,
+                )
+                set_span_attr(
+                    span_message, "logit_bias", span, SpanAttributes.LLM_LOGIT_BIAS
+                )
+                set_span_attr(span_message, "user", span, SpanAttributes.LLM_USER)
 
             span_request = SubmitSpanRequest(span=span_message, run=run)
             try:
@@ -147,3 +151,24 @@ class BaserunExporter(SpanExporter):
                     logger.warning(f"Failed to submit span to Baserun: {e.details()}")
                 else:
                     logger.warning(f"Failed to submit span to Baserun: {e}")
+
+
+def set_span_attr(
+    span_message: Span,
+    span_message_attribute: str,
+    span: ReadableSpan,
+    span_attribute: str,
+):
+    """Sets a value on the span message only if it's not None"""
+    try:
+        value = span.attributes.get(span_attribute)
+        if value is not None:
+            setattr(span_message, span_message_attribute, value)
+    except Exception as e:
+        import traceback
+
+        traceback.print_exception(e)
+        import pdb
+
+        pdb.set_trace()
+        pass
