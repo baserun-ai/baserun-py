@@ -55,10 +55,6 @@ def pytest_sessionfinish(session):
             except Exception as e:
                 logger.warning(f"Failed to end test suite for Baserun, error: {e}")
 
-        if session.config.getoption("--no-flush"):
-            logger.info("Baserun flush disabled by --no-flush option.")
-            return
-
 
 def pytest_collection_modifyitems(config, items):
     if config.getoption("--baserun"):

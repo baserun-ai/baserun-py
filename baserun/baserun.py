@@ -313,7 +313,7 @@ class Baserun:
                     f"baserun.parent.{func.__name__}",
                     kind=SpanKind.CLIENT,
                     attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
-                ) as span:
+                ):
                     try:
                         result = func(*args, **kwargs)
                         run.result = str(result) if result is not None else ""
