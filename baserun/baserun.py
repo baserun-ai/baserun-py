@@ -2,12 +2,13 @@ import inspect
 import json
 import logging
 import os
+import traceback
 import uuid
 import warnings
 from base64 import b64encode, b64decode
 from datetime import datetime
 from importlib.util import find_spec
-from typing import Callable, Dict, Optional, Union, Any
+from typing import Callable, Dict, Optional, Union, Any, Type
 
 import grpc
 from opentelemetry import trace
@@ -45,6 +46,7 @@ class Baserun:
 
     _instrumentors: list[BaseInstrumentor] = None
 
+    grpc_channel: grpc.Channel = None
     submission_service: SubmissionServiceStub = None
 
     current_test_suite: TestSuite = None
@@ -52,7 +54,9 @@ class Baserun:
     evals = Evals
 
     @staticmethod
-    def init(api_base_url: str = "https://baserun.ai/api/v1") -> None:
+    def init(
+        api_base_url: str = "https://baserun.ai/api/v1", instrument: bool = True
+    ) -> None:
         api_key = os.environ.get("BASERUN_API_KEY")
         if not api_key:
             raise ValueError(
@@ -82,8 +86,16 @@ class Baserun:
         channel_credentials = grpc.composite_channel_credentials(
             ssl_creds, call_credentials
         )
-        grpc_channel = grpc.secure_channel(grpc_base, channel_credentials)
-        Baserun.submission_service = SubmissionServiceStub(grpc_channel)
+        Baserun.grpc_channel = grpc.secure_channel(grpc_base, channel_credentials)
+        Baserun.submission_service = SubmissionServiceStub(Baserun.grpc_channel)
+
+        if instrument:
+            Baserun.instrument()
+
+    @staticmethod
+    def instrument(processor_class: Type = BatchSpanProcessor):
+        if not Baserun._instrumentors:
+            Baserun._instrumentors = []
 
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
@@ -92,15 +104,8 @@ class Baserun:
             tracer_provider = TracerProvider()
             trace.set_tracer_provider(tracer_provider)
 
-        processor = BatchSpanProcessor(BaserunExporter())
+        processor = processor_class(BaserunExporter())
         tracer_provider.add_span_processor(processor)
-
-        Baserun.instrument()
-
-    @staticmethod
-    def instrument():
-        if not Baserun._instrumentors:
-            Baserun._instrumentors = []
 
         if find_spec("openai") is not None:
             from .instrumentation.openai import OpenAIInstrumentor
@@ -262,7 +267,7 @@ class Baserun:
                         run.result = str(result) if result is not None else ""
                         return result
                     except Exception as e:
-                        run.error = str(e)
+                        run.error = "".join(traceback.format_exception(e))
                         raise e
                     finally:
                         Baserun._finish_run(run, span)
@@ -294,7 +299,7 @@ class Baserun:
 
                         run.result = str(result) if result is not None else ""
                     except Exception as e:
-                        run.error = str(e)
+                        run.error = "".join(traceback.format_exception(e))
                         raise e
                     finally:
                         Baserun._finish_run(run, span)
@@ -323,7 +328,7 @@ class Baserun:
                         run.result = str(result) if result is not None else ""
                         return result
                     except Exception as e:
-                        run.error = str(e)
+                        run.error = "".join(traceback.format_exception(e))
                         raise e
                     finally:
                         Baserun._finish_run(run, span)

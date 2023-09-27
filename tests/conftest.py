@@ -4,6 +4,7 @@ from unittest.mock import patch
 import openai
 import pytest
 from dotenv import load_dotenv
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
 from baserun import Baserun
 
@@ -17,22 +18,20 @@ def set_openai_api_key():
     openai.api_key = api_key
 
 
-@pytest.fixture(autouse=True)
-def mock_services(init_baserun):
-    with patch.object(
-        Baserun.submission_service, "StartRun", autospec=True
-    ) as mock_start_run, patch.object(
-        Baserun.submission_service, "SubmitLog", autospec=True
-    ) as mock_submit_log, patch.object(
-        Baserun.submission_service, "SubmitSpan", autospec=True
-    ) as mock_submit_span, patch.object(
-        Baserun.submission_service, "EndRun", autospec=True
-    ) as mock_end_run, patch.object(
-        Baserun.submission_service, "SubmitEval", autospec=True
-    ) as mock_submit_eval, patch.object(
-        Baserun.submission_service, "StartTestSuite", autospec=True
-    ) as mock_start_test_suite, patch.object(
-        Baserun.submission_service, "EndTestSuite", autospec=True
+@pytest.fixture
+def mock_services():
+    with patch("baserun.Baserun.submission_service.StartRun") as mock_start_run, patch(
+        "baserun.Baserun.submission_service.SubmitLog"
+    ) as mock_submit_log, patch(
+        "baserun.Baserun.submission_service.SubmitSpan"
+    ) as mock_submit_span, patch(
+        "baserun.Baserun.submission_service.EndRun"
+    ) as mock_end_run, patch(
+        "baserun.Baserun.submission_service.SubmitEval"
+    ) as mock_submit_eval, patch(
+        "baserun.Baserun.submission_service.StartTestSuite"
+    ) as mock_start_test_suite, patch(
+        "baserun.Baserun.submission_service.EndTestSuite"
     ) as mock_end_test_suite:
         yield {
             "mock_start_run": mock_start_run,
@@ -45,6 +44,15 @@ def mock_services(init_baserun):
         }
 
 
-@pytest.fixture
-def init_baserun():
-    Baserun.init()
+def pytest_sessionstart(session):
+    """Starting up Baserun in tests requires that these things happen in a specific order:
+    - `init`, specifically setting up gRPC
+    - Mock services, to replace the services that were just set up
+    - Instrument
+    - Close channel, simply to ensure that no unmocked calls get through
+    """
+    Baserun.init(instrument=False)
+    # mock_services()
+    # Replace the batch processor so that things happen synchronously and not in a separate thread
+    Baserun.instrument(processor_class=SimpleSpanProcessor)
+    Baserun.grpc_channel.close()

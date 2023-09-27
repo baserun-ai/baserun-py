@@ -48,6 +48,8 @@ def instrumented_wrapper(
             attributes=parent_span.attributes,
         )
 
+        error_to_reraise = None
+
         auto_end_span = True
         try:
             # Activate the span in the current context, but don't end it automatically
@@ -74,7 +76,17 @@ def instrumented_wrapper(
                     )
 
                 # Actually call the wrapped method
-                response = wrapped_fn(*args, **kwargs)
+                try:
+                    response = wrapped_fn(*args, **kwargs)
+                    span.set_status(Status(StatusCode.OK))
+                except Exception as e:
+                    span.set_status(
+                        Status(
+                            description=str(e),
+                            status_code=StatusCode.ERROR,
+                        )
+                    )
+                    raise e
 
                 # If this is a streaming response, wrap it, so we can capture each chunk
                 if isinstance(response, GeneratorType):
@@ -98,7 +110,6 @@ def instrumented_wrapper(
                 if response:
                     # noinspection PyBroadException
                     try:
-                        span.set_status(Status(StatusCode.OK))
                         instrumentor.set_response_attributes(span, response)
                     except Exception as e:
                         logger.warning(
@@ -115,6 +126,7 @@ def instrumented_wrapper(
         finally:
             if auto_end_span:
                 span.end()
+
         return response
 
     return instrumented_function
