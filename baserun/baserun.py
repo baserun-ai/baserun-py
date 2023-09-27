@@ -207,9 +207,13 @@ class Baserun:
         return run
 
     @staticmethod
-    def _finish_run(run: Run):
+    def _finish_run(run: Run, span: _Span = None):
         try:
             run.completion_timestamp.FromDatetime(datetime.utcnow())
+            if span:
+                span.set_attribute(
+                    SpanAttributes.BASERUN_RUN, Baserun.serialize_run(run)
+                )
             Baserun.submission_service.EndRun(EndRunRequest(run=run))
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
@@ -252,7 +256,7 @@ class Baserun:
                     f"baserun.parent.{func.__name__}",
                     kind=SpanKind.CLIENT,
                     attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
-                ):
+                ) as span:
                     try:
                         result = await func(*args, **kwargs)
                         run.result = str(result) if result is not None else ""
@@ -261,7 +265,7 @@ class Baserun:
                         run.error = str(e)
                         raise e
                     finally:
-                        Baserun._finish_run(run)
+                        Baserun._finish_run(run, span)
 
         elif inspect.isasyncgenfunction(func):
 
@@ -281,7 +285,7 @@ class Baserun:
                     f"baserun.parent.{func.__name__}",
                     kind=SpanKind.CLIENT,
                     attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
-                ):
+                ) as span:
                     try:
                         result = []
                         async for item in func(*args, **kwargs):
@@ -293,7 +297,7 @@ class Baserun:
                         run.error = str(e)
                         raise e
                     finally:
-                        Baserun._finish_run(run)
+                        Baserun._finish_run(run, span)
 
         else:
 
@@ -313,7 +317,7 @@ class Baserun:
                     f"baserun.parent.{func.__name__}",
                     kind=SpanKind.CLIENT,
                     attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
-                ):
+                ) as span:
                     try:
                         result = func(*args, **kwargs)
                         run.result = str(result) if result is not None else ""
@@ -322,7 +326,7 @@ class Baserun:
                         run.error = str(e)
                         raise e
                     finally:
-                        Baserun._finish_run(run)
+                        Baserun._finish_run(run, span)
 
         return wrapper
 

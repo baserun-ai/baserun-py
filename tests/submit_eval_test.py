@@ -6,7 +6,7 @@ import pytest
 from baserun import Baserun
 
 
-def test_eval_includes(init_baserun):
+def test_eval_includes():
     with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         Baserun.evals.includes(eval_name, "Contains some words", ["Contains"])
@@ -26,7 +26,7 @@ def test_eval_includes(init_baserun):
         assert submit_eval_request.run.name == "test_eval_includes"
 
 
-def test_eval_not_includes(init_baserun):
+def test_eval_not_includes():
     with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         Baserun.evals.not_includes(
@@ -48,7 +48,7 @@ def test_eval_not_includes(init_baserun):
         assert submit_eval_request.run.name == "test_eval_not_includes"
 
 
-def test_eval_match(init_baserun):
+def test_eval_match():
     with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         Baserun.evals.match(eval_name, "Matches some string", ["Match"])
@@ -66,7 +66,7 @@ def test_eval_match(init_baserun):
         assert submit_eval_request.run.name == "test_eval_match"
 
 
-def test_eval_not_match(init_baserun):
+def test_eval_not_match():
     with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         Baserun.evals.not_match(eval_name, "Does not match some string", ["matches"])
@@ -84,7 +84,7 @@ def test_eval_not_match(init_baserun):
         assert submit_eval_request.run.name == "test_eval_not_match"
 
 
-def test_eval_fuzzy_match(init_baserun):
+def test_eval_fuzzy_match():
     with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         Baserun.evals.fuzzy_match(eval_name, "Fuzzy matches some string", ["Fuzz"])
@@ -102,7 +102,7 @@ def test_eval_fuzzy_match(init_baserun):
         assert submit_eval_request.run.name == "test_eval_fuzzy_match"
 
 
-def test_eval_not_fuzzy_match(init_baserun):
+def test_eval_not_fuzzy_match():
     with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         Baserun.evals.not_fuzzy_match(eval_name, "Fuzzy matches some string", ["Fizz"])
@@ -120,7 +120,7 @@ def test_eval_not_fuzzy_match(init_baserun):
         assert submit_eval_request.run.name == "test_eval_not_fuzzy_match"
 
 
-def test_eval_valid_json_valid(init_baserun):
+def test_eval_valid_json_valid():
     with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         valid_json = json.dumps({"foo": "bar"})
@@ -139,7 +139,7 @@ def test_eval_valid_json_valid(init_baserun):
         assert submit_eval_request.run.name == "test_eval_valid_json_valid"
 
 
-def test_eval_valid_json_invalid(init_baserun):
+def test_eval_valid_json_invalid():
     with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         invalid_json = json.dumps({"foo": "bar"}) + "}}}"
@@ -158,7 +158,7 @@ def test_eval_valid_json_invalid(init_baserun):
         assert submit_eval_request.run.name == "test_eval_valid_json_invalid"
 
 
-def test_eval_custom(init_baserun):
+def test_eval_custom():
     def custom_eval(submission):
         return True
 
@@ -180,7 +180,7 @@ def test_eval_custom(init_baserun):
 
 
 @pytest.mark.asyncio
-async def test_eval_custom_async(init_baserun):
+async def test_eval_custom_async():
     async def custom_eval(submission):
         return True
 
