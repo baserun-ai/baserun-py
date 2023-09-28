@@ -57,7 +57,7 @@ def basic_span_asserts(
 def anthropic_completion(prompt: str) -> str:
     anthropic = Anthropic()
     completion = anthropic.completions.create(
-        max_tokens_to_sample="100",
+        max_tokens_to_sample=100,
         model="claude-2",
         prompt=prompt,
     )
@@ -82,7 +82,7 @@ def test_completion_basic(mock_services):
 async def anthropic_completion_async(prompt: str) -> str:
     anthropic = AsyncAnthropic()
     completion = await anthropic.completions.create(
-        max_tokens_to_sample="100",
+        max_tokens_to_sample=100,
         model="claude-2",
         prompt=prompt,
     )

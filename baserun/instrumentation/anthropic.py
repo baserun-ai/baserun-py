@@ -42,9 +42,9 @@ class AnthropicInstrumentor(BaseInstrumentor):
     def set_request_attributes(span: Span, kwargs: dict[str, Any]):
         span.set_attribute(SpanAttributes.LLM_VENDOR, ANTHROPIC_VENDOR_NAME)
         span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model"))
-        span.set_attribute(
-            SpanAttributes.LLM_CHAT_STOP_SEQUENCES, kwargs.get("stop_sequences")
-        )
+        if stop_sequences := kwargs.get("stop_sequences"):
+            span.set_attribute(SpanAttributes.LLM_CHAT_STOP_SEQUENCES, stop_sequences)
+
         span.set_attribute(
             SpanAttributes.LLM_REQUEST_MAX_TOKENS, kwargs.get("max_tokens_to_sample")
         )
