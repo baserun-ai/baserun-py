@@ -28,6 +28,7 @@ def basic_run_asserts(run: Run, name: str = "", result: str = "", error: str = "
 
 def basic_span_asserts(
     span: Span,
+    request_type="chat",
     status_code=StatusCode.OK.value,
     api_type="open_ai",
     prompt_role="user",
@@ -38,12 +39,12 @@ def basic_span_asserts(
     assert isinstance(span.run_id, str)
     assert isinstance(span.trace_id, bytes)
     assert isinstance(span.span_id, int)
-    assert span.name == "baserun.openai.chat"
+    assert span.name == f"baserun.openai.{request_type}"
     assert isinstance(span.start_time, protobuf.timestamp_pb2.Timestamp)
     assert isinstance(span.end_time, protobuf.timestamp_pb2.Timestamp)
     assert span.status.code == status_code
     assert span.vendor == "OpenAI"
-    assert span.request_type == "chat"
+    assert span.request_type == request_type
     assert span.api_base == "https://api.openai.com/v1"
     assert span.api_type == api_type
     assert isinstance(span.total_tokens, int)
@@ -205,5 +206,10 @@ def test_completion(mock_services):
     basic_run_asserts(run=ended_run, name=name, result="test")
 
     basic_span_asserts(
-        span, prompt=prompt, prompt_role="", completion_role="", result="test"
+        span,
+        request_type="completion",
+        prompt=prompt,
+        prompt_role="",
+        completion_role="",
+        result="test",
     )

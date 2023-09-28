@@ -100,7 +100,9 @@ class Baserun:
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
         if not hasattr(tracer, "active_span_processor"):
-            # This is almost always a ProxyTracerProvider?
+            # Check to see if there's an active span processor. If there's not it means that we need to create a new
+            # tracer provider and add our span processor to it. (The default type is ProxyTracerProvider which can't
+            # have span processors)
             tracer_provider = TracerProvider()
             trace.set_tracer_provider(tracer_provider)
 

@@ -34,12 +34,12 @@ class OpenAIInstrumentor(BaseInstrumentor):
         {
             "class": Completion,
             "function": Completion.create,
-            "span_name": "openai.chat",
+            "span_name": "openai.completion",
         },
         {
             "class": Completion,
             "function": Completion.acreate,
-            "span_name": "openai.chat",
+            "span_name": "openai.completion",
         },
     ]
 
@@ -101,7 +101,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
             )
 
         if "logprobs" in kwargs:
-            span.set_attribute(SpanAttributes.LLM_BEST_OF, kwargs.get("logprobs"))
+            span.set_attribute(SpanAttributes.LLM_LOGPROBS, kwargs.get("logprobs"))
 
         if "echo" in kwargs:
             span.set_attribute(SpanAttributes.LLM_ECHO, kwargs.get("echo"))
