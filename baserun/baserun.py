@@ -4,11 +4,11 @@ import logging
 import os
 import traceback
 import uuid
-import warnings
 from base64 import b64encode, b64decode
 from datetime import datetime
 from importlib.util import find_spec
-from typing import Callable, Dict, Optional, Union, Any, Type
+from typing import Any, Type
+from typing import Callable, Dict, Optional, Union
 
 import grpc
 from opentelemetry import trace
@@ -17,14 +17,6 @@ from opentelemetry.sdk.trace import TracerProvider, _Span
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import SpanKind, get_current_span
 
-import uuid
-import requests
-import time
-import threading
-from typing import Callable, Dict, Optional, Union
-from urllib.parse import urlparse
-import warnings
-from .api_key import get_api_key
 from .evals.evals import Evals
 from .exporter import BaserunExporter
 from .instrumentation.base_instrumentor import BaseInstrumentor
@@ -357,7 +349,6 @@ class Baserun:
         if not Baserun._initialized:
             return
 
-<<<<<<< HEAD
         run = Baserun.current_run()
         log_message = Log(
             run_id=run.run_id,
@@ -366,40 +357,6 @@ class Baserun:
         )
         log_message.timestamp.FromDatetime(datetime.utcnow())
         log_request = SubmitLogRequest(log=log_message, run=run)
-=======
-        if not Baserun._trace_id:
-            warnings.warn("baserun.log was called outside of a Baserun decorated trace. The log will be ignored.")
-            return
-
-        log_entry = {
-            "stepType": BaserunStepType.LOG.name.lower(),
-            "name": name,
-            "payload": payload,
-            "timestamp": time.time(),
-        }
-
-        Baserun._append_to_buffer(log_entry)
-
-    @staticmethod
-    def store_trace(trace_data):
-        Baserun._traces.append({
-            **trace_data,
-            "completionTimestamp": time.time(),
-            "steps": Baserun._buffer,
-            "evals": Baserun._evals,
-        })
-
-    @staticmethod
-    def flush():
-        if not Baserun._initialized:
-            warnings.warn("Baserun has not been initialized. No data will be flushed.")
-            return
-
-        if not Baserun._traces:
-            return
-
-        headers = {"Authorization": f"Bearer {get_api_key()}"}
->>>>>>> c1b1775 (Support setting api_key and don't warn on multiple init calls (#61))
 
         # noinspection PyBroadException
         try:
