@@ -109,6 +109,29 @@ def test_chat_completion_basic(mock_services):
 
 
 @baserun.trace
+async def openai_chat_async() -> str:
+    completion = await ChatCompletion.acreate(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": "What is the capitol of the US?"}],
+    )
+    return completion.choices[0]["message"].content
+
+
+@pytest.mark.asyncio
+async def test_chat_completion_async(mock_services):
+    name = "test_chat_completion_async"
+    openai_chat()
+
+    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+
+    basic_run_asserts(run=started_run, name=name)
+    basic_run_asserts(run=submitted_run, name=name)
+    basic_run_asserts(run=ended_run, name=name, result="Washington")
+
+    basic_span_asserts(span)
+
+
+@baserun.trace
 def openai_chat_functions(prompt) -> dict[str, str]:
     functions = [
         {

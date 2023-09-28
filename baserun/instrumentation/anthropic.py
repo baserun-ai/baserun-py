@@ -54,9 +54,6 @@ class AnthropicInstrumentor(BaseInstrumentor):
 
     @staticmethod
     def set_response_attributes(span: Span, response: Completion):
-        import pdb
-
-        pdb.set_trace()
         prefix = f"{SpanAttributes.LLM_COMPLETIONS}.0"
         span.set_attribute(f"{prefix}.finish_reason", response.stop_reason)
         span.set_attribute(f"{prefix}.content", response.completion)
