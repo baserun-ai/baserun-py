@@ -26,7 +26,15 @@ def basic_run_asserts(run: Run, name: str = "", result: str = "", error: str = "
     assert isinstance(run.start_timestamp, protobuf.timestamp_pb2.Timestamp)
 
 
-def basic_span_asserts(span: Span, status_code=StatusCode.OK.value, api_type="open_ai"):
+def basic_span_asserts(
+    span: Span,
+    status_code=StatusCode.OK.value,
+    api_type="open_ai",
+    prompt_role="user",
+    completion_role="assistant",
+    prompt="What is the capitol of the US?",
+    result: str = "washington",
+):
     assert isinstance(span.run_id, str)
     assert isinstance(span.trace_id, bytes)
     assert isinstance(span.span_id, int)
@@ -43,14 +51,14 @@ def basic_span_asserts(span: Span, status_code=StatusCode.OK.value, api_type="op
     assert isinstance(span.prompt_tokens, int)
 
     prompt_message = span.prompt_messages[0]
-    assert prompt_message.role == "user"
-    assert prompt_message.content == "What is the capitol of the US?"
+    assert prompt_message.role == prompt_role
+    assert prompt_message.content == prompt
 
     # Some things, like error responses, don't have any completions
     if len(span.completions):
         completion = span.completions[0]
-        assert completion.role == "assistant"
-        assert "Washington" in completion.content
+        assert completion.role == completion_role
+        assert result.lower() in completion.content.lower()
 
 
 def get_mock_objects(mock_services) -> tuple[Run, Span, Run, Run]:
@@ -181,21 +189,21 @@ def test_traced_fn_error(mock_services):
 
 
 @baserun.trace
-def openai_completion() -> tuple[str, _Span]:
-    completion = Completion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": "What is the capitol of the US?"}],
-    )
-    return completion.choices[0]["message"].content
+def openai_completion(prompt: str) -> tuple[str, _Span]:
+    completion = Completion.create(model="text-davinci-003", prompt=prompt)
+    return completion.choices[0].text
 
 
 def test_completion(mock_services):
+    prompt = "say this is a test"
     name = "test_completion"
-    openai_completion()
+    openai_completion(prompt)
     started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
 
     basic_run_asserts(run=started_run, name=name)
     basic_run_asserts(run=submitted_run, name=name)
-    basic_run_asserts(run=ended_run, name=name, result="Washington")
+    basic_run_asserts(run=ended_run, name=name, result="test")
 
-    basic_span_asserts(span)
+    basic_span_asserts(
+        span, prompt=prompt, prompt_role="", completion_role="", result="test"
+    )

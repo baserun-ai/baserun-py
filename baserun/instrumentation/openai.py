@@ -33,12 +33,12 @@ class OpenAIInstrumentor(BaseInstrumentor):
         },
         {
             "class": Completion,
-            "function": ChatCompletion.create,
+            "function": Completion.create,
             "span_name": "openai.chat",
         },
         {
             "class": Completion,
-            "function": ChatCompletion.acreate,
+            "function": Completion.acreate,
             "span_name": "openai.chat",
         },
     ]
@@ -122,6 +122,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
             if content := message.get("content"):
                 span.set_attribute(f"{prefix}.content", content)
+
+        if (prompt := kwargs.get("prompt")) and not messages:
+            span.set_attribute(f"{SpanAttributes.LLM_PROMPTS}.0.content", prompt)
 
     @staticmethod
     def set_response_attributes(span: Span, response: OpenAIObject):

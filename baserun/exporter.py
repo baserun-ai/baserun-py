@@ -42,13 +42,14 @@ class BaserunExporter(SpanExporter):
             prompt_messages = [
                 Message(**message_attrs)
                 for message_attrs in self._extract_prefix_dicts(
-                    span.attributes, "llm.prompts"
+                    span.attributes, SpanAttributes.LLM_PROMPTS
                 )
             ]
+            # TODO: Prompt messages for completions input which are just a string
             completions = [
                 Message(**message_attrs)
                 for message_attrs in self._extract_prefix_dicts(
-                    span.attributes, "llm.completions"
+                    span.attributes, SpanAttributes.LLM_COMPLETIONS
                 )
             ]
 
