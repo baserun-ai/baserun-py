@@ -222,8 +222,9 @@ def test_eval_model_graded_fact():
         assert submit_eval_request.eval.type == "model_graded_fact"
         assert submit_eval_request.eval.submission == "DC"
         assert submit_eval_request.eval.result == "A"
-        # FIXME? Is this right?
+        # This is the default value
         assert submit_eval_request.eval.score == 0
+        assert not submit_eval_request.eval.is_scored
 
         payload = json.loads(submit_eval_request.eval.payload)
         assert payload.get("question") == question

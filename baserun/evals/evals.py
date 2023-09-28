@@ -70,10 +70,15 @@ class Evals:
             name=name,
             type=eval_type,
             result=result,
-            score=score,
             submission=submission,
             payload=json.dumps(payload),
         )
+        if score is not None:
+            eval_message.score = score
+            eval_message.is_scored = True
+        else:
+            eval_message.is_scored = False
+
         run = Baserun.current_run()
         try:
             Baserun.submission_service.SubmitEval(
