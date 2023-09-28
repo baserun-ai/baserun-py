@@ -49,6 +49,8 @@ def basic_span_asserts(
     assert isinstance(span.total_tokens, int)
     assert isinstance(span.completion_tokens, int)
     assert isinstance(span.prompt_tokens, int)
+    assert span.stop == []
+    assert span.max_tokens == 0
 
     prompt_message = span.prompt_messages[0]
     assert prompt_message.role == prompt_role

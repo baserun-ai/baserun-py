@@ -87,6 +87,8 @@ class BaserunExporter(SpanExporter):
                 model=span.attributes.get(SpanAttributes.LLM_REQUEST_MODEL, ""),
                 completions=completions,
                 request_type=span.attributes.get(SpanAttributes.LLM_REQUEST_TYPE, ""),
+                max_tokens=span.attributes.get(SpanAttributes.LLM_REQUEST_MAX_TOKENS),
+                stop=span.attributes.get(SpanAttributes.LLM_CHAT_STOP_SEQUENCES),
             )
             span_message.start_time.FromNanoseconds(span.start_time)
             span_message.end_time.FromNanoseconds(span.end_time)
@@ -121,12 +123,6 @@ class BaserunExporter(SpanExporter):
                     span_message, "api_base", span, SpanAttributes.OPENAI_API_BASE
                 )
                 set_span_attr(span_message, "n", span, SpanAttributes.LLM_N)
-                set_span_attr(
-                    span_message,
-                    "max_tokens",
-                    span,
-                    SpanAttributes.LLM_REQUEST_MAX_TOKENS,
-                )
                 set_span_attr(
                     span_message,
                     "frequency_penalty",

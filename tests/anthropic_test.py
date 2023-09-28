@@ -26,8 +26,6 @@ def basic_span_asserts(
     span: Span,
     request_type="chat",
     status_code=StatusCode.OK.value,
-    prompt_role="user",
-    completion_role="assistant",
     prompt="What is the capitol of the US?",
     result: str = "washington",
 ):
@@ -43,6 +41,8 @@ def basic_span_asserts(
     assert isinstance(span.total_tokens, int)
     assert isinstance(span.completion_tokens, int)
     assert isinstance(span.prompt_tokens, int)
+    assert span.stop == []
+    assert span.max_tokens == 100
 
     prompt_message = span.prompt_messages[0]
     assert prompt_message.content == prompt
