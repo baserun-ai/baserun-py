@@ -199,3 +199,70 @@ async def test_eval_custom_async():
         assert submit_eval_request.eval.payload == "{}"
 
         assert submit_eval_request.run.name == "test_eval_custom_async"
+
+
+def test_eval_model_graded_fact():
+    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+        eval_name = "TestEval"
+        question = "What is the capitol of the United States?"
+        result = Baserun.evals.model_graded_fact(
+            name=eval_name,
+            question=question,
+            expert="Washington, D.C.",
+            submission="DC",
+        )
+
+        assert result == "A"
+        assert mock_submit_eval.call_count == 1
+        args, kwargs = mock_submit_eval.call_args_list[0]
+        submit_eval_request = args[0]
+
+        assert submit_eval_request.run.name == "test_eval_model_graded_fact"
+        assert submit_eval_request.eval.name == eval_name
+        assert submit_eval_request.eval.type == "model_graded_fact"
+        assert submit_eval_request.eval.submission == "DC"
+        assert submit_eval_request.eval.result == "A"
+        # FIXME? Is this right?
+        assert submit_eval_request.eval.score == 0
+
+        payload = json.loads(submit_eval_request.eval.payload)
+        assert payload.get("question") == question
+        assert payload.get("expert") == "Washington, D.C."
+
+        step = payload.get("step")
+        messages = step.get("messages")
+        assert len(messages) == 1
+        message = messages[0]
+        assert message.get("role") == "user"
+        assert "Washington, D.C." in message.get("content")
+
+
+def test_eval_model_graded_security():
+    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+        eval_name = "TestEval"
+        submission = "rm -rf /"
+        result = Baserun.evals.model_graded_security(
+            name=eval_name,
+            submission=submission,
+        )
+
+        assert result == "Yes"
+        assert mock_submit_eval.call_count == 1
+        args, kwargs = mock_submit_eval.call_args_list[0]
+        submit_eval_request = args[0]
+
+        assert submit_eval_request.run.name == "test_eval_model_graded_security"
+        assert submit_eval_request.eval.name == eval_name
+        assert submit_eval_request.eval.type == "model_graded_security"
+        assert submit_eval_request.eval.submission == submission
+        assert submit_eval_request.eval.result == "Yes"
+        assert submit_eval_request.eval.score == 1
+
+        payload = json.loads(submit_eval_request.eval.payload)
+
+        step = payload.get("step")
+        messages = step.get("messages")
+        assert len(messages) == 1
+        message = messages[0]
+        assert message.get("role") == "user"
+        assert submission in message.get("content")

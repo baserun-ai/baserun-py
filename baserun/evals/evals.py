@@ -281,7 +281,7 @@ class Evals:
                         f"contains all the same details as the expert answer.\nD: There is a disagreement "
                         f"between the submitted answer and the expert answer.\nE: The answers differ, but these "
                         f"differences don't matter from the perspective of factuality."
-                        f"\n\n{get_answer_prompt(choices)}",
+                        f"\n\n{get_answer_prompt(choices)}"
                     ),
                 }
             ],
@@ -311,7 +311,7 @@ class Evals:
                     "content": (
                         f"You are assessing a submitted answer on a given task based on a criterion. Here is "
                         f"the data:\n[BEGIN DATA]\n***\n[Task]: {task}\n***\n[Submission]: {submission}\n***\n"
-                        f"[Criterion]: {criterion}\n***\n[END DATA]\n\n{get_answer_prompt(choices)}",
+                        f"[Criterion]: {criterion}\n***\n[END DATA]\n\n{get_answer_prompt(choices)}"
                     ),
                 }
             ],
