@@ -1,5 +1,5 @@
 import os
-from unittest.mock import patch
+from unittest.mock import patch, call
 
 import openai
 import pytest
@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
 from baserun import Baserun
+from baserun.v1.baserun_pb2 import Run, Span, StartRunRequest
 
 load_dotenv()
 
@@ -56,3 +57,27 @@ def pytest_sessionstart(session):
     # Replace the batch processor so that things happen synchronously and not in a separate thread
     Baserun.instrument(processor_class=SimpleSpanProcessor)
     Baserun.grpc_channel.close()
+
+
+def get_mock_objects(mock_services) -> tuple[Run, Span, Run, Run]:
+    mock_services["mock_start_run"].assert_called_once()
+    run_call: call = mock_services["mock_start_run"].call_args_list[0]
+    start_run_request: StartRunRequest = run_call.args[0]
+    started_run = start_run_request.run
+
+    if len(mock_services["mock_submit_span"].call_args_list):
+        mock_services["mock_submit_span"].assert_called_once()
+        submit_span_call: call = mock_services["mock_submit_span"].call_args_list[0]
+        submit_span_request = submit_span_call.args[0]
+        span = submit_span_request.span
+        submitted_run = submit_span_request.run
+    else:
+        span = None
+        submitted_run = None
+
+    mock_services["mock_end_run"].assert_called_once()
+    end_run_call: call = mock_services["mock_end_run"].call_args_list[0]
+    end_run_request: StartRunRequest = end_run_call.args[0]
+    ended_run = end_run_request.run
+
+    return started_run, span, submitted_run, ended_run

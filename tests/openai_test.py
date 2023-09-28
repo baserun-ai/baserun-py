@@ -1,5 +1,3 @@
-from unittest.mock import call
-
 import openai
 import pytest
 from google import protobuf
@@ -9,7 +7,8 @@ from opentelemetry.sdk.trace import _Span
 from opentelemetry.trace import StatusCode
 
 import baserun
-from baserun.v1.baserun_pb2 import Run, StartRunRequest, Span
+from baserun.v1.baserun_pb2 import Run, Span
+from tests.conftest import get_mock_objects
 
 
 def basic_run_asserts(run: Run, name: str = "", result: str = "", error: str = ""):
@@ -60,30 +59,6 @@ def basic_span_asserts(
         completion = span.completions[0]
         assert completion.role == completion_role
         assert result.lower() in completion.content.lower()
-
-
-def get_mock_objects(mock_services) -> tuple[Run, Span, Run, Run]:
-    mock_services["mock_start_run"].assert_called_once()
-    run_call: call = mock_services["mock_start_run"].call_args_list[0]
-    start_run_request: StartRunRequest = run_call.args[0]
-    started_run = start_run_request.run
-
-    if len(mock_services["mock_submit_span"].call_args_list):
-        mock_services["mock_submit_span"].assert_called_once()
-        submit_span_call: call = mock_services["mock_submit_span"].call_args_list[0]
-        submit_span_request = submit_span_call.args[0]
-        span = submit_span_request.span
-        submitted_run = submit_span_request.run
-    else:
-        span = None
-        submitted_run = None
-
-    mock_services["mock_end_run"].assert_called_once()
-    end_run_call: call = mock_services["mock_end_run"].call_args_list[0]
-    end_run_request: StartRunRequest = end_run_call.args[0]
-    ended_run = end_run_request.run
-
-    return started_run, span, submitted_run, ended_run
 
 
 @baserun.trace
