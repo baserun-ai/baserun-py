@@ -87,7 +87,7 @@ def get_mock_objects(mock_services) -> tuple[Run, Span, Run, Run]:
 
 
 @baserun.trace
-def openai_chat() -> tuple[str]:
+def openai_chat() -> str:
     completion = ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": "What is the capitol of the US?"}],
@@ -106,6 +106,56 @@ def test_chat_completion_basic(mock_services):
     basic_run_asserts(run=ended_run, name=name, result="Washington")
 
     basic_span_asserts(span)
+
+
+@baserun.trace
+def openai_chat_functions(prompt) -> dict[str, str]:
+    functions = [
+        {
+            "name": "say",
+            "description": "Convert some text to speech",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string", "description": "The text to speak"},
+                },
+                "required": ["text"],
+            },
+        }
+    ]
+    completion = ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+        functions=functions,
+        function_call={"name": "say"},
+    )
+    return completion.choices[0]["message"].function_call
+
+
+def test_openai_chat_with_functions(mock_services):
+    name = "test_openai_chat_with_functions"
+    prompt = "Say 'hello world'"
+    function_call = openai_chat_functions(prompt=prompt)
+    assert function_call.get("name") == "say"
+    assert "hello world" in function_call.get("arguments")
+
+    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+
+    basic_run_asserts(run=started_run, name=name)
+    basic_run_asserts(run=submitted_run, name=name)
+    basic_run_asserts(run=ended_run, name=name, result="")
+
+    basic_span_asserts(span, prompt=prompt, result="")
+
+    # Request parameters
+    assert span.function_call == '{"name": "say"}'
+    assert "text to speech" in span.functions
+
+    # Response parameters (which is on the completion and not on the span itself)
+    completion = span.completions[0]
+    assert completion.role == "assistant"
+    assert "say" in completion.function_call
+    assert "hello world" in completion.function_call
 
 
 @baserun.trace
