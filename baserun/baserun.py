@@ -41,7 +41,6 @@ class BaserunEvaluationFailedException(Exception):
 class Baserun:
     _initialized = False
 
-    _api_base_url = None
     _api_key = None
 
     _instrumentors: list[BaseInstrumentor] = None
@@ -54,16 +53,12 @@ class Baserun:
     evals = Evals
 
     @staticmethod
-    def init(
-        api_base_url: str = "https://baserun.ai/api/v1", instrument: bool = True
-    ) -> None:
+    def init(instrument: bool = True) -> None:
         api_key = os.environ.get("BASERUN_API_KEY")
         if not api_key:
             raise ValueError(
                 "Baserun API key is missing. Ensure the BASERUN_API_KEY environment variable is set."
             )
-
-        grpc_base = os.environ.get("BASERUN_GRPC_URI", "grpc.baserun.ai:50051")
 
         if Baserun._initialized:
             warnings.warn(
@@ -71,7 +66,6 @@ class Baserun:
             )
             return
 
-        Baserun._api_base_url = api_base_url
         Baserun._api_key = api_key
         Baserun._initialized = True
 
@@ -86,6 +80,7 @@ class Baserun:
         channel_credentials = grpc.composite_channel_credentials(
             ssl_creds, call_credentials
         )
+        grpc_base = os.environ.get("BASERUN_GRPC_URI", "grpc.baserun.ai:50051")
         Baserun.grpc_channel = grpc.secure_channel(grpc_base, channel_credentials)
         Baserun.submission_service = SubmissionServiceStub(Baserun.grpc_channel)
 

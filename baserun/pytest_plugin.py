@@ -7,28 +7,16 @@ from baserun.v1.baserun_pb2 import TestSuite, StartTestSuiteRequest, EndTestSuit
 
 logger = logging.getLogger(__name__)
 
-run_url = None
-
 
 def pytest_addoption(parser):
     parser.addoption(
         "--baserun", action="store_true", help="Enable baserun functionality"
     )
-    parser.addoption(
-        "--baserun-api-url", default="https://baserun.ai/api/v1", help="Baserun API URL"
-    )
-    parser.addoption(
-        "--no-flush",
-        action="store_true",
-        default=False,
-        help="do not flush to baserun, even if --baserun is used",
-    )
 
 
 def pytest_sessionstart(session):
     if session.config.getoption("--baserun"):
-        api_url = session.config.getoption("--baserun-api-url")
-        Baserun.init(api_url)
+        Baserun.init()
 
         suite = TestSuite(id=str(uuid.uuid4()))
         suite.start_timestamp.FromDatetime(datetime.utcnow())
@@ -43,7 +31,6 @@ def pytest_sessionstart(session):
 
 
 def pytest_sessionfinish(session):
-    global run_url
     if session.config.getoption("--baserun"):
         if hasattr(session, "suite"):
             session.suite.completion_timestamp.FromDatetime(datetime.utcnow())
@@ -63,7 +50,11 @@ def pytest_collection_modifyitems(config, items):
 
 
 def pytest_terminal_summary(terminalreporter):
-    global run_url
-    if run_url:
-        terminalreporter.write_sep("=", "Baserun summary", blue=True)
-        terminalreporter.write_line(f"Test results available at: {run_url}")
+    # This will happen if they don't run pytest with `--baserun`
+    if not Baserun.current_test_suite:
+        return
+
+    # TODO: Support other base URLs?
+    run_url = f"https://baserun.ai/runs/{Baserun.current_test_suite.id}"
+    terminalreporter.write_sep("=", "Baserun summary", blue=True)
+    terminalreporter.write_line(f"Test results available at: {run_url}")
