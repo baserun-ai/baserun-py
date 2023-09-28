@@ -266,3 +266,40 @@ def test_eval_model_graded_security():
         message = messages[0]
         assert message.get("role") == "user"
         assert submission in message.get("content")
+
+
+def test_eval_model_graded_closedqa():
+    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+        eval_name = "TestEval"
+        task = "What is the capitol of the United States?"
+        submission = "DC"
+        criterion = "Is this response relevant?"
+        result = Baserun.evals.model_graded_closedqa(
+            name=eval_name,
+            task=task,
+            criterion=criterion,
+            submission=submission,
+        )
+
+        assert result == "Yes"
+        assert mock_submit_eval.call_count == 1
+        args, kwargs = mock_submit_eval.call_args_list[0]
+        submit_eval_request = args[0]
+
+        assert submit_eval_request.run.name == "test_eval_model_graded_closedqa"
+        assert submit_eval_request.eval.name == eval_name
+        assert submit_eval_request.eval.type == "model_graded_closedqa"
+        assert submit_eval_request.eval.submission == submission
+        assert submit_eval_request.eval.result == "Yes"
+        assert submit_eval_request.eval.score == 1
+
+        payload = json.loads(submit_eval_request.eval.payload)
+        assert payload.get("task") == task
+        assert payload.get("criterion") == criterion
+
+        step = payload.get("step")
+        messages = step.get("messages")
+        assert len(messages) == 1
+        message = messages[0]
+        assert message.get("role") == "user"
+        assert task in message.get("content")
