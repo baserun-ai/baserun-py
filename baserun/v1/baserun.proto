@@ -69,29 +69,29 @@ message Span {
     repeated Message completions = 15;
 
     // OpenAI-specific attributes
-    string api_base = 16;
-    string api_type = 17;
-    string functions = 18; // JSONified array<map<str, any>>
-    string function_call = 19; // Request attribute: response function_call is in each Message
-    float temperature = 20;
-    float top_p = 21;
-    int32 n = 22;
-    bool stream = 23;
+    optional string api_base = 16;
+    optional string api_type = 17;
+    optional string functions = 18; // JSONified array<map<str, any>>
+    optional string function_call = 19; // Request attribute: response function_call is in each Message
+    optional float temperature = 20;
+    optional float top_p = 21;
+    optional int32 n = 22;
+    optional bool stream = 23;
     repeated string stop = 24;
-    int32 max_tokens = 25;
-    float presence_penalty = 26;
-    float frequency_penalty = 27;
-    string logit_bias = 28; // JSONified map<str, int>
-    string user = 29;
-    int32 logprobs = 30;
-    bool echo = 31;
-    string suffix = 32;
-    int32 best_of = 33;
+    optional int32 max_tokens = 25;
+    optional float presence_penalty = 26;
+    optional float frequency_penalty = 27;
+    optional string logit_bias = 28; // JSONified map<str, int>
+    optional string user = 29;
+    optional int32 logprobs = 30;
+    optional bool echo = 31;
+    optional string suffix = 32;
+    optional int32 best_of = 33;
 
 
     // Anthropic-specific attributes
-    string log_id = 34;
-    float top_k = 35;
+    optional string log_id = 34;
+    optional float top_k = 35;
 }
 
 message Eval {
