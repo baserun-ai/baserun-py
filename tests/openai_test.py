@@ -1,14 +1,20 @@
-import openai
 import pytest
 from google import protobuf
-from openai import ChatCompletion, Completion
 from openai.error import InvalidAPIType
-from opentelemetry.sdk.trace import _Span
 from opentelemetry.trace import StatusCode
 
-import baserun
 from baserun.v1.baserun_pb2 import Run, Span
 from tests.conftest import get_mock_objects
+from tests.testing_functions import (
+    openai_chat,
+    openai_chat_async,
+    openai_chat_functions,
+    openai_chat_functions_streaming,
+    openai_chat_streaming,
+    openai_chat_error,
+    traced_fn_error,
+    openai_completion,
+)
 
 
 def basic_run_asserts(run: Run, name: str = "", result: str = "", error: str = ""):
@@ -63,15 +69,6 @@ def basic_span_asserts(
         assert result.lower() in completion.content.lower()
 
 
-@baserun.trace
-def openai_chat() -> str:
-    completion = ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": "What is the capitol of the US?"}],
-    )
-    return completion.choices[0]["message"].content
-
-
 def test_chat_completion_basic(mock_services):
     name = "test_chat_completion_basic"
     openai_chat()
@@ -83,15 +80,6 @@ def test_chat_completion_basic(mock_services):
     basic_run_asserts(run=ended_run, name=name, result="Washington")
 
     basic_span_asserts(span)
-
-
-@baserun.trace
-async def openai_chat_async() -> str:
-    completion = await ChatCompletion.acreate(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": "What is the capitol of the US?"}],
-    )
-    return completion.choices[0]["message"].content
 
 
 @pytest.mark.asyncio
@@ -106,63 +94,6 @@ async def test_chat_completion_async(mock_services):
     basic_run_asserts(run=ended_run, name=name, result="Washington")
 
     basic_span_asserts(span)
-
-
-@baserun.trace
-def openai_chat_functions(prompt) -> dict[str, str]:
-    functions = [
-        {
-            "name": "say",
-            "description": "Convert some text to speech",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "text": {"type": "string", "description": "The text to speak"},
-                },
-                "required": ["text"],
-            },
-        }
-    ]
-    completion = ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        functions=functions,
-        function_call={"name": "say"},
-    )
-    return completion.choices[0]["message"].function_call
-
-
-@baserun.trace
-def openai_chat_functions_streaming(prompt) -> dict[str, str]:
-    functions = [
-        {
-            "name": "say",
-            "description": "Convert some text to speech",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "text": {"type": "string", "description": "The text to speak"},
-                },
-                "required": ["text"],
-            },
-        }
-    ]
-    completion_generator = ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        functions=functions,
-        stream=True,
-        function_call={"name": "say"},
-    )
-    function_name = ""
-    function_arguments = ""
-    for chunk in completion_generator:
-        choice = chunk.choices[0]
-        if function_call := choice.delta.get("function_call"):
-            function_name += function_call.get("name", "")
-            function_arguments += function_call.get("arguments", "")
-
-    return {"name": function_name, "arguments": function_arguments}
 
 
 def test_openai_chat_with_functions_streaming(mock_services):
@@ -217,21 +148,6 @@ def test_openai_chat_with_functions(mock_services):
     assert "hello world" in completion.function_call
 
 
-@baserun.trace
-def openai_chat_streaming() -> tuple[str, _Span]:
-    completion_generator = ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        stream=True,
-        messages=[{"role": "user", "content": "What is the capitol of the US?"}],
-    )
-    content = ""
-    for chunk in completion_generator:
-        if new_content := chunk.choices[0].delta.get("content"):
-            content += new_content
-
-    return content
-
-
 def test_chat_completion_streaming(mock_services):
     name = "test_chat_completion_streaming"
     openai_chat_streaming()
@@ -242,20 +158,6 @@ def test_chat_completion_streaming(mock_services):
     basic_run_asserts(run=ended_run, name=name, result="Washington")
 
     basic_span_asserts(span)
-
-
-@baserun.trace
-def openai_chat_error():
-    original_api_type = openai.api_type
-    try:
-        openai.api_type = "somegarbage"
-        # Will raise InvalidAPIType
-        ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": "What is the capitol of the US?"}],
-        )
-    finally:
-        openai.api_type = original_api_type
 
 
 def test_chat_completion_error(mock_services):
@@ -271,15 +173,6 @@ def test_chat_completion_error(mock_services):
     basic_run_asserts(run=ended_run, name=name, result="", error="InvalidAPIType")
 
     basic_span_asserts(span, status_code=StatusCode.ERROR.value, api_type="somegarbage")
-
-
-@baserun.trace
-def traced_fn_error():
-    ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": "What is the capitol of the US?"}],
-    )
-    raise ValueError("Something went wrong")
 
 
 def test_traced_fn_error(mock_services):
@@ -298,14 +191,8 @@ def test_traced_fn_error(mock_services):
     basic_span_asserts(span, status_code=StatusCode.OK.value)
 
 
-@baserun.trace
-def openai_completion(prompt: str) -> tuple[str, _Span]:
-    completion = Completion.create(model="text-davinci-003", prompt=prompt)
-    return completion.choices[0].text
-
-
 def test_completion(mock_services):
-    prompt = "say this is a test"
+    prompt = "Human: say this is a test\nAssistant: "
     name = "test_completion"
     openai_completion(prompt)
     started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
