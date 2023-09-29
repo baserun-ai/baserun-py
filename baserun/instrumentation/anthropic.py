@@ -3,8 +3,6 @@ import logging
 from types import GeneratorType
 from typing import Collection, Any
 
-from anthropic.resources import Completions, AsyncCompletions
-from anthropic.types import Completion
 from opentelemetry.sdk.trace import Span
 
 from baserun.instrumentation.base_instrumentor import BaseInstrumentor
@@ -22,18 +20,22 @@ __version__ = "0.1.0"
 class AnthropicInstrumentor(BaseInstrumentor):
     """An instrumentor for OpenAI's client library."""
 
-    WRAPPED_METHODS = [
-        {
-            "class": Completions,
-            "function": Completions.create,
-            "span_name": "anthropic.completion",
-        },
-        {
-            "class": AsyncCompletions,
-            "function": AsyncCompletions.create,
-            "span_name": "anthropic.completion",
-        },
-    ]
+    @staticmethod
+    def wrapped_methods() -> list[dict[str, Any]]:
+        from anthropic.resources import Completions, AsyncCompletions
+
+        return [
+            {
+                "class": Completions,
+                "function": Completions.create,
+                "span_name": "anthropic.completion",
+            },
+            {
+                "class": AsyncCompletions,
+                "function": AsyncCompletions.create,
+                "span_name": "anthropic.completion",
+            },
+        ]
 
     def instrumentation_dependencies(self) -> Collection[str]:
         return _instruments
@@ -53,7 +55,7 @@ class AnthropicInstrumentor(BaseInstrumentor):
         span.set_attribute(f"{prefix}.content", kwargs.get("prompt"))
 
     @staticmethod
-    def set_response_attributes(span: Span, response: Completion):
+    def set_response_attributes(span: Span, response):
         prefix = f"{SpanAttributes.LLM_COMPLETIONS}.0"
         span.set_attribute(f"{prefix}.finish_reason", response.stop_reason)
         span.set_attribute(f"{prefix}.content", response.completion)

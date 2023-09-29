@@ -11,7 +11,10 @@ from baserun.instrumentation.instrumented_wrapper import instrumented_wrapper
 
 
 class BaseInstrumentor(OTelInstrumentor):
-    WRAPPED_METHODS: list[dict[str, Any]] = None
+    @staticmethod
+    @abstractmethod
+    def wrapped_methods() -> list[dict[str, Any]]:
+        pass
 
     @staticmethod
     @abstractmethod
@@ -29,10 +32,10 @@ class BaseInstrumentor(OTelInstrumentor):
         pass
 
     def _instrument(self, **kwargs):
-        if not self.WRAPPED_METHODS:
+        if not self.wrapped_methods():
             return
 
-        for method_spec in self.WRAPPED_METHODS:
+        for method_spec in self.wrapped_methods():
             original_method = method_spec["function"]
             original_class = method_spec["class"]
             wrapper = instrumented_wrapper(

@@ -12,18 +12,10 @@ from typing import Callable, Dict, Optional, Union
 
 import grpc
 from opentelemetry import trace
-from opentelemetry.context import set_value, attach
 from opentelemetry.sdk.trace import TracerProvider, _Span
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import SpanKind, get_current_span
 
-import uuid
-import requests
-import time
-import threading
-from typing import Callable, Dict, Optional, Union
-from urllib.parse import urlparse
-import warnings
 from .api_key import get_api_key
 from .evals.evals import Evals
 from .exporter import BaserunExporter
@@ -49,7 +41,6 @@ class BaserunEvaluationFailedException(Exception):
 class Baserun:
     _initialized = False
 
-
     _instrumentors: list[BaseInstrumentor] = None
 
     grpc_channel: grpc.Channel = None
@@ -61,15 +52,9 @@ class Baserun:
 
     @staticmethod
     def init(instrument: bool = True) -> None:
-        api_key = os.environ.get("BASERUN_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "Baserun API key is missing. Ensure the BASERUN_API_KEY environment variable is set."
-            )
         if Baserun._initialized:
             return
 
-        Baserun._api_key = api_key
         Baserun._initialized = True
 
         if key_chain := os.environ.get("SSL_KEY_CHAIN"):
@@ -79,7 +64,7 @@ class Baserun:
         else:
             ssl_creds = grpc.ssl_channel_credentials()
 
-        call_credentials = grpc.access_token_call_credentials(api_key)
+        call_credentials = grpc.access_token_call_credentials(get_api_key())
         channel_credentials = grpc.composite_channel_credentials(
             ssl_creds, call_credentials
         )
@@ -160,8 +145,16 @@ class Baserun:
         return Baserun.deserialize_run(current_run_str)
 
     @staticmethod
-    def clear_run():
-        attach(set_value(SpanAttributes.BASERUN_RUN, None))
+    def _finish_run(run: Run, span: _Span = None):
+        try:
+            run.completion_timestamp.FromDatetime(datetime.utcnow())
+            if span:
+                span.set_attribute(
+                    SpanAttributes.BASERUN_RUN, Baserun.serialize_run(run)
+                )
+            Baserun.submission_service.EndRun(EndRunRequest(run=run))
+        except Exception as e:
+            logger.warning(f"Failed to submit run end to Baserun: {e}")
 
     @staticmethod
     def get_or_create_current_run(
@@ -210,18 +203,6 @@ class Baserun:
             logger.warning(f"Failed to submit run start to Baserun: {e}")
 
         return run
-
-    @staticmethod
-    def _finish_run(run: Run, span: _Span = None):
-        try:
-            run.completion_timestamp.FromDatetime(datetime.utcnow())
-            if span:
-                span.set_attribute(
-                    SpanAttributes.BASERUN_RUN, Baserun.serialize_run(run)
-                )
-            Baserun.submission_service.EndRun(EndRunRequest(run=run))
-        except Exception as e:
-            logger.warning(f"Failed to submit run end to Baserun: {e}")
 
     @staticmethod
     def _inputs_from_kwargs(kwargs: dict) -> list[str]:

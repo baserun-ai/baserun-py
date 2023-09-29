@@ -27,8 +27,5 @@ dependencies = [
 Homepage = "https://baserun.ai"
 Repository = "https://github.com/baserun-ai/baserun-py"
 
-[project.scripts]
-test = "pip install -r requirements-dev.txt && pytest"
-
 [project.entry-points.pytest11]
 pbaserun = "baserun.pytest_plugin"

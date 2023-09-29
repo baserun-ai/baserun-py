@@ -20,28 +20,30 @@ __version__ = "0.1.0"
 class OpenAIInstrumentor(BaseInstrumentor):
     """An instrumentor for OpenAI's client library."""
 
-    WRAPPED_METHODS = [
-        {
-            "class": ChatCompletion,
-            "function": ChatCompletion.create,
-            "span_name": "openai.chat",
-        },
-        {
-            "class": ChatCompletion,
-            "function": ChatCompletion.acreate,
-            "span_name": "openai.chat",
-        },
-        {
-            "class": Completion,
-            "function": Completion.create,
-            "span_name": "openai.completion",
-        },
-        {
-            "class": Completion,
-            "function": Completion.acreate,
-            "span_name": "openai.completion",
-        },
-    ]
+    @staticmethod
+    def wrapped_methods() -> list[dict[str, Any]]:
+        return [
+            {
+                "class": ChatCompletion,
+                "function": ChatCompletion.create,
+                "span_name": "openai.chat",
+            },
+            {
+                "class": ChatCompletion,
+                "function": ChatCompletion.acreate,
+                "span_name": "openai.chat",
+            },
+            {
+                "class": Completion,
+                "function": Completion.create,
+                "span_name": "openai.completion",
+            },
+            {
+                "class": Completion,
+                "function": Completion.acreate,
+                "span_name": "openai.completion",
+            },
+        ]
 
     def instrumentation_dependencies(self) -> Collection[str]:
         return _instruments
