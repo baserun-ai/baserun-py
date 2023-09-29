@@ -97,7 +97,7 @@ async def openai_chat_async() -> str:
 @pytest.mark.asyncio
 async def test_chat_completion_async(mock_services):
     name = "test_chat_completion_async"
-    openai_chat()
+    await openai_chat_async()
 
     started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
 
