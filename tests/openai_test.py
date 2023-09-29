@@ -132,6 +132,65 @@ def openai_chat_functions(prompt) -> dict[str, str]:
     return completion.choices[0]["message"].function_call
 
 
+@baserun.trace
+def openai_chat_functions_streaming(prompt) -> dict[str, str]:
+    functions = [
+        {
+            "name": "say",
+            "description": "Convert some text to speech",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string", "description": "The text to speak"},
+                },
+                "required": ["text"],
+            },
+        }
+    ]
+    completion_generator = ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+        functions=functions,
+        stream=True,
+        function_call={"name": "say"},
+    )
+    function_name = ""
+    function_arguments = ""
+    for chunk in completion_generator:
+        choice = chunk.choices[0]
+        if function_call := choice.delta.get("function_call"):
+            function_name += function_call.get("name", "")
+            function_arguments += function_call.get("arguments", "")
+
+    return {"name": function_name, "arguments": function_arguments}
+
+
+def test_openai_chat_with_functions_streaming(mock_services):
+    name = "test_openai_chat_with_functions_streaming"
+    prompt = "Say 'hello world'"
+    function_call = openai_chat_functions_streaming(prompt=prompt)
+    assert function_call.get("name") == "say"
+    assert "hello world" in function_call.get("arguments")
+
+    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+
+    basic_run_asserts(run=started_run, name=name)
+    basic_run_asserts(run=submitted_run, name=name)
+    basic_run_asserts(run=ended_run, name=name, result="")
+
+    basic_span_asserts(span, prompt=prompt, result="")
+
+    # Request parameters
+    assert span.function_call == '{"name": "say"}'
+    assert "text to speech" in span.functions
+
+    # Response parameters (which is on the completion and not on the span itself)
+    completion = span.completions[0]
+    assert completion.role == "assistant"
+    assert "say" in completion.function_call
+    assert "hello world" in completion.function_call
+
+
 def test_openai_chat_with_functions(mock_services):
     name = "test_openai_chat_with_functions"
     prompt = "Say 'hello world'"

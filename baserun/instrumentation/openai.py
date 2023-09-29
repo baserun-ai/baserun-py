@@ -168,22 +168,39 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
     @staticmethod
     def generator_wrapper(original_generator: GeneratorType, span: Span):
+        function_name = ""
+        function_arguments = ""
+        content = ""
+
         for value in original_generator:
             # Currently we only support one choice in streaming responses
+            choice = value.choices[0]
+            delta = choice.delta
+
             prefix = f"{SpanAttributes.LLM_COMPLETIONS}.0"
 
-            role = value.choices[0].delta.get("role")
+            role = delta.get("role")
             if role:
                 span.set_attribute(f"{prefix}.role", role)
 
-            new_content = value.choices[0].delta.get("content")
+            new_content = delta.get("content")
             if new_content:
+                content += new_content
+                span.set_attribute(f"{prefix}.content", content)
+
+            new_function_call: OpenAIObject = delta.get("function_call")
+            if new_function_call:
+                function_name += new_function_call.get("name", "")
+                function_arguments += new_function_call.get("arguments", "")
+
                 span.set_attribute(
-                    f"{prefix}.content",
-                    span.attributes.get(f"{prefix}.content", "") + new_content,
+                    f"{prefix}.function_call",
+                    json.dumps(
+                        {"name": function_name, "arguments": function_arguments}
+                    ),
                 )
 
-            if new_content is None or value.choices[0].finish_reason:
+            if (new_content is None and not new_function_call) or choice.finish_reason:
                 span.end()
 
             yield value
