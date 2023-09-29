@@ -91,6 +91,7 @@ message Span {
 
     // Anthropic-specific attributes
     string log_id = 34;
+    float top_k = 35;
 }
 
 message Eval {

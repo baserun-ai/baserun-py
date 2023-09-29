@@ -43,6 +43,10 @@ def basic_span_asserts(
     assert isinstance(span.prompt_tokens, int)
     assert span.stop == []
     assert span.max_tokens == 100
+    assert span.top_p == 1
+    assert span.top_k == 1
+    assert span.temperature == 1
+    assert span.max_tokens == 100
 
     prompt_message = span.prompt_messages[0]
     assert prompt_message.content == prompt
@@ -60,6 +64,9 @@ def anthropic_completion(prompt: str) -> str:
         max_tokens_to_sample=100,
         model="claude-2",
         prompt=prompt,
+        temperature=1,
+        top_k=1,
+        top_p=1,
     )
     return completion.completion
 

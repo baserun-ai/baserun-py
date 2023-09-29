@@ -93,7 +93,14 @@ class BaserunExporter(SpanExporter):
             span_message.start_time.FromNanoseconds(span.start_time)
             span_message.end_time.FromNanoseconds(span.end_time)
 
+            set_span_attr(
+                span_message, "temperature", span, SpanAttributes.LLM_TEMPERATURE
+            )
+            set_span_attr(span_message, "top_p", span, SpanAttributes.LLM_TOP_P)
+            set_span_attr(span_message, "stream", span, SpanAttributes.LLM_STREAM)
+
             if vendor == ANTHROPIC_VENDOR_NAME:
+                set_span_attr(span_message, "top_k", span, SpanAttributes.LLM_TOP_K)
                 set_span_attr(
                     span_message, "log_id", span, SpanAttributes.ANTHROPIC_LOG_ID
                 )
@@ -113,12 +120,7 @@ class BaserunExporter(SpanExporter):
                     span,
                     SpanAttributes.LLM_FUNCTION_CALL,
                 )
-                set_span_attr(
-                    span_message, "temperature", span, SpanAttributes.LLM_TEMPERATURE
-                )
-                set_span_attr(span_message, "top_p", span, SpanAttributes.LLM_TOP_P)
                 set_span_attr(span_message, "n", span, SpanAttributes.LLM_N)
-                set_span_attr(span_message, "stream", span, SpanAttributes.LLM_STREAM)
                 set_span_attr(
                     span_message, "api_base", span, SpanAttributes.OPENAI_API_BASE
                 )

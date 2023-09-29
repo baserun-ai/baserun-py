@@ -162,6 +162,7 @@ class Span(_message.Message):
         "suffix",
         "best_of",
         "log_id",
+        "top_k",
     ]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     TRACE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -197,6 +198,7 @@ class Span(_message.Message):
     SUFFIX_FIELD_NUMBER: _ClassVar[int]
     BEST_OF_FIELD_NUMBER: _ClassVar[int]
     LOG_ID_FIELD_NUMBER: _ClassVar[int]
+    TOP_K_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     trace_id: bytes
     span_id: int
@@ -231,6 +233,7 @@ class Span(_message.Message):
     suffix: str
     best_of: int
     log_id: str
+    top_k: float
     def __init__(
         self,
         run_id: _Optional[str] = ...,
@@ -267,6 +270,7 @@ class Span(_message.Message):
         suffix: _Optional[str] = ...,
         best_of: _Optional[int] = ...,
         log_id: _Optional[str] = ...,
+        top_k: _Optional[float] = ...,
     ) -> None: ...
 
 class Eval(_message.Message):

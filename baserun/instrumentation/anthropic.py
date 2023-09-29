@@ -44,6 +44,21 @@ class AnthropicInstrumentor(BaseInstrumentor):
     def set_request_attributes(span: Span, kwargs: dict[str, Any]):
         span.set_attribute(SpanAttributes.LLM_VENDOR, ANTHROPIC_VENDOR_NAME)
         span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model"))
+
+        if "top_k" in kwargs:
+            span.set_attribute(SpanAttributes.LLM_TOP_K, kwargs.get("top_k"))
+
+        if "top_p" in kwargs:
+            span.set_attribute(SpanAttributes.LLM_TOP_P, kwargs.get("top_p"))
+
+        if "stream" in kwargs:
+            span.set_attribute(SpanAttributes.LLM_STREAM, kwargs.get("stream"))
+
+        if "temperature" in kwargs:
+            span.set_attribute(
+                SpanAttributes.LLM_TEMPERATURE, kwargs.get("temperature")
+            )
+
         if stop_sequences := kwargs.get("stop_sequences"):
             span.set_attribute(SpanAttributes.LLM_CHAT_STOP_SEQUENCES, stop_sequences)
 
