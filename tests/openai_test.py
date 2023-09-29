@@ -15,6 +15,7 @@ from tests.testing_functions import (
     traced_fn_error,
     openai_completion,
     openai_chat_async_streaming,
+    openai_completion_async,
 )
 
 
@@ -210,6 +211,27 @@ def test_completion(mock_services):
     prompt = "Human: say this is a test\nAssistant: "
     name = "test_completion"
     openai_completion(prompt)
+    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+
+    basic_run_asserts(run=started_run, name=name)
+    basic_run_asserts(run=submitted_run, name=name)
+    basic_run_asserts(run=ended_run, name=name, result="test")
+
+    basic_span_asserts(
+        span,
+        request_type="completion",
+        prompt=prompt,
+        prompt_role="",
+        completion_role="",
+        result="test",
+    )
+
+
+@pytest.mark.asyncio
+async def test_completion_async(mock_services):
+    prompt = "Human: say this is a test\nAssistant: "
+    name = "test_completion_async"
+    await openai_completion_async(prompt)
     started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
 
     basic_run_asserts(run=started_run, name=name)

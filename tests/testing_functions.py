@@ -143,6 +143,14 @@ def openai_completion(prompt="Human: say this is a test\nAssistant: ") -> str:
     return completion.choices[0].text
 
 
+@baserun.trace
+async def openai_completion_async(
+    prompt="Human: say this is a test\nAssistant: ",
+) -> str:
+    completion = await Completion.acreate(model="text-davinci-003", prompt=prompt)
+    return completion.choices[0].text
+
+
 # Allows you to call any of these functions, e.g. python tests/testing_functions.py openai_chat_functions_streaming
 if __name__ == "__main__":
     from dotenv import load_dotenv
