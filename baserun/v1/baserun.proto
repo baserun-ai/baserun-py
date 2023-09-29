@@ -98,9 +98,7 @@ message Eval {
     string name = 1;
     string type = 2;
     string result = 3;
-    // This flag is needed because floats are defaulted to 0 if null, so this is the only way to tell if it's null
-    bool is_scored = 4;
-    float score = 5;
+    optional float score = 5;
     string submission = 6;
     string payload = 7; // JSONified map<string, any>
 }

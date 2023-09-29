@@ -274,26 +274,16 @@ class Span(_message.Message):
     ) -> None: ...
 
 class Eval(_message.Message):
-    __slots__ = [
-        "name",
-        "type",
-        "result",
-        "is_scored",
-        "score",
-        "submission",
-        "payload",
-    ]
+    __slots__ = ["name", "type", "result", "score", "submission", "payload"]
     NAME_FIELD_NUMBER: _ClassVar[int]
     TYPE_FIELD_NUMBER: _ClassVar[int]
     RESULT_FIELD_NUMBER: _ClassVar[int]
-    IS_SCORED_FIELD_NUMBER: _ClassVar[int]
     SCORE_FIELD_NUMBER: _ClassVar[int]
     SUBMISSION_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_FIELD_NUMBER: _ClassVar[int]
     name: str
     type: str
     result: str
-    is_scored: bool
     score: float
     submission: str
     payload: str
@@ -302,7 +292,6 @@ class Eval(_message.Message):
         name: _Optional[str] = ...,
         type: _Optional[str] = ...,
         result: _Optional[str] = ...,
-        is_scored: bool = ...,
         score: _Optional[float] = ...,
         submission: _Optional[str] = ...,
         payload: _Optional[str] = ...,
