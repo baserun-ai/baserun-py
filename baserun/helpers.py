@@ -15,8 +15,3 @@ class BaserunStepType(Enum):
     LOG = auto()
     AUTO_LLM = auto()
     CUSTOM_LLM = auto()
-
-
-class TraceType(Enum):
-    TEST = auto()
-    PRODUCTION = auto()
