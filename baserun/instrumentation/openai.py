@@ -18,6 +18,8 @@ __version__ = "0.1.0"
 
 
 class OpenAIInstrumentor(BaseInstrumentor):
+    original_chat_completion_create = ChatCompletion.create
+
     """An instrumentor for OpenAI's client library."""
 
     @staticmethod
