@@ -3,11 +3,12 @@ import logging
 import time
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
-from ..instrumentation.openai import OpenAIInstrumentor
+from openai import ChatCompletion
 
 from baserun.evals.json import is_valid_json
 from baserun.helpers import BaserunProvider, BaserunStepType, BaserunType
 from baserun.v1.baserun_pb2 import SubmitEvalRequest, Eval
+from ..instrumentation.base_instrumentor import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
 
@@ -227,7 +228,13 @@ class Evals:
         payload: Dict,
     ) -> str:
         start_time = time.time()
-        response = OpenAIInstrumentor.original_chat_completion_create(**model_config)
+        if BaseInstrumentor.original_methods:
+            response = BaseInstrumentor.original_methods.get("ChatCompletion.create")(
+                **model_config
+            )
+        else:
+            response = ChatCompletion.create(**model_config)
+
         end_time = time.time()
 
         output = response["choices"][0]["message"]["content"]

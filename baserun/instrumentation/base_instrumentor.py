@@ -1,7 +1,7 @@
 import inspect
 from abc import abstractmethod
 from types import GeneratorType
-from typing import Any
+from typing import Any, Callable
 
 from opentelemetry.instrumentation.instrumentor import (
     BaseInstrumentor as OTelInstrumentor,
@@ -15,6 +15,8 @@ from baserun.instrumentation.instrumented_wrapper import (
 
 
 class BaseInstrumentor(OTelInstrumentor):
+    original_methods: dict[str, Callable] = None
+
     @staticmethod
     @abstractmethod
     def wrapped_methods() -> list[dict[str, Any]]:
@@ -44,9 +46,17 @@ class BaseInstrumentor(OTelInstrumentor):
         if not self.wrapped_methods():
             return
 
+        if not BaseInstrumentor.original_methods:
+            BaseInstrumentor.original_methods = {}
+
         for method_spec in self.wrapped_methods():
             original_method = method_spec["function"]
             original_class = method_spec["class"]
+
+            BaseInstrumentor.original_methods[
+                f"{original_class.__name__}.{original_method.__name__}"
+            ] = original_method
+
             if inspect.iscoroutinefunction(original_method):
                 wrapper = async_instrumented_wrapper(
                     original_method, self, method_spec["span_name"]

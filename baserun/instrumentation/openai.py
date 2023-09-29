@@ -19,8 +19,6 @@ if TYPE_CHECKING:
 
 
 class OpenAIInstrumentor(BaseInstrumentor):
-    original_chat_completion_create = ChatCompletion.create
-
     """An instrumentor for OpenAI's client library."""
 
     @staticmethod
