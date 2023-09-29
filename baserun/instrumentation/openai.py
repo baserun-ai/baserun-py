@@ -192,23 +192,31 @@ class OpenAIInstrumentor(BaseInstrumentor):
     ) -> tuple[str, str, str]:
         # Currently we only support one choice in streaming responses
         choice = value.choices[0]
-        delta = choice.delta
+
+        if hasattr(choice, "delta"):
+            # Chat
+            delta = choice.delta
+            role = delta.get("role")
+            new_content = delta.get("content")
+            new_function_call: "OpenAIObject" = delta.get("function_call")
+        else:
+            # Completion
+            role = None
+            new_content = choice.text
+            new_function_call = None
 
         prefix = f"{SpanAttributes.LLM_COMPLETIONS}.0"
         content_attribute = f"{prefix}.content"
         function_name_attribute = f"{prefix}.function_name"
         function_arguments_attribute = f"{prefix}.function_arguments"
 
-        role = delta.get("role")
         if role:
             span.set_attribute(f"{prefix}.role", role)
 
-        new_content = delta.get("content")
         if new_content:
             content = span.attributes.get(content_attribute, "")
             span.set_attribute(content_attribute, content + new_content)
 
-        new_function_call: "OpenAIObject" = delta.get("function_call")
         if new_function_call:
             function_name = span.attributes.get(function_name_attribute, "")
             if name_delta := new_function_call.get("name"):

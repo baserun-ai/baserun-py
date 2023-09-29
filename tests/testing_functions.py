@@ -151,6 +151,35 @@ async def openai_completion_async(
     return completion.choices[0].text
 
 
+@baserun.trace
+def openai_completion_streaming(prompt="Human: say this is a test\nAssistant: ") -> str:
+    completion_generator = Completion.create(
+        model="text-davinci-003", prompt=prompt, stream=True
+    )
+
+    content = ""
+    for chunk in completion_generator:
+        if new_content := chunk.choices[0].text:
+            content += new_content
+
+    return content
+
+
+@baserun.trace
+async def openai_completion_async_streaming(
+    prompt="Human: say this is a test\nAssistant: ",
+) -> str:
+    completion_generator = await Completion.acreate(
+        model="text-davinci-003", prompt=prompt, stream=True
+    )
+    content = ""
+    async for chunk in completion_generator:
+        if new_content := chunk.choices[0].text:
+            content += new_content
+
+    return content
+
+
 # Allows you to call any of these functions, e.g. python tests/testing_functions.py openai_chat_functions_streaming
 if __name__ == "__main__":
     from dotenv import load_dotenv
@@ -186,5 +215,5 @@ if __name__ == "__main__":
 
         print(result)
 
-    except AttributeError:
-        print(f"Function {args.function_to_call} not found.")
+    except AttributeError as e:
+        print(f"Function {args.function_to_call} not found. {e}")
