@@ -17,6 +17,14 @@ from opentelemetry.sdk.trace import TracerProvider, _Span
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import SpanKind, get_current_span
 
+import uuid
+import requests
+import time
+import threading
+from typing import Callable, Dict, Optional, Union
+from urllib.parse import urlparse
+import warnings
+from .api_key import get_api_key
 from .evals.evals import Evals
 from .exporter import BaserunExporter
 from .instrumentation.base_instrumentor import BaseInstrumentor
@@ -41,7 +49,6 @@ class BaserunEvaluationFailedException(Exception):
 class Baserun:
     _initialized = False
 
-    _api_key = None
 
     _instrumentors: list[BaseInstrumentor] = None
 
@@ -59,7 +66,6 @@ class Baserun:
             raise ValueError(
                 "Baserun API key is missing. Ensure the BASERUN_API_KEY environment variable is set."
             )
-
         if Baserun._initialized:
             return
 
