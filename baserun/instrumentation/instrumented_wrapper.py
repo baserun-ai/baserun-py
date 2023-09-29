@@ -14,6 +14,7 @@ from opentelemetry.trace import (
 )
 
 from baserun.instrumentation.span_attributes import SpanAttributes
+from baserun.v1.baserun_pb2 import Run
 
 if TYPE_CHECKING:
     from baserun.instrumentation.base_instrumentor import BaseInstrumentor
@@ -27,14 +28,30 @@ def async_instrumented_wrapper(
     """Generates a function (`instrumented_function`) which instruments the original function (`wrapped_fn`)"""
 
     async def instrumented_function(*args, **kwargs):
+        from baserun import Baserun
+
         if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
             return await wrapped_fn(*args, **kwargs)
 
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
 
+        parent_span: _Span = get_current_span()
+        if not parent_span.is_recording():
+            run = Baserun.get_or_create_current_run(
+                name="untraced",
+                trace_type=Run.RunType.RUN_TYPE_PRODUCTION,
+            )
+            parent_span = tracer.start_span(
+                f"baserun.parent.untraced",
+                kind=SpanKind.CLIENT,
+                attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
+            )
+
+        span = tracer.start_span(
+            **setup_span(span_name=span_name, parent_span=parent_span)
+        )
         auto_end_span = True
-        span = tracer.start_span(**setup_span(span_name))
         try:
             # Activate the span in the current context, but don't end it automatically
             with trace.use_span(span, end_on_exit=False):
@@ -70,6 +87,7 @@ def async_instrumented_wrapper(
         finally:
             if auto_end_span:
                 span.end()
+                parent_span.end()
 
         return response
 
@@ -81,18 +99,36 @@ def instrumented_wrapper(
 ):
     """Generates a function (`instrumented_function`) which instruments the original function (`wrapped_fn`)"""
 
-    tracer_provider = trace.get_tracer_provider()
-    tracer = tracer_provider.get_tracer("baserun")
-
     def instrumented_function(*args, **kwargs):
         """Replacement for the original function (`wrapped_fn`). Will perform instrumentation, call `wrapped_fn`,
         perform more instrumentation, and then return the result of the previous call to `wrapped_fn`.
         """
+        from baserun import Baserun
+
         if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
             return wrapped_fn(*args, **kwargs)
 
+        tracer_provider = trace.get_tracer_provider()
+        tracer = tracer_provider.get_tracer("baserun")
+
+        parent_span: _Span = get_current_span()
+        # If a call is made outside of a traced function we need to create a parent
+        if not parent_span.is_recording():
+            run = Baserun.get_or_create_current_run(
+                name="untraced",
+                trace_type=Run.RunType.RUN_TYPE_PRODUCTION,
+            )
+            parent_span = tracer.start_span(
+                f"baserun.parent.untraced",
+                kind=SpanKind.CLIENT,
+                attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
+            )
+
+        span = tracer.start_span(
+            **setup_span(span_name=span_name, parent_span=parent_span)
+        )
+
         auto_end_span = True
-        span = tracer.start_span(**setup_span(span_name))
         try:
             # Activate the span in the current context, but don't end it automatically
             with trace.use_span(span, end_on_exit=False):
@@ -126,14 +162,15 @@ def instrumented_wrapper(
         finally:
             if auto_end_span:
                 span.end()
+                if parent_span.is_recording():
+                    parent_span.end()
 
         return response
 
     return instrumented_function
 
 
-def setup_span(span_name: str) -> dict:
-    parent_span: _Span = get_current_span()
+def setup_span(span_name: str, parent_span: _Span) -> dict:
     request_type = span_name.split(".")[-1]
     parent_span.set_attribute(SpanAttributes.LLM_REQUEST_TYPE, request_type)
 

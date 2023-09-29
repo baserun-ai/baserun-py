@@ -18,6 +18,14 @@ def openai_chat(prompt="What is the capitol of the US?") -> str:
     return completion.choices[0]["message"].content
 
 
+def openai_chat_unwrapped(prompt="What is the capitol of the US?") -> str:
+    completion = ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return completion.choices[0]["message"].content
+
+
 @baserun.trace
 async def openai_chat_async(prompt="What is the capitol of the US?") -> str:
     completion = await ChatCompletion.acreate(
@@ -199,21 +207,17 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    try:
-        # Resolve the string function name to the function object
-        function_to_call = globals().get(args.function_to_call)
-        if inspect.iscoroutinefunction(function_to_call):
-            if args.prompt:
-                result = asyncio.run(function_to_call(args.prompt))
-            else:
-                result = asyncio.run(function_to_call())
+    # Resolve the string function name to the function object
+    function_to_call = globals().get(args.function_to_call)
+    if inspect.iscoroutinefunction(function_to_call):
+        if args.prompt:
+            result = asyncio.run(function_to_call(args.prompt))
         else:
-            if args.prompt:
-                result = function_to_call(args.prompt)
-            else:
-                result = function_to_call()
+            result = asyncio.run(function_to_call())
+    else:
+        if args.prompt:
+            result = function_to_call(args.prompt)
+        else:
+            result = function_to_call()
 
-        print(result)
-
-    except AttributeError as e:
-        print(f"Function {args.function_to_call} not found. {e}")
+    print(result)
