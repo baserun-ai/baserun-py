@@ -1,3 +1,4 @@
+import inspect
 from abc import abstractmethod
 from types import GeneratorType
 from typing import Any
@@ -5,9 +6,12 @@ from typing import Any
 from opentelemetry.instrumentation.instrumentor import (
     BaseInstrumentor as OTelInstrumentor,
 )
-from opentelemetry.sdk.trace import Span
+from opentelemetry.sdk.trace import Span, _Span
 
-from baserun.instrumentation.instrumented_wrapper import instrumented_wrapper
+from baserun.instrumentation.instrumented_wrapper import (
+    instrumented_wrapper,
+    async_instrumented_wrapper,
+)
 
 
 class BaseInstrumentor(OTelInstrumentor):
@@ -28,7 +32,12 @@ class BaseInstrumentor(OTelInstrumentor):
 
     @staticmethod
     @abstractmethod
-    def generator_wrapper(original_generator: GeneratorType, span: Span):
+    def generator_wrapper(original_generator: GeneratorType, span: _Span):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def async_generator_wrapper(original_generator: GeneratorType, span: _Span):
         pass
 
     def _instrument(self, **kwargs):
@@ -38,16 +47,21 @@ class BaseInstrumentor(OTelInstrumentor):
         for method_spec in self.wrapped_methods():
             original_method = method_spec["function"]
             original_class = method_spec["class"]
-            wrapper = instrumented_wrapper(
-                original_method, self, method_spec["span_name"]
-            )
+            if inspect.iscoroutinefunction(original_method):
+                wrapper = async_instrumented_wrapper(
+                    original_method, self, method_spec["span_name"]
+                )
+            else:
+                wrapper = instrumented_wrapper(
+                    original_method, self, method_spec["span_name"]
+                )
             setattr(original_class, original_method.__name__, wrapper)
 
     def _uninstrument(self, **kwargs):
-        if not self.WRAPPED_METHODS:
+        if not self.wrapped_methods():
             return
 
-        for method_spec in self.WRAPPED_METHODS:
+        for method_spec in self.wrapped_methods():
             original_method = method_spec["function"]
             original_class = method_spec["class"]
             setattr(original_class, original_method.__name__, original_method)

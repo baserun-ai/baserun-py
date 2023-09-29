@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Sequence, Any
 
@@ -45,13 +46,19 @@ class BaserunExporter(SpanExporter):
                     span.attributes, SpanAttributes.LLM_PROMPTS
                 )
             ]
-            # TODO: Prompt messages for completions input which are just a string
-            completions = [
-                Message(**message_attrs)
-                for message_attrs in self._extract_prefix_dicts(
-                    span.attributes, SpanAttributes.LLM_COMPLETIONS
-                )
-            ]
+
+            completions = []
+            for message_attrs in self._extract_prefix_dicts(
+                span.attributes, SpanAttributes.LLM_COMPLETIONS
+            ):
+                if "function_name" in message_attrs:
+                    message_attrs["function_call"] = json.dumps(
+                        {
+                            "name": message_attrs.pop("function_name"),
+                            "arguments": message_attrs.pop("function_arguments"),
+                        }
+                    )
+                completions.append(Message(**message_attrs))
 
             # Trace IDs are huge integers, so they must be encoded as bytes
             trace_id_int = span.context.trace_id

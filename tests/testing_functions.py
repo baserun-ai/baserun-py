@@ -1,4 +1,6 @@
 import argparse
+import asyncio
+import inspect
 import os
 
 import openai
@@ -98,6 +100,21 @@ def openai_chat_streaming(prompt="What is the capitol of the US?") -> str:
 
 
 @baserun.trace
+async def openai_chat_async_streaming(prompt="What is the capitol of the US?") -> str:
+    completion_generator = await ChatCompletion.acreate(
+        model="gpt-3.5-turbo",
+        stream=True,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    content = ""
+    async for chunk in completion_generator:
+        if new_content := chunk.choices[0].delta.get("content"):
+            content += new_content
+
+    return content
+
+
+@baserun.trace
 def openai_chat_error(prompt="What is the capitol of the US?"):
     original_api_type = openai.api_type
     try:
@@ -148,10 +165,16 @@ if __name__ == "__main__":
     try:
         # Resolve the string function name to the function object
         function_to_call = globals().get(args.function_to_call)
-        if args.prompt:
-            result = function_to_call(args.prompt)
+        if inspect.iscoroutinefunction(function_to_call):
+            if args.prompt:
+                result = asyncio.run(function_to_call(args.prompt))
+            else:
+                result = asyncio.run(function_to_call())
         else:
-            result = function_to_call()
+            if args.prompt:
+                result = function_to_call(args.prompt)
+            else:
+                result = function_to_call()
 
         print(result)
 

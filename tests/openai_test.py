@@ -14,6 +14,7 @@ from tests.testing_functions import (
     openai_chat_error,
     traced_fn_error,
     openai_completion,
+    openai_chat_async_streaming,
 )
 
 
@@ -86,6 +87,20 @@ def test_chat_completion_basic(mock_services):
 async def test_chat_completion_async(mock_services):
     name = "test_chat_completion_async"
     await openai_chat_async()
+
+    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+
+    basic_run_asserts(run=started_run, name=name)
+    basic_run_asserts(run=submitted_run, name=name)
+    basic_run_asserts(run=ended_run, name=name, result="Washington")
+
+    basic_span_asserts(span)
+
+
+@pytest.mark.asyncio
+async def test_chat_completion_async_streaming(mock_services):
+    name = "test_chat_completion_async_streaming"
+    await openai_chat_async_streaming()
 
     started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
 

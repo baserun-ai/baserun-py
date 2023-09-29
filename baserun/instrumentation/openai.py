@@ -1,12 +1,10 @@
 import json
 import logging
 from types import GeneratorType
-from typing import Collection, Any
+from typing import Collection, Any, TYPE_CHECKING
 
 import openai
-from openai import ChatCompletion, Completion
-from openai.openai_object import OpenAIObject
-from opentelemetry.sdk.trace import Span
+from opentelemetry.sdk.trace import _Span
 
 from baserun.instrumentation.base_instrumentor import BaseInstrumentor
 from baserun.instrumentation.span_attributes import SpanAttributes, OPENAI_VENDOR_NAME
@@ -16,6 +14,9 @@ logger = logging.getLogger(__name__)
 _instruments = ("openai >= 0.27.0",)
 __version__ = "0.1.0"
 
+if TYPE_CHECKING:
+    from openai.openai_object import OpenAIObject
+
 
 class OpenAIInstrumentor(BaseInstrumentor):
     original_chat_completion_create = ChatCompletion.create
@@ -24,6 +25,8 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
     @staticmethod
     def wrapped_methods() -> list[dict[str, Any]]:
+        from openai import ChatCompletion, Completion
+
         return [
             {
                 "class": ChatCompletion,
@@ -51,7 +54,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
         return _instruments
 
     @staticmethod
-    def set_request_attributes(span: Span, kwargs: dict[str, Any]):
+    def set_request_attributes(span: _Span, kwargs: dict[str, Any]):
         span.set_attribute(SpanAttributes.LLM_VENDOR, OPENAI_VENDOR_NAME)
         span.set_attribute(SpanAttributes.OPENAI_API_BASE, openai.api_base)
         span.set_attribute(SpanAttributes.OPENAI_API_TYPE, openai.api_type)
@@ -131,7 +134,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
             span.set_attribute(f"{SpanAttributes.LLM_PROMPTS}.0.content", prompt)
 
     @staticmethod
-    def set_response_attributes(span: Span, response: OpenAIObject):
+    def set_response_attributes(span: _Span, response: "OpenAIObject"):
         choices = response.get("choices", [])
         for i, choice in enumerate(choices):
             prefix = f"{SpanAttributes.LLM_COMPLETIONS}.{i}"
@@ -146,9 +149,12 @@ class OpenAIInstrumentor(BaseInstrumentor):
                     span.set_attribute(f"{prefix}.content", content)
 
                 if "function_call" in message:
+                    function_call = message.get("function_call")
                     span.set_attribute(
-                        f"{prefix}.function_call",
-                        json.dumps(message.get("function_call").to_dict()),
+                        f"{prefix}.function_name", function_call.get("name")
+                    )
+                    span.set_attribute(
+                        f"{prefix}.function_arguments", function_call.get("arguments")
                     )
 
             elif text:
@@ -169,40 +175,52 @@ class OpenAIInstrumentor(BaseInstrumentor):
             )
 
     @staticmethod
-    def generator_wrapper(original_generator: GeneratorType, span: Span):
-        function_name = ""
-        function_arguments = ""
-        content = ""
-
+    def generator_wrapper(original_generator: GeneratorType, span: _Span):
         for value in original_generator:
-            # Currently we only support one choice in streaming responses
-            choice = value.choices[0]
-            delta = choice.delta
-
-            prefix = f"{SpanAttributes.LLM_COMPLETIONS}.0"
-
-            role = delta.get("role")
-            if role:
-                span.set_attribute(f"{prefix}.role", role)
-
-            new_content = delta.get("content")
-            if new_content:
-                content += new_content
-                span.set_attribute(f"{prefix}.content", content)
-
-            new_function_call: OpenAIObject = delta.get("function_call")
-            if new_function_call:
-                function_name += new_function_call.get("name", "")
-                function_arguments += new_function_call.get("arguments", "")
-
-                span.set_attribute(
-                    f"{prefix}.function_call",
-                    json.dumps(
-                        {"name": function_name, "arguments": function_arguments}
-                    ),
-                )
-
-            if (new_content is None and not new_function_call) or choice.finish_reason:
-                span.end()
+            OpenAIInstrumentor._handle_generator_value(value, span)
 
             yield value
+
+    @staticmethod
+    async def async_generator_wrapper(original_generator: GeneratorType, span: _Span):
+        async for value in original_generator:
+            OpenAIInstrumentor._handle_generator_value(value, span)
+
+            yield value
+
+    @staticmethod
+    def _handle_generator_value(
+        value: "OpenAIObject", span: _Span
+    ) -> tuple[str, str, str]:
+        # Currently we only support one choice in streaming responses
+        choice = value.choices[0]
+        delta = choice.delta
+
+        prefix = f"{SpanAttributes.LLM_COMPLETIONS}.0"
+        content_attribute = f"{prefix}.content"
+        function_name_attribute = f"{prefix}.function_name"
+        function_arguments_attribute = f"{prefix}.function_arguments"
+
+        role = delta.get("role")
+        if role:
+            span.set_attribute(f"{prefix}.role", role)
+
+        new_content = delta.get("content")
+        if new_content:
+            content = span.attributes.get(content_attribute, "")
+            span.set_attribute(content_attribute, content + new_content)
+
+        new_function_call: "OpenAIObject" = delta.get("function_call")
+        if new_function_call:
+            function_name = span.attributes.get(function_name_attribute, "")
+            if name_delta := new_function_call.get("name"):
+                span.set_attribute(function_name_attribute, function_name + name_delta)
+
+            function_arguments = span.attributes.get(function_arguments_attribute, "")
+            if arguments_delta := new_function_call.get("arguments"):
+                span.set_attribute(
+                    function_arguments_attribute, function_arguments + arguments_delta
+                )
+
+        if (new_content is None and not new_function_call) or choice.finish_reason:
+            span.end()

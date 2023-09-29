@@ -1,3 +1,4 @@
+import inspect
 import logging
 from types import GeneratorType
 from typing import Callable, TYPE_CHECKING
@@ -20,64 +21,90 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def async_instrumented_wrapper(
+    wrapped_fn: Callable, instrumentor: "BaseInstrumentor", span_name: str
+):
+    """Generates a function (`instrumented_function`) which instruments the original function (`wrapped_fn`)"""
+
+    async def instrumented_function(*args, **kwargs):
+        if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
+            return await wrapped_fn(*args, **kwargs)
+
+        tracer_provider = trace.get_tracer_provider()
+        tracer = tracer_provider.get_tracer("baserun")
+
+        auto_end_span = True
+        span = tracer.start_span(**setup_span(span_name))
+        try:
+            # Activate the span in the current context, but don't end it automatically
+            with trace.use_span(span, end_on_exit=False):
+                # Capture request attributes
+                set_request_attributes(
+                    instrumentor=instrumentor, span=span, kwargs=kwargs
+                )
+
+                # Actually call the wrapped method
+                try:
+                    response = await wrapped_fn(*args, **kwargs)
+
+                    span.set_status(Status(StatusCode.OK))
+                except Exception as e:
+                    span.set_status(
+                        Status(
+                            description=str(e),
+                            status_code=StatusCode.ERROR,
+                        )
+                    )
+                    raise e
+
+                # If this is a streaming response, wrap it, so we can capture each chunk
+                if inspect.isasyncgen(response):
+                    wrapped_response = instrumentor.async_generator_wrapper(
+                        response, span
+                    )
+                    # The span will be ended inside the generator once it's finished
+                    auto_end_span = False
+                    return wrapped_response
+
+                handle_response(instrumentor, span, response)
+        finally:
+            if auto_end_span:
+                span.end()
+
+        return response
+
+    return instrumented_function
+
+
 def instrumented_wrapper(
     wrapped_fn: Callable, instrumentor: "BaseInstrumentor", span_name: str
 ):
     """Generates a function (`instrumented_function`) which instruments the original function (`wrapped_fn`)"""
 
+    tracer_provider = trace.get_tracer_provider()
+    tracer = tracer_provider.get_tracer("baserun")
+
     def instrumented_function(*args, **kwargs):
         """Replacement for the original function (`wrapped_fn`). Will perform instrumentation, call `wrapped_fn`,
         perform more instrumentation, and then return the result of the previous call to `wrapped_fn`.
         """
-        from baserun import Baserun
-
-        tracer_provider = trace.get_tracer_provider()
-        tracer = tracer_provider.get_tracer("baserun")
-
         if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
             return wrapped_fn(*args, **kwargs)
 
-        parent_span: _Span = get_current_span()
-        request_type = span_name.split(".")[-1]
-        parent_span.set_attribute(SpanAttributes.LLM_REQUEST_TYPE, request_type)
-
-        # Start new span
-        span = tracer.start_span(
-            f"baserun.{span_name}",
-            kind=SpanKind.CLIENT,
-            attributes=parent_span.attributes,
-        )
-
-        error_to_reraise = None
-
         auto_end_span = True
+        span = tracer.start_span(**setup_span(span_name))
         try:
             # Activate the span in the current context, but don't end it automatically
             with trace.use_span(span, end_on_exit=False):
                 # Capture request attributes
-                # noinspection PyBroadException
-                try:
-                    instrumentor.set_request_attributes(span, kwargs)
-
-                    span.set_attribute(
-                        SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model")
-                    )
-
-                    max_tokens = kwargs.get(
-                        "max_tokens", kwargs.get("max_tokens_to_sample")
-                    )
-                    if max_tokens is not None:
-                        span.set_attribute(
-                            SpanAttributes.LLM_REQUEST_MAX_TOKENS, max_tokens
-                        )
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to set input attributes for Baserun span, error: {e}"
-                    )
+                set_request_attributes(
+                    instrumentor=instrumentor, span=span, kwargs=kwargs
+                )
 
                 # Actually call the wrapped method
                 try:
                     response = wrapped_fn(*args, **kwargs)
+
                     span.set_status(Status(StatusCode.OK))
                 except Exception as e:
                     span.set_status(
@@ -95,34 +122,7 @@ def instrumented_wrapper(
                     auto_end_span = False
                     return wrapped_response
 
-                run = Baserun.current_run()
-                if not run:
-                    logger.warning(
-                        "Baserun data not propagated correctly, cannot send data"
-                    )
-                    return response
-
-                span.set_attribute(
-                    SpanAttributes.BASERUN_RUN, Baserun.serialize_run(run)
-                )
-
-                # If it's a full response capture the response attributes
-                if response:
-                    # noinspection PyBroadException
-                    try:
-                        instrumentor.set_response_attributes(span, response)
-                    except Exception as e:
-                        logger.warning(
-                            f"Failed to set response attributes for Baserun span, error: {e}"
-                        )
-                else:
-                    # Not sure when this could happen?
-                    span.set_status(
-                        Status(
-                            description="No response received",
-                            status_code=StatusCode.UNSET,
-                        )
-                    )
+                handle_response(instrumentor, span, response)
         finally:
             if auto_end_span:
                 span.end()
@@ -130,3 +130,63 @@ def instrumented_wrapper(
         return response
 
     return instrumented_function
+
+
+def setup_span(span_name: str) -> dict:
+    parent_span: _Span = get_current_span()
+    request_type = span_name.split(".")[-1]
+    parent_span.set_attribute(SpanAttributes.LLM_REQUEST_TYPE, request_type)
+
+    return {
+        "name": f"baserun.{span_name}",
+        "kind": SpanKind.CLIENT,
+        "attributes": parent_span.attributes,
+    }
+
+
+def set_request_attributes(
+    instrumentor: "BaseInstrumentor", span: _Span, kwargs: dict
+) -> _Span:
+    try:
+        instrumentor.set_request_attributes(span, kwargs)
+
+        span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model"))
+
+        max_tokens = kwargs.get("max_tokens", kwargs.get("max_tokens_to_sample"))
+        if max_tokens is not None:
+            span.set_attribute(SpanAttributes.LLM_REQUEST_MAX_TOKENS, max_tokens)
+    except Exception as e:
+        logger.warning(f"Failed to set input attributes for Baserun span, error: {e}")
+
+    return span
+
+
+def handle_response(instrumentor: "BaseInstrumentor", span: _Span, response):
+    from baserun import Baserun
+
+    run = Baserun.current_run()
+    if not run:
+        logger.warning("Baserun data not propagated correctly, cannot send data")
+        return response
+
+    span.set_attribute(SpanAttributes.BASERUN_RUN, Baserun.serialize_run(run))
+
+    # If it's a full response capture the response attributes
+    if response:
+        # noinspection PyBroadException
+        try:
+            instrumentor.set_response_attributes(span, response)
+        except Exception as e:
+            logger.warning(
+                f"Failed to set response attributes for Baserun span, error: {e}"
+            )
+    else:
+        # This will happen if the user doesn't return anything from their traced function
+        span.set_status(
+            Status(
+                description="No response received",
+                status_code=StatusCode.UNSET,
+            )
+        )
+
+    return span

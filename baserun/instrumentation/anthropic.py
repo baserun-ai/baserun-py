@@ -3,7 +3,7 @@ import logging
 from types import GeneratorType
 from typing import Collection, Any
 
-from opentelemetry.sdk.trace import Span
+from opentelemetry.sdk.trace import _Span
 
 from baserun.instrumentation.base_instrumentor import BaseInstrumentor
 from baserun.instrumentation.span_attributes import (
@@ -41,7 +41,7 @@ class AnthropicInstrumentor(BaseInstrumentor):
         return _instruments
 
     @staticmethod
-    def set_request_attributes(span: Span, kwargs: dict[str, Any]):
+    def set_request_attributes(span: _Span, kwargs: dict[str, Any]):
         span.set_attribute(SpanAttributes.LLM_VENDOR, ANTHROPIC_VENDOR_NAME)
         span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model"))
 
@@ -70,12 +70,16 @@ class AnthropicInstrumentor(BaseInstrumentor):
         span.set_attribute(f"{prefix}.content", kwargs.get("prompt"))
 
     @staticmethod
-    def set_response_attributes(span: Span, response):
+    def set_response_attributes(span: _Span, response):
         prefix = f"{SpanAttributes.LLM_COMPLETIONS}.0"
         span.set_attribute(f"{prefix}.finish_reason", response.stop_reason)
         span.set_attribute(f"{prefix}.content", response.completion)
         span.set_attribute(SpanAttributes.ANTHROPIC_LOG_ID, response.log_id)
 
     @staticmethod
-    def generator_wrapper(original_generator: GeneratorType, span: Span):
+    def generator_wrapper(original_generator: GeneratorType, span: _Span):
+        raise NotImplementedError
+
+    @staticmethod
+    async def async_generator_wrapper(original_generator: GeneratorType, span: _Span):
         raise NotImplementedError
