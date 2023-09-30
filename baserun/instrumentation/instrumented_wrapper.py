@@ -1,7 +1,7 @@
 import inspect
 import logging
-from types import GeneratorType
 from typing import Callable, TYPE_CHECKING
+from collections.abc import AsyncIterator, Iterator
 
 from opentelemetry import context as context_api, trace
 from opentelemetry.context import _SUPPRESS_INSTRUMENTATION_KEY
@@ -37,7 +37,7 @@ def async_instrumented_wrapper(
         tracer = tracer_provider.get_tracer("baserun")
 
         parent_span: _Span = get_current_span()
-        if not parent_span.is_recording():
+        if not parent_span.is_recording() and not Baserun.current_test_suite:
             run = Baserun.get_or_create_current_run(
                 name="untraced",
                 trace_type=Run.RunType.RUN_TYPE_PRODUCTION,
@@ -75,7 +75,7 @@ def async_instrumented_wrapper(
                     raise e
 
                 # If this is a streaming response, wrap it, so we can capture each chunk
-                if inspect.isasyncgen(response):
+                if isinstance(response, AsyncIterator):
                     wrapped_response = instrumentor.async_generator_wrapper(
                         response, span
                     )
@@ -87,7 +87,8 @@ def async_instrumented_wrapper(
         finally:
             if auto_end_span:
                 span.end()
-                parent_span.end()
+                if parent_span.is_recording() and not Baserun.current_test_suite:
+                    parent_span.end()
 
         return response
 
@@ -113,7 +114,7 @@ def instrumented_wrapper(
 
         parent_span: _Span = get_current_span()
         # If a call is made outside of a traced function we need to create a parent
-        if not parent_span.is_recording():
+        if not parent_span.is_recording() and not Baserun.current_test_suite:
             run = Baserun.get_or_create_current_run(
                 name="untraced",
                 trace_type=Run.RunType.RUN_TYPE_PRODUCTION,
@@ -152,7 +153,7 @@ def instrumented_wrapper(
                     raise e
 
                 # If this is a streaming response, wrap it, so we can capture each chunk
-                if isinstance(response, GeneratorType):
+                if isinstance(response, Iterator):
                     wrapped_response = instrumentor.generator_wrapper(response, span)
                     # The span will be ended inside the generator once it's finished
                     auto_end_span = False
@@ -162,7 +163,7 @@ def instrumented_wrapper(
         finally:
             if auto_end_span:
                 span.end()
-                if parent_span.is_recording():
+                if parent_span.is_recording() and not Baserun.current_test_suite:
                     parent_span.end()
 
         return response
