@@ -58,7 +58,7 @@ def basic_span_asserts(
 
 
 @baserun.trace
-def anthropic_completion(prompt: str) -> str:
+def anthropic_completion(prompt: str, stream=False) -> str:
     anthropic = Anthropic()
     completion = anthropic.completions.create(
         max_tokens_to_sample=100,
@@ -67,8 +67,16 @@ def anthropic_completion(prompt: str) -> str:
         temperature=1,
         top_k=1,
         top_p=1,
+        stream=stream
     )
-    return completion.completion
+
+    result = ""
+    if stream:
+        for data in completion:
+            result += data.completion
+    else:
+        result = completion.completion
+    return result
 
 
 def test_completion_basic(mock_services):
@@ -85,22 +93,61 @@ def test_completion_basic(mock_services):
     basic_span_asserts(span, request_type="completion", prompt=prompt)
 
 
+def test_completion_basic_stream(mock_services):
+    prompt = "Human: What is the capitol of the US?\nAssistant: "
+    name = "test_completion_basic_stream"
+    anthropic_completion(prompt, stream=True)
+
+    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+
+    basic_run_asserts(run=started_run, name=name)
+    basic_run_asserts(run=submitted_run, name=name)
+    basic_run_asserts(run=ended_run, name=name, result="Washington")
+
+    basic_span_asserts(span, request_type="completion", prompt=prompt)
+
+
 @baserun.trace
-async def anthropic_completion_async(prompt: str) -> str:
+async def anthropic_completion_async(prompt: str, stream: bool = False) -> str:
     anthropic = AsyncAnthropic()
     completion = await anthropic.completions.create(
         max_tokens_to_sample=100,
         model="claude-2",
         prompt=prompt,
+        temperature=1,
+        top_k=1,
+        top_p=1,
+        stream=stream
     )
-    return completion.completion
+
+    result = ""
+    if stream:
+        async for data in completion:
+            result += data.completion
+    else:
+        result = completion.completion
+    return result
 
 
 @pytest.mark.asyncio
 async def test_completion_async(mock_services):
     prompt = "Human: What is the capitol of the US?\nAssistant: "
     name = "test_completion_async"
-    anthropic_completion(prompt)
+    await anthropic_completion_async(prompt)
+
+    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+
+    basic_run_asserts(run=started_run, name=name)
+    basic_run_asserts(run=submitted_run, name=name)
+    basic_run_asserts(run=ended_run, name=name, result="Washington")
+
+    basic_span_asserts(span, request_type="completion", prompt=prompt)
+
+@pytest.mark.asyncio
+async def test_completion_async_stream(mock_services):
+    prompt = "Human: What is the capitol of the US?\nAssistant: "
+    name = "test_completion_async_stream"
+    await anthropic_completion_async(prompt, stream=True)
 
     started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
 

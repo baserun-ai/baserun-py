@@ -1,6 +1,6 @@
 import json
 import logging
-from types import GeneratorType
+import collections.abc
 from typing import Collection, Any, TYPE_CHECKING
 
 import openai
@@ -173,23 +173,21 @@ class OpenAIInstrumentor(BaseInstrumentor):
             )
 
     @staticmethod
-    def generator_wrapper(original_generator: GeneratorType, span: _Span):
+    def generator_wrapper(original_generator: collections.abc.Iterator, span: _Span):
         for value in original_generator:
             OpenAIInstrumentor._handle_generator_value(value, span)
 
             yield value
 
     @staticmethod
-    async def async_generator_wrapper(original_generator: GeneratorType, span: _Span):
+    async def async_generator_wrapper(original_generator: collections.abc.AsyncIterator, span: _Span):
         async for value in original_generator:
             OpenAIInstrumentor._handle_generator_value(value, span)
 
             yield value
 
     @staticmethod
-    def _handle_generator_value(
-        value: "OpenAIObject", span: _Span
-    ) -> tuple[str, str, str]:
+    def _handle_generator_value(value: "OpenAIObject", span: _Span):
         # Currently we only support one choice in streaming responses
         choice = value.choices[0]
 

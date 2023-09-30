@@ -1,6 +1,6 @@
+import collections.abc
 import inspect
 from abc import abstractmethod
-from types import GeneratorType
 from typing import Any, Callable
 
 from opentelemetry.instrumentation.instrumentor import (
@@ -34,12 +34,12 @@ class BaseInstrumentor(OTelInstrumentor):
 
     @staticmethod
     @abstractmethod
-    def generator_wrapper(original_generator: GeneratorType, span: _Span):
+    def generator_wrapper(original_generator: collections.abc.Iterator, span: _Span):
         pass
 
     @staticmethod
     @abstractmethod
-    def async_generator_wrapper(original_generator: GeneratorType, span: _Span):
+    def async_generator_wrapper(original_generator: collections.abc.AsyncIterator, span: _Span):
         pass
 
     def _instrument(self, **kwargs):
@@ -57,7 +57,11 @@ class BaseInstrumentor(OTelInstrumentor):
                 f"{original_class.__name__}.{original_method.__name__}"
             ] = original_method
 
-            if inspect.iscoroutinefunction(original_method):
+            unwrapped_method = original_method
+            while hasattr(unwrapped_method, '__wrapped__'):
+                unwrapped_method = unwrapped_method.__wrapped__
+
+            if inspect.iscoroutinefunction(unwrapped_method):
                 wrapper = async_instrumented_wrapper(
                     original_method, self, method_spec["span_name"]
                 )

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import logging
-from types import GeneratorType
 from typing import Collection, Any
+import collections.abc
 
 from opentelemetry.sdk.trace import _Span
 
@@ -77,9 +77,29 @@ class AnthropicInstrumentor(BaseInstrumentor):
         span.set_attribute(SpanAttributes.ANTHROPIC_LOG_ID, response.log_id)
 
     @staticmethod
-    def generator_wrapper(original_generator: GeneratorType, span: _Span):
-        raise NotImplementedError
+    def generator_wrapper(original_generator: collections.abc.Iterator, span: _Span):
+        for value in original_generator:
+            AnthropicInstrumentor._handle_generator_value(value, span)
+
+            yield value
 
     @staticmethod
-    async def async_generator_wrapper(original_generator: GeneratorType, span: _Span):
-        raise NotImplementedError
+    async def async_generator_wrapper(original_generator: collections.abc.AsyncIterator, span: _Span):
+        async for value in original_generator:
+            AnthropicInstrumentor._handle_generator_value(value, span)
+
+            yield value
+
+    @staticmethod
+    def _handle_generator_value(value, span: _Span):
+        new_content = value.completion
+
+        prefix = f"{SpanAttributes.LLM_COMPLETIONS}.0"
+        content_attribute = f"{prefix}.content"
+
+        if new_content:
+            content = span.attributes.get(content_attribute, "")
+            span.set_attribute(content_attribute, content + new_content)
+
+        if new_content is None or value.stop_reason:
+            span.end()
