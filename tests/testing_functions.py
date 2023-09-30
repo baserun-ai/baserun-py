@@ -2,11 +2,13 @@ import argparse
 import asyncio
 import inspect
 import os
+from threading import Thread
 
 import openai
 from openai import ChatCompletion, Completion
 
 import baserun
+from baserun.helpers import baserun_threaded_wrapper
 
 
 @baserun.trace
@@ -188,6 +190,37 @@ async def openai_completion_async_streaming(
     return content
 
 
+@baserun.trace
+def openai_threaded():
+    results = []
+    threads = [
+        Thread(
+            target=baserun_threaded_wrapper(
+                openai_chat_unwrapped,
+                results=results,
+                thread_args=("What is the capitol of the state of Georgia?",),
+            )
+        ),
+        Thread(
+            target=baserun_threaded_wrapper(
+                openai_chat_unwrapped,
+                results=results,
+                thread_args=("What is the capitol of California?",),
+            )
+        ),
+        Thread(
+            target=baserun_threaded_wrapper(
+                openai_chat_unwrapped,
+                results=results,
+                thread_args=("What is the capitol of Montana?",),
+            )
+        ),
+    ]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    return results
+
+
 # Allows you to call any of these functions, e.g. python tests/testing_functions.py openai_chat_functions_streaming
 if __name__ == "__main__":
     from dotenv import load_dotenv
@@ -205,18 +238,18 @@ if __name__ == "__main__":
         "--prompt", type=str, help="Prompt to pass to the function", default=None
     )
 
-    args = parser.parse_args()
+    parsed_args = parser.parse_args()
 
     # Resolve the string function name to the function object
-    function_to_call = globals().get(args.function_to_call)
+    function_to_call = globals().get(parsed_args.function_to_call)
     if inspect.iscoroutinefunction(function_to_call):
-        if args.prompt:
-            result = asyncio.run(function_to_call(args.prompt))
+        if parsed_args.prompt:
+            result = asyncio.run(function_to_call(parsed_args.prompt))
         else:
             result = asyncio.run(function_to_call())
     else:
-        if args.prompt:
-            result = function_to_call(args.prompt)
+        if parsed_args.prompt:
+            result = function_to_call(parsed_args.prompt)
         else:
             result = function_to_call()
 

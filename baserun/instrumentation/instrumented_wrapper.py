@@ -1,7 +1,6 @@
-import inspect
 import logging
-from typing import Callable, TYPE_CHECKING
 from collections.abc import AsyncIterator, Iterator
+from typing import Callable, TYPE_CHECKING
 
 from opentelemetry import context as context_api, trace
 from opentelemetry.context import _SUPPRESS_INSTRUMENTATION_KEY

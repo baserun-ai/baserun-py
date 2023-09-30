@@ -84,7 +84,9 @@ class AnthropicInstrumentor(BaseInstrumentor):
             yield value
 
     @staticmethod
-    async def async_generator_wrapper(original_generator: collections.abc.AsyncIterator, span: _Span):
+    async def async_generator_wrapper(
+        original_generator: collections.abc.AsyncIterator, span: _Span
+    ):
         async for value in original_generator:
             AnthropicInstrumentor._handle_generator_value(value, span)
 

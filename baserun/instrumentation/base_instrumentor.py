@@ -39,7 +39,9 @@ class BaseInstrumentor(OTelInstrumentor):
 
     @staticmethod
     @abstractmethod
-    def async_generator_wrapper(original_generator: collections.abc.AsyncIterator, span: _Span):
+    def async_generator_wrapper(
+        original_generator: collections.abc.AsyncIterator, span: _Span
+    ):
         pass
 
     def _instrument(self, **kwargs):
@@ -58,7 +60,7 @@ class BaseInstrumentor(OTelInstrumentor):
             ] = original_method
 
             unwrapped_method = original_method
-            while hasattr(unwrapped_method, '__wrapped__'):
+            while hasattr(unwrapped_method, "__wrapped__"):
                 unwrapped_method = unwrapped_method.__wrapped__
 
             if inspect.iscoroutinefunction(unwrapped_method):
