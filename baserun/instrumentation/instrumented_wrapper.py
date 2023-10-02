@@ -39,7 +39,7 @@ def async_instrumented_wrapper(
         parent_span: _Span = get_current_span()
         if not parent_span.is_recording() and not Baserun.current_test_suite:
             run = Baserun.get_or_create_current_run(
-                name="untraced",
+                name=UNTRACED_SPAN_PARENT_NAME,
                 trace_type=Run.RunType.RUN_TYPE_PRODUCTION,
             )
             parent_span = tracer.start_span(

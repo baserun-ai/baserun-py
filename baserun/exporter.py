@@ -5,6 +5,7 @@ from typing import Sequence, Any
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter
 
+from baserun.constants import PARENT_SPAN_NAME
 from baserun.instrumentation.span_attributes import (
     SpanAttributes,
     ANTHROPIC_VENDOR_NAME,
@@ -32,7 +33,7 @@ class BaserunExporter(SpanExporter):
         from baserun import Baserun
 
         for span in spans:
-            if span.name.startswith("baserun.parent") or not span.name.startswith(
+            if span.name.startswith(PARENT_SPAN_NAME) or not span.name.startswith(
                 "baserun"
             ):
                 continue
