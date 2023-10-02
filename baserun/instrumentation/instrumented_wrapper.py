@@ -164,7 +164,12 @@ def instrumented_wrapper(
             if auto_end_span:
                 if span.is_recording():
                     span.end()
-                if parent_span.is_recording() and not Baserun.current_test_suite:
+
+                if (
+                    parent_span.name == "baserun.parent.untraced"
+                    and parent_span.is_recording()
+                    and not Baserun.current_test_suite
+                ):
                     parent_span.end()
 
         return response
