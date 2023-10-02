@@ -56,6 +56,12 @@ class OpenAIInstrumentor(BaseInstrumentor):
         span.set_attribute(SpanAttributes.LLM_VENDOR, OPENAI_VENDOR_NAME)
         span.set_attribute(SpanAttributes.OPENAI_API_BASE, openai.api_base)
         span.set_attribute(SpanAttributes.OPENAI_API_TYPE, openai.api_type)
+        span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model"))
+
+        if "max_tokens" in kwargs:
+            span.set_attribute(
+                SpanAttributes.LLM_REQUEST_MAX_TOKENS, kwargs.get("max_tokens")
+            )
 
         if "temperature" in kwargs:
             span.set_attribute(

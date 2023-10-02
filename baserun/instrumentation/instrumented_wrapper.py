@@ -12,13 +12,12 @@ from opentelemetry.trace import (
     get_current_span,
 )
 
+from baserun.constants import UNTRACED_SPAN_PARENT_NAME
 from baserun.instrumentation.span_attributes import SpanAttributes
 from baserun.v1.baserun_pb2 import Run
 
 if TYPE_CHECKING:
     from baserun.instrumentation.base_instrumentor import BaseInstrumentor
-
-UNTRACED_SPAN_PARENT_NAME = "baserun.parent.untraced"
 
 logger = logging.getLogger(__name__)
 
@@ -200,12 +199,6 @@ def set_request_attributes(
 ) -> _Span:
     try:
         instrumentor.set_request_attributes(span, kwargs)
-
-        span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model"))
-
-        max_tokens = kwargs.get("max_tokens", kwargs.get("max_tokens_to_sample"))
-        if max_tokens is not None:
-            span.set_attribute(SpanAttributes.LLM_REQUEST_MAX_TOKENS, max_tokens)
     except Exception as e:
         logger.warning(f"Failed to set input attributes for Baserun span, error: {e}")
 

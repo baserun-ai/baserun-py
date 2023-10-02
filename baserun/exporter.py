@@ -71,6 +71,7 @@ class BaserunExporter(SpanExporter):
             run_str = span.attributes.get(SpanAttributes.BASERUN_RUN)
             if not run_str:
                 logger.warning("Baserun run attribute not set, cannot submit run")
+                return
 
             run = Baserun.deserialize_run(run_str)
 
@@ -126,10 +127,6 @@ class BaserunExporter(SpanExporter):
                     "function_call",
                     span,
                     SpanAttributes.LLM_FUNCTION_CALL,
-                )
-                set_span_attr(span_message, "n", span, SpanAttributes.LLM_N)
-                set_span_attr(
-                    span_message, "api_base", span, SpanAttributes.OPENAI_API_BASE
                 )
                 set_span_attr(span_message, "n", span, SpanAttributes.LLM_N)
                 set_span_attr(
