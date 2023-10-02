@@ -63,8 +63,69 @@ Test results available at: https://baserun.ai/runs/<id>
 =======================================================
 ```
 
+### Production usage
+
+You can use Baserun for production observability as well. To do so, simply call `baserun.init()` somewhere during your application's startup, and add the `@baserun.trace` decorator to the function you want to observe (e.g. a request/response handler). For example,
+
+```python
+import sys
+import openai
+import baserun
+
+
+@baserun.trace
+def answer_question(question: str) -> str:
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": question}],
+    )
+    return response["choices"][0]["message"]["content"]
+
+
+if __name__ == "__main__":
+    baserun.init()
+    print(answer_question(sys.argv[-1]))
+```
+
 ## Documentation
 For a deeper dive on all capabilities and more advanced usage, please refer to our [Documentation](https://docs.baserun.ai).
+
+## Contributing
+
+Contributions to baserun-py are welcome! Below are some guidelines to help you get started.
+
+### Dependencies
+Install the dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+Install the dev dependencies with:
+```bash
+pip install -r requirements-dev.txt
+```
+
+### Tests
+
+You can run tests using `pytest`. Note is that in pytest the remote server is mocked, so network requests are not actually made to Baserun's backend.
+
+If you want to emulate production tracing, we have a utility for that:
+
+```bash
+python tests/testing_functions.py {function_to_test}
+```
+
+Take a look at the list of functions in that file: any function with the `@baserun.trace` decorator can be used.
+
+### gRPC and Protobuf
+If you're making changes to `baserun.proto`, you'll need to compile those changes. Run the following command:
+
+```
+python -m grpc_tools.protoc -Ibaserun --python_out=baserun --pyi_out=baserun --grpc_python_out=baserun baserun/v1/baserun.proto
+```
+
+### A Note on Breaking Changes
+Be cautious when making breaking changes to protobuf definitions. These could impact backward compatibility and require corresponding server-side changes, so be sure to discuss it with our maintainers.
 
 ## License
 

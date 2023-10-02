@@ -1,0 +1,180 @@
+syntax = "proto3";
+
+package baserun.v1;
+
+import "google/protobuf/timestamp.proto";
+
+message Status {
+    string message = 1;
+
+    enum StatusCode {
+        STATUS_CODE_UNSPECIFIED = 0;
+        STATUS_CODE_OK = 1;
+        STATUS_CODE_ERROR = 2;
+    }
+
+    StatusCode code = 2;
+}
+
+message Message {
+    string role = 1;
+    string content = 2;
+    string finish_reason = 3;
+    string function_call = 4;
+}
+
+message Run {
+    string run_id = 1;
+    string suite_id = 2;
+    string name = 3;
+    repeated string inputs = 4;
+    RunType run_type = 5;
+    string metadata = 6; // JSONified map<string, any>
+    google.protobuf.Timestamp start_timestamp = 7;
+    google.protobuf.Timestamp completion_timestamp = 8;
+    string result = 9;
+    string error = 10;
+
+    enum RunType {
+        RUN_TYPE_TEST = 0;
+        RUN_TYPE_PRODUCTION = 1;
+    }
+}
+
+message Log {
+    string run_id = 1;
+    string name = 2;
+    string payload = 3;
+    google.protobuf.Timestamp timestamp = 4;
+}
+
+message Span {
+    string run_id = 1;
+    bytes trace_id = 2;
+    uint64 span_id = 3;
+    string name = 4;
+    google.protobuf.Timestamp start_time = 5;
+    google.protobuf.Timestamp end_time = 6;
+    Status status = 7;
+
+    // Common Attributes
+    string vendor = 8;
+    string request_type = 9;
+    string model = 10;
+    int32 total_tokens = 11;
+    int32 completion_tokens = 12;
+    int32 prompt_tokens = 13;
+
+    repeated Message prompt_messages = 14;
+    repeated Message completions = 15;
+
+    // OpenAI-specific attributes
+    optional string api_base = 16;
+    optional string api_type = 17;
+    optional string functions = 18; // JSONified array<map<str, any>>
+    optional string function_call = 19; // Request attribute: response function_call is in each Message
+    optional double temperature = 20;
+    optional double top_p = 21;
+    optional int32 n = 22;
+    optional bool stream = 23;
+    repeated string stop = 24;
+    optional int32 max_tokens = 25;
+    optional double presence_penalty = 26;
+    optional double frequency_penalty = 27;
+    optional string logit_bias = 28; // JSONified map<str, int>
+    optional string user = 29;
+    optional int32 logprobs = 30;
+    optional bool echo = 31;
+    optional string suffix = 32;
+    optional int32 best_of = 33;
+
+
+    // Anthropic-specific attributes
+    optional string log_id = 34;
+    optional double top_k = 35;
+}
+
+message Eval {
+    string name = 1;
+    string type = 2;
+    string result = 3;
+    optional double score = 5;
+    string submission = 6;
+    string payload = 7; // JSONified map<string, any>
+}
+
+message TestSuite {
+    string id = 1;
+    string name = 2;
+    google.protobuf.Timestamp start_timestamp = 3;
+    google.protobuf.Timestamp completion_timestamp = 4;
+}
+
+message StartRunRequest {
+    Run run = 1;
+}
+
+message StartRunResponse {
+    string message = 1;
+}
+
+message SubmitLogRequest {
+    Log log = 1;
+    Run run = 2;
+}
+
+message SubmitLogResponse {
+    string message = 1;
+}
+
+message SubmitSpanRequest {
+    Span span = 1;
+    Run run = 2;
+}
+
+message SubmitSpanResponse {
+    string message = 1;
+}
+
+message EndRunRequest {
+    Run run = 1;
+}
+
+message EndRunResponse {
+    string message = 1;
+}
+
+message SubmitEvalRequest {
+    Eval eval = 1;
+    Run run = 2;
+}
+
+message SubmitEvalResponse {
+    string message = 1;
+}
+
+message StartTestSuiteRequest {
+    TestSuite test_suite = 1;
+}
+
+message StartTestSuiteResponse {
+    string message = 1;
+}
+
+message EndTestSuiteRequest {
+    TestSuite test_suite = 1;
+}
+
+message EndTestSuiteResponse {
+    string message = 1;
+}
+
+service SubmissionService {
+    rpc StartRun (StartRunRequest) returns (StartRunResponse);
+    rpc SubmitLog (SubmitLogRequest) returns (SubmitLogResponse);
+    rpc SubmitSpan (SubmitSpanRequest) returns (SubmitSpanResponse);
+    rpc EndRun (EndRunRequest) returns (EndRunResponse);
+    rpc SubmitEval (SubmitEvalRequest) returns (SubmitEvalResponse);
+    rpc StartTestSuite (StartTestSuiteRequest) returns (StartTestSuiteResponse);
+    rpc EndTestSuite (EndTestSuiteRequest) returns (EndTestSuiteResponse);
+}
