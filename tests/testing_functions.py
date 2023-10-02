@@ -8,7 +8,6 @@ import openai
 from openai import ChatCompletion, Completion
 
 import baserun
-from baserun.helpers import baserun_threaded_wrapper
 
 
 @baserun.trace
@@ -195,24 +194,24 @@ def openai_threaded():
     results = []
     threads = [
         Thread(
-            target=baserun_threaded_wrapper(
+            target=baserun.thread_wrapper(
                 openai_chat_unwrapped,
+                "What is the capitol of the state of Georgia?",
                 results=results,
-                thread_args=("What is the capitol of the state of Georgia?",),
             )
         ),
         Thread(
-            target=baserun_threaded_wrapper(
+            target=baserun.thread_wrapper(
                 openai_chat_unwrapped,
+                "What is the capitol of California?",
                 results=results,
-                thread_args=("What is the capitol of California?",),
             )
         ),
         Thread(
-            target=baserun_threaded_wrapper(
+            target=baserun.thread_wrapper(
                 openai_chat_unwrapped,
+                "What is the capitol of Montana?",
                 results=results,
-                thread_args=("What is the capitol of Montana?",),
             )
         ),
     ]

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
+import collections.abc
 import logging
 from typing import Collection, Any
-import collections.abc
 
 from opentelemetry.sdk.trace import _Span
 

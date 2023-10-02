@@ -85,7 +85,8 @@ def async_instrumented_wrapper(
                 handle_response(instrumentor, span, response)
         finally:
             if auto_end_span:
-                span.end()
+                if span.is_recording():
+                    span.end()
                 if parent_span.is_recording() and not Baserun.current_test_suite:
                     parent_span.end()
 
@@ -161,7 +162,8 @@ def instrumented_wrapper(
                 handle_response(instrumentor, span, response)
         finally:
             if auto_end_span:
-                span.end()
+                if span.is_recording():
+                    span.end()
                 if parent_span.is_recording() and not Baserun.current_test_suite:
                     parent_span.end()
 
