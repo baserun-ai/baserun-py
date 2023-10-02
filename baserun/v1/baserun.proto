@@ -73,14 +73,14 @@ message Span {
     optional string api_type = 17;
     optional string functions = 18; // JSONified array<map<str, any>>
     optional string function_call = 19; // Request attribute: response function_call is in each Message
-    optional float temperature = 20;
-    optional float top_p = 21;
+    optional double temperature = 20;
+    optional double top_p = 21;
     optional int32 n = 22;
     optional bool stream = 23;
     repeated string stop = 24;
     optional int32 max_tokens = 25;
-    optional float presence_penalty = 26;
-    optional float frequency_penalty = 27;
+    optional double presence_penalty = 26;
+    optional double frequency_penalty = 27;
     optional string logit_bias = 28; // JSONified map<str, int>
     optional string user = 29;
     optional int32 logprobs = 30;
@@ -91,14 +91,14 @@ message Span {
 
     // Anthropic-specific attributes
     optional string log_id = 34;
-    optional float top_k = 35;
+    optional double top_k = 35;
 }
 
 message Eval {
     string name = 1;
     string type = 2;
     string result = 3;
-    optional float score = 5;
+    optional double score = 5;
     string submission = 6;
     string payload = 7; // JSONified map<string, any>
 }
