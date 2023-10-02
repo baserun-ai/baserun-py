@@ -67,7 +67,7 @@ def anthropic_completion(prompt: str, stream=False) -> str:
         temperature=1,
         top_k=1,
         top_p=1,
-        stream=stream
+        stream=stream,
     )
 
     result = ""
@@ -117,7 +117,7 @@ async def anthropic_completion_async(prompt: str, stream: bool = False) -> str:
         temperature=1,
         top_k=1,
         top_p=1,
-        stream=stream
+        stream=stream,
     )
 
     result = ""
@@ -142,6 +142,7 @@ async def test_completion_async(mock_services):
     basic_run_asserts(run=ended_run, name=name, result="Washington")
 
     basic_span_asserts(span, request_type="completion", prompt=prompt)
+
 
 @pytest.mark.asyncio
 async def test_completion_async_stream(mock_services):

@@ -1,6 +1,6 @@
+import collections.abc
 import json
 import logging
-import collections.abc
 from typing import Collection, Any, TYPE_CHECKING
 
 import openai
@@ -180,7 +180,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
             yield value
 
     @staticmethod
-    async def async_generator_wrapper(original_generator: collections.abc.AsyncIterator, span: _Span):
+    async def async_generator_wrapper(
+        original_generator: collections.abc.AsyncIterator, span: _Span
+    ):
         async for value in original_generator:
             OpenAIInstrumentor._handle_generator_value(value, span)
 
@@ -226,5 +228,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
                     function_arguments_attribute, function_arguments + arguments_delta
                 )
 
-        if (new_content is None and not new_function_call) or choice.finish_reason:
+        if (
+            (new_content is None and not new_function_call) or choice.finish_reason
+        ) and span.is_recording():
             span.end()
