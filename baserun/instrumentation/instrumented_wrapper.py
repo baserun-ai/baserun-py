@@ -18,6 +18,8 @@ from baserun.v1.baserun_pb2 import Run
 if TYPE_CHECKING:
     from baserun.instrumentation.base_instrumentor import BaseInstrumentor
 
+UNTRACED_SPAN_PARENT_NAME = "baserun.parent.untraced"
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,7 +44,7 @@ def async_instrumented_wrapper(
                 trace_type=Run.RunType.RUN_TYPE_PRODUCTION,
             )
             parent_span = tracer.start_span(
-                f"baserun.parent.untraced",
+                UNTRACED_SPAN_PARENT_NAME,
                 kind=SpanKind.CLIENT,
                 attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
             )
@@ -87,7 +89,12 @@ def async_instrumented_wrapper(
             if auto_end_span:
                 if span.is_recording():
                     span.end()
-                if parent_span.is_recording() and not Baserun.current_test_suite:
+
+                if (
+                    parent_span.name == UNTRACED_SPAN_PARENT_NAME
+                    and parent_span.is_recording()
+                    and not Baserun.current_test_suite
+                ):
                     parent_span.end()
 
         return response
@@ -120,7 +127,7 @@ def instrumented_wrapper(
                 trace_type=Run.RunType.RUN_TYPE_PRODUCTION,
             )
             parent_span = tracer.start_span(
-                f"baserun.parent.untraced",
+                UNTRACED_SPAN_PARENT_NAME,
                 kind=SpanKind.CLIENT,
                 attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
             )
@@ -166,7 +173,7 @@ def instrumented_wrapper(
                     span.end()
 
                 if (
-                    parent_span.name == "baserun.parent.untraced"
+                    parent_span.name == UNTRACED_SPAN_PARENT_NAME
                     and parent_span.is_recording()
                     and not Baserun.current_test_suite
                 ):
