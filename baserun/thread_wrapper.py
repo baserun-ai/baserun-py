@@ -5,16 +5,12 @@ from opentelemetry.sdk.trace import _Span
 from opentelemetry.trace import get_current_span, SpanKind
 
 
-def baserun_thread_wrapper(target: Callable, *args, **kwargs):
+def baserun_thread_wrapper(target: Callable):
     """Given a target function intended to be run in a new thread, wrap the target in a function and start a new
     parent span which propagates attributes from the parent thread's parent span."""
     parent_span: _Span = get_current_span()
-    if "results" in kwargs:
-        results = kwargs.pop("results")
-    else:
-        results = None
 
-    def wrapper():
+    def wrapper(*args, **kwargs):
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
         span = tracer.start_span(
@@ -23,10 +19,7 @@ def baserun_thread_wrapper(target: Callable, *args, **kwargs):
             attributes=parent_span.attributes,
         )
         try:
-            output = target(*args, **kwargs)
-            if results is not None:
-                results.append(output)
-            return output
+            return target(*args, **kwargs)
         finally:
             if span.is_recording():
                 span.end()

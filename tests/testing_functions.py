@@ -19,12 +19,13 @@ def openai_chat(prompt="What is the capitol of the US?") -> str:
     return completion.choices[0]["message"].content
 
 
-def openai_chat_unwrapped(prompt="What is the capitol of the US?") -> str:
+def openai_chat_unwrapped(prompt="What is the capitol of the US?", **kwargs) -> str:
     completion = ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
+        model="gpt-3.5-turbo", messages=[{"role": "user", "content": prompt}], **kwargs
     )
-    return completion.choices[0]["message"].content
+    result = completion.choices[0]["message"].content
+    print(result)
+    return result
 
 
 @baserun.trace
@@ -191,33 +192,24 @@ async def openai_completion_async_streaming(
 
 @baserun.trace
 def openai_threaded():
-    results = []
     threads = [
         Thread(
-            target=baserun.thread_wrapper(
-                openai_chat_unwrapped,
-                "What is the capitol of the state of Georgia?",
-                results=results,
-            )
+            target=baserun.thread_wrapper(openai_chat_unwrapped),
+            args=("What is the capitol of the state of Georgia?",),
         ),
         Thread(
-            target=baserun.thread_wrapper(
-                openai_chat_unwrapped,
-                "What is the capitol of California?",
-                results=results,
-            )
+            target=baserun.thread_wrapper(openai_chat_unwrapped),
+            args=("What is the capitol of the California?",),
+            kwargs={"top_p": 0.5},
         ),
         Thread(
-            target=baserun.thread_wrapper(
-                openai_chat_unwrapped,
-                "What is the capitol of Montana?",
-                results=results,
-            )
+            target=baserun.thread_wrapper(openai_chat_unwrapped),
+            args=("What is the capitol of the Montana?",),
+            kwargs={"temperature": 1},
         ),
     ]
     [t.start() for t in threads]
     [t.join() for t in threads]
-    return results
 
 
 # Allows you to call any of these functions, e.g. python tests/testing_functions.py openai_chat_functions_streaming
