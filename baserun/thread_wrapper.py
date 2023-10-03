@@ -1,5 +1,6 @@
 from typing import Callable
 
+from .constants import INNER_THREAD_SPAN_PARENT_NAME
 from opentelemetry import trace
 from opentelemetry.sdk.trace import Span
 from opentelemetry.trace import get_current_span, SpanKind
@@ -18,11 +19,16 @@ def baserun_thread_wrapper(target: Callable):
     def wrapper(*args, **kwargs):
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
-        with tracer.start_as_current_span(
-                f"baserun.parent.inner_thread",
-                kind=SpanKind.CLIENT,
-                attributes=parent_span.attributes,
-        ) as span:
-            return target(*args, **kwargs)
+        span = tracer.start_span(
+            INNER_THREAD_SPAN_PARENT_NAME,
+            kind=SpanKind.CLIENT,
+            attributes=parent_span.attributes,
+        )
+        with trace.use_span(span, end_on_exit=False):
+            try:
+                return target(*args, **kwargs)
+            finally:
+                if span.is_recording():
+                    span.end()
 
     return wrapper

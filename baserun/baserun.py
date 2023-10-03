@@ -27,6 +27,7 @@ from .v1.baserun_pb2 import (
     TestSuite,
     StartRunRequest,
 )
+from .constants import PARENT_SPAN_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +218,7 @@ class Baserun:
                     suite_id=suite_id,
                 )
                 with tracer.start_as_current_span(
-                    f"baserun.parent.{func.__name__}",
+                    f"{PARENT_SPAN_NAME}.{func.__name__}",
                     kind=SpanKind.CLIENT,
                     attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
                 ) as span:
@@ -246,7 +247,7 @@ class Baserun:
                 )
 
                 with tracer.start_as_current_span(
-                    f"baserun.parent.{func.__name__}",
+                    f"{PARENT_SPAN_NAME}.{func.__name__}",
                     kind=SpanKind.CLIENT,
                     attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
                 ) as span:
@@ -278,7 +279,7 @@ class Baserun:
 
                 # Create a parent span so we can attach the run to it, all child spans are part of this run.
                 with tracer.start_as_current_span(
-                    f"baserun.parent.{func.__name__}",
+                    f"{PARENT_SPAN_NAME}.{func.__name__}",
                     kind=SpanKind.CLIENT,
                     attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
                 ) as span:
