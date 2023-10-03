@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "baserun"
-version = "0.6.0b1"
+version = "0.6.0b2"
 description = "Tools for testing, debugging, and evaluating LLM features."
 readme = "README.md"
 license = { file = "LICENSE" }

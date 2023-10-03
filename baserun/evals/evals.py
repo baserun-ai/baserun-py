@@ -9,6 +9,7 @@ from baserun.evals.json import is_valid_json
 from baserun.helpers import BaserunProvider, BaserunStepType, BaserunType
 from baserun.v1.baserun_pb2 import SubmitEvalRequest, Eval
 from ..instrumentation.base_instrumentor import BaseInstrumentor
+from ..grpc import get_or_create_submission_service
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ class Evals:
 
         run = Baserun.current_run()
         try:
-            Baserun.submission_service.SubmitEval(
+            get_or_create_submission_service().SubmitEval(
                 SubmitEvalRequest(eval=eval_message, run=run)
             )
         except Exception as e:

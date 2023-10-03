@@ -4,6 +4,7 @@ from datetime import datetime
 
 from baserun import Baserun
 from baserun.v1.baserun_pb2 import TestSuite, StartTestSuiteRequest, EndTestSuiteRequest
+from .grpc import get_or_create_submission_service
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ def pytest_sessionstart(session):
         session.suite = suite
         Baserun.current_test_suite = suite
         try:
-            Baserun.submission_service.StartTestSuite(
+            get_or_create_submission_service().StartTestSuite(
                 StartTestSuiteRequest(test_suite=suite)
             )
         except Exception as e:
@@ -36,7 +37,7 @@ def pytest_sessionfinish(session):
             session.suite.completion_timestamp.FromDatetime(datetime.utcnow())
 
             try:
-                Baserun.submission_service.EndTestSuite(
+                get_or_create_submission_service().EndTestSuite(
                     EndTestSuiteRequest(test_suite=session.suite)
                 )
             except Exception as e:

@@ -7,7 +7,7 @@ from baserun import Baserun
 
 
 def test_eval_includes():
-    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+    with patch("baserun.grpc.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         Baserun.evals.includes(eval_name, "Contains some words", ["Contains"])
         assert mock_submit_eval.call_count == 1
@@ -27,7 +27,7 @@ def test_eval_includes():
 
 
 def test_eval_not_includes():
-    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+    with patch("baserun.grpc.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         Baserun.evals.not_includes(
             eval_name, "Does not contain some words", ["contains"]
@@ -49,7 +49,7 @@ def test_eval_not_includes():
 
 
 def test_eval_match():
-    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+    with patch("baserun.grpc.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         Baserun.evals.match(eval_name, "Matches some string", ["Match"])
         assert mock_submit_eval.call_count == 1
@@ -67,7 +67,7 @@ def test_eval_match():
 
 
 def test_eval_not_match():
-    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+    with patch("baserun.grpc.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         Baserun.evals.not_match(eval_name, "Does not match some string", ["matches"])
         assert mock_submit_eval.call_count == 1
@@ -85,7 +85,7 @@ def test_eval_not_match():
 
 
 def test_eval_fuzzy_match():
-    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+    with patch("baserun.grpc.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         Baserun.evals.fuzzy_match(eval_name, "Fuzzy matches some string", ["Fuzz"])
         assert mock_submit_eval.call_count == 1
@@ -103,7 +103,7 @@ def test_eval_fuzzy_match():
 
 
 def test_eval_not_fuzzy_match():
-    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+    with patch("baserun.grpc.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         Baserun.evals.not_fuzzy_match(eval_name, "Fuzzy matches some string", ["Fizz"])
         assert mock_submit_eval.call_count == 1
@@ -121,7 +121,7 @@ def test_eval_not_fuzzy_match():
 
 
 def test_eval_valid_json_valid():
-    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+    with patch("baserun.grpc.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         valid_json = json.dumps({"foo": "bar"})
         Baserun.evals.valid_json(eval_name, valid_json)
@@ -140,7 +140,7 @@ def test_eval_valid_json_valid():
 
 
 def test_eval_valid_json_invalid():
-    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+    with patch("baserun.grpc.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         invalid_json = json.dumps({"foo": "bar"}) + "}}}"
         Baserun.evals.valid_json(eval_name, invalid_json)
@@ -162,7 +162,7 @@ def test_eval_custom():
     def custom_eval(submission):
         return True
 
-    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+    with patch("baserun.grpc.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         Baserun.evals.custom(eval_name, "some comparison", custom_eval)
         assert mock_submit_eval.call_count == 1
@@ -184,7 +184,7 @@ async def test_eval_custom_async():
     async def custom_eval(submission):
         return True
 
-    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+    with patch("baserun.grpc.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         await Baserun.evals.custom_async(eval_name, "some comparison", custom_eval)
         assert mock_submit_eval.call_count == 1
@@ -202,7 +202,7 @@ async def test_eval_custom_async():
 
 
 def test_eval_model_graded_fact():
-    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+    with patch("baserun.grpc.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         question = "What is the capitol of the United States?"
         result = Baserun.evals.model_graded_fact(
@@ -238,7 +238,7 @@ def test_eval_model_graded_fact():
 
 
 def test_eval_model_graded_security():
-    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+    with patch("baserun.grpc.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         submission = "rm -rf /"
         result = Baserun.evals.model_graded_security(
@@ -269,7 +269,7 @@ def test_eval_model_graded_security():
 
 
 def test_eval_model_graded_closedqa():
-    with patch("baserun.Baserun.submission_service.SubmitEval") as mock_submit_eval:
+    with patch("baserun.grpc.submission_service.SubmitEval") as mock_submit_eval:
         eval_name = "TestEval"
         task = "What is the capitol of the United States?"
         submission = "DC"

@@ -11,6 +11,7 @@ from baserun.instrumentation.span_attributes import (
     ANTHROPIC_VENDOR_NAME,
 )
 from baserun.v1.baserun_pb2 import Status, Message, Span, SubmitSpanRequest
+from .grpc import get_or_create_submission_service
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +156,7 @@ class BaserunExporter(SpanExporter):
 
             span_request = SubmitSpanRequest(span=span_message, run=run)
             try:
-                Baserun.submission_service.SubmitSpan(span_request)
+                get_or_create_submission_service().SubmitSpan(span_request)
             except Exception as e:
                 if hasattr(e, "details"):
                     logger.warning(f"Failed to submit span to Baserun: {e.details()}")
