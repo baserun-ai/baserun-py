@@ -1,7 +1,6 @@
 import inspect
 import json
 import logging
-import os
 import traceback
 import uuid
 from base64 import b64encode, b64decode
@@ -10,13 +9,12 @@ from importlib.util import find_spec
 from typing import Any, Type
 from typing import Callable, Dict, Optional, Union
 
-import grpc
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider, _Span
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import SpanKind, get_current_span
+from .grpc import get_or_create_submission_service
 
-from .api_key import get_api_key
 from .evals.evals import Evals
 from .exporter import BaserunExporter
 from .instrumentation.base_instrumentor import BaseInstrumentor
@@ -29,7 +27,7 @@ from .v1.baserun_pb2 import (
     TestSuite,
     StartRunRequest,
 )
-from .v1.baserun_pb2_grpc import SubmissionServiceStub
+from .constants import PARENT_SPAN_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +41,6 @@ class Baserun:
 
     _instrumentors: list[BaseInstrumentor] = None
 
-    grpc_channel: grpc.Channel = None
-    submission_service: SubmissionServiceStub = None
-
     current_test_suite: TestSuite = None
 
     evals = Evals
@@ -56,22 +51,6 @@ class Baserun:
             return
 
         Baserun._initialized = True
-
-        if key_chain := os.environ.get("SSL_KEY_CHAIN"):
-            ssl_creds = grpc.ssl_channel_credentials(
-                root_certificates=bytes(key_chain, "utf-8")
-            )
-        else:
-            ssl_creds = grpc.ssl_channel_credentials()
-
-        call_credentials = grpc.access_token_call_credentials(get_api_key())
-        channel_credentials = grpc.composite_channel_credentials(
-            ssl_creds, call_credentials
-        )
-        grpc_base = os.environ.get("BASERUN_GRPC_URI", "grpc.baserun.ai:50051")
-        Baserun.grpc_channel = grpc.secure_channel(grpc_base, channel_credentials)
-        Baserun.submission_service = SubmissionServiceStub(Baserun.grpc_channel)
-
         if instrument:
             Baserun.instrument()
 
@@ -152,7 +131,7 @@ class Baserun:
                 span.set_attribute(
                     SpanAttributes.BASERUN_RUN, Baserun.serialize_run(run)
                 )
-            Baserun.submission_service.EndRun(EndRunRequest(run=run))
+            get_or_create_submission_service().EndRun(EndRunRequest(run=run))
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
 
@@ -198,7 +177,7 @@ class Baserun:
             run.completion_timestamp.FromDatetime(completion_timestamp)
 
         try:
-            Baserun.submission_service.StartRun(StartRunRequest(run=run))
+            get_or_create_submission_service().StartRun(StartRunRequest(run=run))
         except Exception as e:
             logger.warning(f"Failed to submit run start to Baserun: {e}")
 
@@ -239,7 +218,7 @@ class Baserun:
                     suite_id=suite_id,
                 )
                 with tracer.start_as_current_span(
-                    f"baserun.parent.{func.__name__}",
+                    f"{PARENT_SPAN_NAME}.{func.__name__}",
                     kind=SpanKind.CLIENT,
                     attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
                 ) as span:
@@ -268,7 +247,7 @@ class Baserun:
                 )
 
                 with tracer.start_as_current_span(
-                    f"baserun.parent.{func.__name__}",
+                    f"{PARENT_SPAN_NAME}.{func.__name__}",
                     kind=SpanKind.CLIENT,
                     attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
                 ) as span:
@@ -300,7 +279,7 @@ class Baserun:
 
                 # Create a parent span so we can attach the run to it, all child spans are part of this run.
                 with tracer.start_as_current_span(
-                    f"baserun.parent.{func.__name__}",
+                    f"{PARENT_SPAN_NAME}.{func.__name__}",
                     kind=SpanKind.CLIENT,
                     attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
                 ) as span:
@@ -347,6 +326,6 @@ class Baserun:
 
         # noinspection PyBroadException
         try:
-            Baserun.submission_service.SubmitLog(log_request)
+            get_or_create_submission_service().SubmitLog(log_request)
         except Exception as e:
             logger.warning(f"Failed to submit log to Baserun: {e}")

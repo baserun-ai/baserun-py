@@ -21,18 +21,18 @@ def set_openai_api_key():
 
 @pytest.fixture
 def mock_services():
-    with patch("baserun.Baserun.submission_service.StartRun") as mock_start_run, patch(
-        "baserun.Baserun.submission_service.SubmitLog"
+    with patch("baserun.grpc.submission_service.StartRun") as mock_start_run, patch(
+        "baserun.grpc.submission_service.SubmitLog"
     ) as mock_submit_log, patch(
-        "baserun.Baserun.submission_service.SubmitSpan"
+        "baserun.grpc.submission_service.SubmitSpan"
     ) as mock_submit_span, patch(
-        "baserun.Baserun.submission_service.EndRun"
+        "baserun.grpc.submission_service.EndRun"
     ) as mock_end_run, patch(
-        "baserun.Baserun.submission_service.SubmitEval"
+        "baserun.grpc.submission_service.SubmitEval"
     ) as mock_submit_eval, patch(
-        "baserun.Baserun.submission_service.StartTestSuite"
+        "baserun.grpc.submission_service.StartTestSuite"
     ) as mock_start_test_suite, patch(
-        "baserun.Baserun.submission_service.EndTestSuite"
+        "baserun.grpc.submission_service.EndTestSuite"
     ) as mock_end_test_suite:
         yield {
             "mock_start_run": mock_start_run,
@@ -56,7 +56,6 @@ def pytest_sessionstart(session):
     # mock_services()
     # Replace the batch processor so that things happen synchronously and not in a separate thread
     Baserun.instrument(processor_class=SimpleSpanProcessor)
-    Baserun.grpc_channel.close()
 
 
 def get_mock_objects(mock_services) -> tuple[Run, Span, Run, Run]:
