@@ -221,6 +221,121 @@ async def test_dogs_anthropic_async_stream():
         print(data.completion)
 
 
+@pytest.mark.asyncio
+async def test_function_call():
+    await openai.ChatCompletion.acreate(
+        model="gpt-3.5-turbo",
+        temperature=0.7,
+        messages=[{
+            "role": "user",
+            "content": "What's the weather like in Paris?",
+        }],
+        functions=[
+            {
+                "name": "get_current_weather",
+                "description": "Get the current weather in a given location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "string",
+                            "description": "The city and state, e.g. San Francisco, CA"
+                        },
+                        "unit": {
+                            "type": "string",
+                            "enum": ["celsius", "fahrenheit"]
+                        }
+                    },
+                    "required": ["location"]
+                }
+            }
+        ]
+    )
+
+
+@pytest.mark.asyncio
+async def test_function_call_stream():
+    response = await openai.ChatCompletion.acreate(
+        model="gpt-3.5-turbo",
+        temperature=0.7,
+        messages=[{
+            "role": "user",
+            "content": "What's the weather like in Paris?",
+        }],
+        functions=[
+            {
+                "name": "get_current_weather",
+                "description": "Get the current weather in a given location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "string",
+                            "description": "The city and state, e.g. San Francisco, CA"
+                        },
+                        "unit": {
+                            "type": "string",
+                            "enum": ["celsius", "fahrenheit"]
+                        }
+                    },
+                    "required": ["location"]
+                }
+            }
+        ],
+        stream=True
+    )
+
+    async for chunk in response:
+        print(chunk.choices[0].delta)
+
+
+@pytest.mark.asyncio
+async def test_function_call_message():
+    await openai.ChatCompletion.acreate(
+        model="gpt-3.5-turbo",
+        temperature=0.7,
+        messages=[
+            {
+                "role": "user",
+                "content": "What's the weather like in Paris?",
+            },
+            {
+                "role": "assistant",
+                "content": None,
+                "function_call": {
+                    "name": "get_current_weather",
+                    "arguments": "{\"location\": \"Paris\"}"
+                }
+            },
+            {
+                "role": "function",
+                "name": "get_current_weather",
+                "content": "{\"temperature\": 22, \"unit\": \"celsius\", \"description\": \"Sunny\"}"
+            }
+        ],
+        functions=[
+            {
+                "name": "get_current_weather",
+                "description": "Get the current weather in a given location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "string",
+                            "description": "The city and state, e.g. San Francisco, CA"
+                        },
+                        "unit": {
+                            "type": "string",
+                            "enum": ["celsius", "fahrenheit"]
+                        }
+                    },
+                    "required": ["location"]
+                }
+            }
+        ]
+    )
+
+
 def test_threads():
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         future_to_fn = {executor.submit(fn): fn for fn in [
