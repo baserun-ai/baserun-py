@@ -133,6 +133,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
             if content := message.get("content"):
                 span.set_attribute(f"{prefix}.content", content)
 
+            if function_call := message.get("function_call"):
+                span.set_attribute(f"{prefix}.function_call", json.dumps(function_call))
+
         if (prompt := kwargs.get("prompt")) and not messages:
             span.set_attribute(f"{SpanAttributes.LLM_PROMPTS}.0.content", prompt)
 
