@@ -34,6 +34,7 @@ message Run {
     google.protobuf.Timestamp completion_timestamp = 8;
     string result = 9;
     string error = 10;
+    string session_id = 11;
 
     enum RunType {
         RUN_TYPE_TEST = 0;
@@ -46,6 +47,34 @@ message Log {
     string name = 2;
     string payload = 3;
     google.protobuf.Timestamp timestamp = 4;
+}
+
+message EndUser {
+    string id = 1;
+    string identifier = 2;
+}
+
+message Model {
+    int32 id = 1;
+
+    string model_name = 2;
+    string provider = 3;
+    string name = 4;
+}
+
+message ModelConfig {
+    int32 id = 1;
+    int32 model_id = 2;
+    Model model = 3;
+
+    string logit_bias = 4;
+    float presence_penalty = 5;
+    float frequency_penalty = 6;
+    float temperature = 7;
+    float top_p = 8;
+    float top_k = 9;
+    string functions = 10;
+    string function_call = 11;
 }
 
 message Span {
@@ -92,6 +121,10 @@ message Span {
     // Anthropic-specific attributes
     optional string log_id = 34;
     optional double top_k = 35;
+
+    EndUser end_user = 36;
+    optional string template_id = 37;
+    optional string template_parameters = 38; // JSONified map<str, any>
 }
 
 message Eval {
@@ -108,6 +141,38 @@ message TestSuite {
     string name = 2;
     google.protobuf.Timestamp start_timestamp = 3;
     google.protobuf.Timestamp completion_timestamp = 4;
+}
+
+message Template {
+    string id = 1;
+    string name = 2;
+
+    enum TemplateType {
+        TEMPLATE_TYPE_UNSPECIFIED = 0;
+        TEMPLATE_TYPE_FORMATTED_STRING = 1;
+        TEMPLATE_TYPE_JINJA2 = 2;
+    }
+
+    TemplateType template_type = 3;
+    repeated TemplateVersion template_versions = 4;
+}
+
+message TemplateVersion {
+    string id = 1;
+    Template template = 2;
+    string tag = 3;
+    string parameter_definition = 4;
+    string template_string = 5;
+}
+
+message Session {
+    string id = 1;
+    string identifier = 2;
+
+    google.protobuf.Timestamp start_timestamp = 3;
+    google.protobuf.Timestamp completion_timestamp = 4;
+
+    EndUser end_user = 5;
 }
 
 message StartRunRequest {
@@ -169,6 +234,58 @@ message EndTestSuiteResponse {
     string message = 1;
 }
 
+message StartSessionRequest {
+    Session session = 1;
+}
+
+message StartSessionResponse {
+    string message = 1;
+    Session session = 2;
+}
+
+message EndSessionRequest {
+    Session session = 1;
+}
+
+message EndSessionResponse {
+    string message = 1;
+    Session session = 2;
+}
+
+message SubmitTemplateVersionRequest {
+    TemplateVersion template_version = 1;
+}
+
+message SubmitTemplateVersionResponse {
+    string message = 1;
+    TemplateVersion template_version = 2;
+}
+
+message SubmitModelConfigRequest {
+    ModelConfig model_config = 1;
+}
+
+message SubmitModelConfigResponse {
+    string message = 1;
+    ModelConfig model_config = 2;
+}
+
+message SubmitUserRequest {
+    EndUser user = 1;
+}
+
+message SubmitUserResponse {
+    string message = 1;
+    EndUser user = 2;
+}
+
+message GetTemplatesRequest {
+}
+
+message GetTemplatesResponse {
+    repeated Template templates = 1;
+}
+
 service SubmissionService {
     rpc StartRun (StartRunRequest) returns (StartRunResponse);
     rpc SubmitLog (SubmitLogRequest) returns (SubmitLogResponse);
@@ -177,4 +294,10 @@ service SubmissionService {
     rpc SubmitEval (SubmitEvalRequest) returns (SubmitEvalResponse);
     rpc StartTestSuite (StartTestSuiteRequest) returns (StartTestSuiteResponse);
     rpc EndTestSuite (EndTestSuiteRequest) returns (EndTestSuiteResponse);
+    rpc StartSession (StartSessionRequest) returns (StartSessionResponse);
+    rpc EndSession (EndSessionRequest) returns (EndSessionResponse);
+    rpc SubmitTemplateVersion (SubmitTemplateVersionRequest) returns (SubmitTemplateVersionResponse);
+    rpc SubmitModelConfig (SubmitModelConfigRequest) returns (SubmitModelConfigResponse);
+    rpc SubmitUser (SubmitUserRequest) returns (SubmitUserResponse);
+    rpc GetTemplates (GetTemplatesRequest) returns (GetTemplatesResponse);
 }

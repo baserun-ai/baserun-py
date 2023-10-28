@@ -13,6 +13,7 @@ from opentelemetry.trace import (
 )
 
 from baserun.constants import UNTRACED_SPAN_PARENT_NAME
+from baserun.helpers import get_session_id
 from baserun.instrumentation.span_attributes import SpanAttributes
 from baserun.v1.baserun_pb2 import Run
 
@@ -45,7 +46,10 @@ def async_instrumented_wrapper(
             parent_span = tracer.start_span(
                 UNTRACED_SPAN_PARENT_NAME,
                 kind=SpanKind.CLIENT,
-                attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
+                attributes={
+                    SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
+                    SpanAttributes.BASERUN_SESSION_ID: get_session_id(),
+                },
             )
 
         span = tracer.start_span(
@@ -102,7 +106,7 @@ def async_instrumented_wrapper(
 
 
 def instrumented_wrapper(
-    wrapped_fn: Callable, instrumentor: "BaseInstrumentor", span_name: str
+    wrapped_fn: Callable, instrumentor: "BaseInstrumentor", span_name: str = None
 ):
     """Generates a function (`instrumented_function`) which instruments the original function (`wrapped_fn`)"""
 
@@ -128,7 +132,10 @@ def instrumented_wrapper(
             parent_span = tracer.start_span(
                 UNTRACED_SPAN_PARENT_NAME,
                 kind=SpanKind.CLIENT,
-                attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
+                attributes={
+                    SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
+                    SpanAttributes.BASERUN_SESSION_ID: get_session_id(),
+                },
             )
 
         span = tracer.start_span(

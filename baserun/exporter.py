@@ -5,7 +5,7 @@ from typing import Sequence, Any
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter
 
-from baserun.constants import PARENT_SPAN_NAME
+from baserun.constants import PARENT_SPAN_NAME, SESSION_SPAN_NAME
 from baserun.instrumentation.span_attributes import (
     SpanAttributes,
     ANTHROPIC_VENDOR_NAME,
@@ -34,8 +34,10 @@ class BaserunExporter(SpanExporter):
         from baserun import Baserun
 
         for span in spans:
-            if span.name.startswith(PARENT_SPAN_NAME) or not span.name.startswith(
-                "baserun"
+            if (
+                span.name.startswith(PARENT_SPAN_NAME)
+                or span.name.startswith(SESSION_SPAN_NAME)
+                or not span.name.startswith("baserun")
             ):
                 continue
 
@@ -102,6 +104,16 @@ class BaserunExporter(SpanExporter):
             )
             span_message.start_time.FromNanoseconds(span.start_time)
             span_message.end_time.FromNanoseconds(span.end_time)
+
+            set_span_attr(
+                span_message, "template_id", span, SpanAttributes.BASERUN_TEMPLATE_ID
+            )
+            set_span_attr(
+                span_message,
+                "template_parameters",
+                span,
+                SpanAttributes.BASERUN_TEMPLATE_PARAMETERS,
+            )
 
             set_span_attr(
                 span_message, "temperature", span, SpanAttributes.LLM_TEMPERATURE

@@ -10,6 +10,7 @@ from baserun.instrumentation.span_attributes import (
     SpanAttributes,
     ANTHROPIC_VENDOR_NAME,
 )
+from baserun.templates import most_similar_templates
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +67,17 @@ class AnthropicInstrumentor(BaseInstrumentor):
             SpanAttributes.LLM_REQUEST_MAX_TOKENS, kwargs.get("max_tokens_to_sample")
         )
 
+        prompt = kwargs.get("prompt")
         prefix = f"{SpanAttributes.LLM_PROMPTS}.0"
-        span.set_attribute(f"{prefix}.content", kwargs.get("prompt"))
+        span.set_attribute(f"{prefix}.content", prompt)
+
+        templates_by_similarity = most_similar_templates(prompt)
+        if templates_by_similarity and templates_by_similarity[0].template:
+            # how do i get template parameters from here
+            span.set_attribute(
+                SpanAttributes.BASERUN_TEMPLATE_ID,
+                templates_by_similarity[0].template.id,
+            )
 
     @staticmethod
     def set_response_attributes(span: _Span, response):
