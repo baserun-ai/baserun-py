@@ -1,4 +1,6 @@
 import logging
+import os
+import sys
 import uuid
 from datetime import datetime
 
@@ -19,8 +21,10 @@ def pytest_sessionstart(session):
     if session.config.getoption("--baserun"):
         Baserun.init()
 
-        suite = TestSuite(id=str(uuid.uuid4()))
+        sys.argv[0] = os.path.basename(sys.argv[0])
+        suite = TestSuite(id=str(uuid.uuid4()), name=" ".join(sys.argv))
         suite.start_timestamp.FromDatetime(datetime.utcnow())
+
         session.suite = suite
         Baserun.current_test_suite = suite
         try:
