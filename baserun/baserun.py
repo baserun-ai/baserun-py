@@ -4,6 +4,7 @@ import logging
 import traceback
 import uuid
 from base64 import b64encode, b64decode
+from contextlib import contextmanager
 from datetime import datetime
 from importlib.util import find_spec
 from typing import Any, Type
@@ -13,10 +14,11 @@ from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider, _Span
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import SpanKind, get_current_span
-from .grpc import get_or_create_submission_service
 
+from .constants import PARENT_SPAN_NAME
 from .evals.evals import Evals
 from .exporter import BaserunExporter
+from .grpc import get_or_create_submission_service
 from .instrumentation.base_instrumentor import BaseInstrumentor
 from .instrumentation.span_attributes import SpanAttributes
 from .v1.baserun_pb2 import (
@@ -27,7 +29,6 @@ from .v1.baserun_pb2 import (
     TestSuite,
     StartRunRequest,
 )
-from .constants import PARENT_SPAN_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -303,6 +304,53 @@ class Baserun:
         return Baserun._trace(
             func=func, run_type=Run.RunType.RUN_TYPE_PRODUCTION, metadata=metadata
         )
+
+    @staticmethod
+    @contextmanager
+    def start_trace(*args, name: str = None, **kwargs):
+        if not Baserun._initialized:
+            yield
+
+        # If given a name, ensure that the run has that name. If not, it will only be set when a new run is created
+        explicitly_named = name is not None
+        if not explicitly_named:
+            name = inspect.stack()[1].function
+
+        if Baserun.current_test_suite:
+            run_type = Run.RunType.RUN_TYPE_TEST
+        else:
+            run_type = Run.RunType.RUN_TYPE_PRODUCTION
+
+        run = Baserun.get_or_create_current_run(
+            name=name,
+            trace_type=run_type,
+            metadata=kwargs,
+        )
+        if Baserun.current_test_suite:
+            run.suite_id = Baserun.current_test_suite.id
+
+        if explicitly_named:
+            run.name = name
+
+        serialized_run = Baserun.serialize_run(run)
+
+        parent_span: _Span = get_current_span()
+        if parent_span and parent_span.is_recording():
+            parent_span.update_name(f"{PARENT_SPAN_NAME}.{name}")
+            parent_span.set_attribute(SpanAttributes.BASERUN_RUN, serialized_run)
+
+        # Create a parent span so we can attach the run to it, all child spans are part of this run.
+        tracer_provider = trace.get_tracer_provider()
+        tracer = tracer_provider.get_tracer("baserun")
+        with tracer.start_as_current_span(
+            f"{PARENT_SPAN_NAME}.{name}",
+            kind=SpanKind.CLIENT,
+            attributes={SpanAttributes.BASERUN_RUN: serialized_run},
+        ) as span:
+            try:
+                yield run
+            finally:
+                Baserun._finish_run(run, span)
 
     @staticmethod
     def test(func: Callable, metadata: Optional[Dict] = None):

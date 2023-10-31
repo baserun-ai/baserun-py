@@ -28,5 +28,3 @@ def get_or_create_submission_service():
     grpc_channel = grpc.secure_channel(grpc_base, channel_credentials)
     submission_service = SubmissionServiceStub(grpc_channel)
     return submission_service
-
-

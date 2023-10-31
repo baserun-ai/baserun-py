@@ -16,6 +16,7 @@ from tests.testing_functions import (
     openai_completion,
     openai_chat_async_streaming,
     openai_completion_async,
+    openai_contextmanager,
 )
 
 
@@ -74,6 +75,21 @@ def basic_span_asserts(
 def test_chat_completion_basic(mock_services):
     name = "test_chat_completion_basic"
     openai_chat()
+
+    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+
+    basic_run_asserts(run=started_run, name=name)
+    basic_run_asserts(run=submitted_run, name=name)
+    basic_run_asserts(run=ended_run, name=name, result="Washington")
+
+    basic_span_asserts(span)
+
+
+def test_chat_completion_contextmanager_with_name(mock_services):
+    """This test is perhaps misleading because in Test mode the name of the run is always the name of the test,
+    even if a name is explicitly provided. Not sure if this is good or not"""
+    name = "test_chat_completion_contextmanager_with_name"
+    openai_contextmanager(name=name)
 
     started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
 
