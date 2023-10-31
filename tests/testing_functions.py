@@ -212,6 +212,18 @@ def openai_threaded():
     [t.join() for t in threads]
 
 
+def openai_contextmanager(
+    prompt="What is the capitol of the US?", name: str = "This is a run that is named"
+) -> str:
+    with baserun.start_trace(name=name) as run:
+        completion = ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        content = completion.choices[0]["message"].content
+        run.result = content
+
+
 # Allows you to call any of these functions, e.g. python tests/testing_functions.py openai_chat_functions_streaming
 if __name__ == "__main__":
     from dotenv import load_dotenv
