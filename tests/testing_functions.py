@@ -20,9 +20,7 @@ def openai_chat(prompt="What is the capitol of the US?") -> str:
 
 
 def openai_chat_unwrapped(prompt="What is the capitol of the US?", **kwargs) -> str:
-    completion = ChatCompletion.create(
-        model="gpt-3.5-turbo", messages=[{"role": "user", "content": prompt}], **kwargs
-    )
+    completion = ChatCompletion.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": prompt}], **kwargs)
     result = completion.choices[0]["message"].content
     print(result)
     return result
@@ -163,9 +161,7 @@ async def openai_completion_async(
 
 @baserun.trace
 def openai_completion_streaming(prompt="Human: say this is a test\nAssistant: ") -> str:
-    completion_generator = Completion.create(
-        model="text-davinci-003", prompt=prompt, stream=True
-    )
+    completion_generator = Completion.create(model="text-davinci-003", prompt=prompt, stream=True)
 
     content = ""
     for chunk in completion_generator:
@@ -179,9 +175,7 @@ def openai_completion_streaming(prompt="Human: say this is a test\nAssistant: ")
 async def openai_completion_async_streaming(
     prompt="Human: say this is a test\nAssistant: ",
 ) -> str:
-    completion_generator = await Completion.acreate(
-        model="text-davinci-003", prompt=prompt, stream=True
-    )
+    completion_generator = await Completion.acreate(model="text-davinci-003", prompt=prompt, stream=True)
     content = ""
     async for chunk in completion_generator:
         if new_content := chunk.choices[0].text:
@@ -212,9 +206,7 @@ def openai_threaded():
     [t.join() for t in threads]
 
 
-def openai_contextmanager(
-    prompt="What is the capitol of the US?", name: str = "This is a run that is named"
-) -> str:
+def openai_contextmanager(prompt="What is the capitol of the US?", name: str = "This is a run that is named") -> str:
     with baserun.start_trace(name=name) as run:
         completion = ChatCompletion.create(
             model="gpt-3.5-turbo",
@@ -222,6 +214,21 @@ def openai_contextmanager(
         )
         content = completion.choices[0]["message"].content
         run.result = content
+
+
+def display_templates():
+    templates = baserun.get_templates()
+    for template in templates:
+        print(template.name)
+        for version in template.template_versions:
+            padded_string = "\n  | ".join(version.template_string.split("\n"))
+            print(f"| Tag: {version.tag}")
+            print(f"| Template: ")
+            print(padded_string.strip())
+            print("")
+        print("")
+
+    return "Done"
 
 
 # Allows you to call any of these functions, e.g. python tests/testing_functions.py openai_chat_functions_streaming
@@ -234,12 +241,8 @@ if __name__ == "__main__":
     Baserun.init()
 
     parser = argparse.ArgumentParser(description="Execute a function with a prompt.")
-    parser.add_argument(
-        "function_to_call", type=str, help="Name of the function to call"
-    )
-    parser.add_argument(
-        "--prompt", type=str, help="Prompt to pass to the function", default=None
-    )
+    parser.add_argument("function_to_call", type=str, help="Name of the function to call")
+    parser.add_argument("--prompt", type=str, help="Prompt to pass to the function", default=None)
 
     parsed_args = parser.parse_args()
 
