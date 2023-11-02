@@ -2,6 +2,7 @@ import hashlib
 import inspect
 import json
 import logging
+import os
 import re
 from collections import defaultdict
 from typing import Any, TYPE_CHECKING, Union
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-@memoize_for_time(600)
+@memoize_for_time(os.environ.get("BASERUN_CACHE_INTERVAL", 600))
 def get_templates() -> list[Template]:
     request = GetTemplatesRequest()
     response: GetTemplatesResponse = get_or_create_submission_service().GetTemplates(
