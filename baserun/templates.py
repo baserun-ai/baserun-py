@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import traceback
 from collections import defaultdict
 from typing import Any, TYPE_CHECKING, Union
 
@@ -35,31 +36,49 @@ logger = logging.getLogger(__name__)
 
 
 @memoize_for_time(os.environ.get("BASERUN_CACHE_INTERVAL", 600))
-def get_templates() -> list[Template]:
-    request = GetTemplatesRequest()
-    response: GetTemplatesResponse = get_or_create_submission_service().GetTemplates(
-        request
-    )
-    return response.templates
+def get_templates() -> dict[str, Template]:
+    if not Baserun.templates:
+        Baserun.templates = {}
+
+    try:
+        request = GetTemplatesRequest()
+        response: GetTemplatesResponse = (
+            get_or_create_submission_service().GetTemplates(request)
+        )
+        for template in response.templates:
+            Baserun.templates[template.name] = template
+    except BaseException as e:
+        logger.error(
+            f"Could not fetch templates from Baserun. Using {len(Baserun.templates.keys())} cached templates"
+        )
+        logger.info(traceback.format_exception(e))
+
+    return Baserun.templates
 
 
 def get_template(name: str, version: str = None) -> TemplateVersion:
-    try:
-        template = next(t for t in get_templates() if t.name == name)
-        if version:
+    templates = get_templates()
+    template = templates.get(name)
+    if not template:
+        logger.info(
+            f"Attempted to get template {name} but no template with that name exists"
+        )
+        return None
+
+    if version:
+        try:
             template_version = next(
                 v for v in template.template_versions if v.tag == version
             )
             return template_version
-        else:
-            return template.template_versions[-1]
-    except StopIteration:
-        return None
+        except StopIteration:
+            logger.info(
+                f"Could not find template version {name}.{version}. Using latest version instead."
+            )
+
+    return template.template_versions[-1]
 
 
-# For completions- need to find the most similar template already created
-# - What to do if no templates
-# - What to do if templates but none are the completion's template or its otherwise freeform (e.g. user generated)
 def most_similar_templates(formatted_str: str):
     """Given a `templates` list, will return the templates sorted by similarity to the `formatted_str` arg"""
     if not Baserun.templates:
