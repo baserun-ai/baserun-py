@@ -6,8 +6,10 @@ from typing import Collection, Any, TYPE_CHECKING
 import openai
 from opentelemetry.sdk.trace import _Span
 
+from baserun.helpers import get_session_id
 from baserun.instrumentation.base_instrumentor import BaseInstrumentor
 from baserun.instrumentation.span_attributes import SpanAttributes, OPENAI_VENDOR_NAME
+from baserun.templates import most_similar_templates, best_guess_template_parameters
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +17,7 @@ _instruments = ("openai >= 0.27.0",)
 __version__ = "0.1.0"
 
 if TYPE_CHECKING:
-    from openai.openai_object import OpenAIObject
+    pass
 
 
 class OpenAIInstrumentor(BaseInstrumentor):
@@ -53,6 +55,8 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
     @staticmethod
     def set_request_attributes(span: _Span, kwargs: dict[str, Any]):
+        span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, get_session_id())
+
         span.set_attribute(SpanAttributes.LLM_VENDOR, OPENAI_VENDOR_NAME)
         span.set_attribute(SpanAttributes.OPENAI_API_BASE, openai.api_base)
         span.set_attribute(SpanAttributes.OPENAI_API_TYPE, openai.api_type)
@@ -126,18 +130,44 @@ class OpenAIInstrumentor(BaseInstrumentor):
             span.set_attribute(SpanAttributes.LLM_USER, kwargs.get("user"))
 
         messages = kwargs.get("messages", [])
+        template_version = None
+        formatted_prompt = ""
         for i, message in enumerate(messages):
             prefix = f"{SpanAttributes.LLM_PROMPTS}.{i}"
             span.set_attribute(f"{prefix}.role", message.get("role"))
 
             if content := message.get("content"):
+                formatted_prompt += content
+                templates_by_similarity = most_similar_templates(content)
+                if templates_by_similarity:
+                    template_version = templates_by_similarity[0]
+
                 span.set_attribute(f"{prefix}.content", content)
 
             if function_call := message.get("function_call"):
                 span.set_attribute(f"{prefix}.function_call", json.dumps(function_call))
 
         if (prompt := kwargs.get("prompt")) and not messages:
+            formatted_prompt = prompt
+            templates_by_similarity = most_similar_templates(prompt)
+            if templates_by_similarity:
+                template_version = templates_by_similarity[0]
+
             span.set_attribute(f"{SpanAttributes.LLM_PROMPTS}.0.content", prompt)
+
+        if template_version:
+            span.set_attribute(
+                SpanAttributes.BASERUN_TEMPLATE_ID,
+                template_version.template.id,
+            )
+            matched_parameters = best_guess_template_parameters(
+                template_version=template_version, prompt=formatted_prompt
+            )
+            if matched_parameters:
+                span.set_attribute(
+                    SpanAttributes.BASERUN_TEMPLATE_PARAMETERS,
+                    json.dumps(matched_parameters),
+                )
 
     @staticmethod
     def set_response_attributes(span: _Span, response: "OpenAIObject"):

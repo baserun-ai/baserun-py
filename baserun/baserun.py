@@ -19,6 +19,7 @@ from .constants import PARENT_SPAN_NAME
 from .evals.evals import Evals
 from .exporter import BaserunExporter
 from .grpc import get_or_create_submission_service
+from .helpers import get_session_id
 from .instrumentation.base_instrumentor import BaseInstrumentor
 from .instrumentation.span_attributes import SpanAttributes
 from .v1.baserun_pb2 import (
@@ -28,7 +29,9 @@ from .v1.baserun_pb2 import (
     EndRunRequest,
     TestSuite,
     StartRunRequest,
+    TemplateVersion,
 )
+from .v1.baserun_pb2_grpc import SubmissionServiceStub
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +48,12 @@ class Baserun:
     current_test_suite: TestSuite = None
 
     evals = Evals
+
+    templates: dict[str, TemplateVersion] = None
+    used_template_parameters: dict[str, list[dict[str, Any]]] = None
+
+    submission_service: SubmissionServiceStub = None
+    async_submission_service: SubmissionServiceStub = None
 
     @staticmethod
     def init(instrument: bool = True) -> None:
@@ -144,6 +153,7 @@ class Baserun:
         completion_timestamp: datetime = None,
         trace_type: Run.RunType = None,
         metadata: dict[str, Any] = None,
+        session_id: str = None,
     ) -> Run:
         """Gets the current run or creates one"""
         existing_run = Baserun.current_run()
@@ -166,6 +176,7 @@ class Baserun:
             "run_type": trace_type,
             "name": name,
             "metadata": json.dumps(metadata or {}),
+            "session_id": session_id,
         }
 
         if suite_id or Baserun.current_test_suite:
@@ -217,11 +228,15 @@ class Baserun:
                     trace_type=run_type,
                     metadata=metadata,
                     suite_id=suite_id,
+                    session_id=get_session_id(),
                 )
                 with tracer.start_as_current_span(
                     f"{PARENT_SPAN_NAME}.{func.__name__}",
                     kind=SpanKind.CLIENT,
-                    attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
+                    attributes={
+                        SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
+                        SpanAttributes.BASERUN_SESSION_ID: get_session_id(),
+                    },
                 ) as span:
                     try:
                         result = await func(*args, **kwargs)
@@ -245,12 +260,16 @@ class Baserun:
                     trace_type=run_type,
                     metadata=metadata,
                     suite_id=suite_id,
+                    session_id=get_session_id(),
                 )
 
                 with tracer.start_as_current_span(
                     f"{PARENT_SPAN_NAME}.{func.__name__}",
                     kind=SpanKind.CLIENT,
-                    attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
+                    attributes={
+                        SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
+                        SpanAttributes.BASERUN_SESSION_ID: get_session_id(),
+                    },
                 ) as span:
                     try:
                         result = []
@@ -276,13 +295,17 @@ class Baserun:
                     trace_type=run_type,
                     metadata=metadata,
                     suite_id=suite_id,
+                    session_id=get_session_id(),
                 )
 
                 # Create a parent span so we can attach the run to it, all child spans are part of this run.
                 with tracer.start_as_current_span(
                     f"{PARENT_SPAN_NAME}.{func.__name__}",
                     kind=SpanKind.CLIENT,
-                    attributes={SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run)},
+                    attributes={
+                        SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
+                        SpanAttributes.BASERUN_SESSION_ID: get_session_id(),
+                    },
                 ) as span:
                     try:
                         result = func(*args, **kwargs)

@@ -4,6 +4,7 @@ import openai
 import pytest
 import concurrent
 
+
 @pytest.mark.asyncio
 async def test_paris_async():
     response = await openai.Completion.acreate(
@@ -12,10 +13,13 @@ async def test_paris_async():
         prompt="What are three activities to do in Paris?",
     )
 
-    baserun.evals.includes("Includes Eiffel Tower", response['choices'][0]['text'], ["Eiffel Tower"])
-    baserun.evals.not_includes("AI Language check", response['choices'][0]['text'], ["AI Language"])
-    baserun.evals.model_graded_security("Malicious", response['choices'][0]['text'])
-
+    baserun.evals.includes(
+        "Includes Eiffel Tower", response["choices"][0]["text"], ["Eiffel Tower"]
+    )
+    baserun.evals.not_includes(
+        "AI Language check", response["choices"][0]["text"], ["AI Language"]
+    )
+    baserun.evals.model_graded_security("Malicious", response["choices"][0]["text"])
 
 
 @pytest.mark.asyncio
@@ -24,7 +28,7 @@ async def test_egypt_async_stream():
         model="text-davinci-003",
         temperature=0.7,
         prompt="What are three activities to do in Egypt?",
-        stream=True
+        stream=True,
     )
 
     async for chunk in response:
@@ -39,10 +43,19 @@ async def test_egypt_async():
         prompt="What are three activities to do in Egypt?",
     )
 
-    baserun.evals.includes("Includes Pyramid", response['choices'][0]['text'], ["Pyramid"])
-    baserun.evals.not_includes("AI Language check", response['choices'][0]['text'], ["AI Language"])
-    baserun.evals.model_graded_security("Malicious", response['choices'][0]['text'])
-    baserun.evals.model_graded_fact("Fact", "tell me about france", "eiffel tower is nice", response['choices'][0]['text'])
+    baserun.evals.includes(
+        "Includes Pyramid", response["choices"][0]["text"], ["Pyramid"]
+    )
+    baserun.evals.not_includes(
+        "AI Language check", response["choices"][0]["text"], ["AI Language"]
+    )
+    baserun.evals.model_graded_security("Malicious", response["choices"][0]["text"])
+    baserun.evals.model_graded_fact(
+        "Fact",
+        "tell me about france",
+        "eiffel tower is nice",
+        response["choices"][0]["text"],
+    )
 
 
 def test_paris_sync_stream():
@@ -50,7 +63,7 @@ def test_paris_sync_stream():
         model="text-davinci-003",
         temperature=0.7,
         prompt="What are three activities to do in Paris?",
-        stream=True
+        stream=True,
     )
 
     for chunk in response:
@@ -64,7 +77,7 @@ def test_paris_sync():
         prompt="What are three activities to do in Paris?",
     )
 
-    baserun.log("Paris", response['choices'][0]['text'])
+    baserun.log("Paris", response["choices"][0]["text"])
 
 
 @pytest.mark.asyncio
@@ -72,11 +85,13 @@ async def test_paris_chat_async_stream():
     response = await openai.ChatCompletion.acreate(
         model="gpt-3.5-turbo",
         temperature=0.7,
-        messages=[{
-            "role": "user",
-            "content": "What are three activities to do in Paris?",
-        }],
-        stream=True
+        messages=[
+            {
+                "role": "user",
+                "content": "What are three activities to do in Paris?",
+            }
+        ],
+        stream=True,
     )
 
     async for chunk in response:
@@ -88,13 +103,15 @@ async def test_paris_chat_async():
     response = await openai.ChatCompletion.acreate(
         model="gpt-3.5-turbo",
         temperature=0.7,
-        messages=[{
-            "role": "user",
-            "content": "What are three activities to do in Paris?",
-        }],
+        messages=[
+            {
+                "role": "user",
+                "content": "What are three activities to do in Paris?",
+            }
+        ],
     )
 
-    baserun.log("Paris", response['choices'][0]['message']['content'])
+    baserun.log("Paris", response["choices"][0]["message"]["content"])
 
 
 @pytest.mark.asyncio
@@ -102,25 +119,27 @@ async def test_madrid_chat_async():
     response = await openai.ChatCompletion.acreate(
         model="gpt-3.5-turbo",
         temperature=0.7,
-        messages=[{
-            "role": "user",
-            "content": "What are three activities to do in Paris?",
-        }],
+        messages=[
+            {
+                "role": "user",
+                "content": "What are three activities to do in Paris?",
+            }
+        ],
     )
-    baserun.log("Madrid", response['choices'][0]['message']['content'])
-
-
+    baserun.log("Madrid", response["choices"][0]["message"]["content"])
 
 
 def test_paris_chat_sync_stream():
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
-        messages=[{
-            "role": "user",
-            "content": "What are three activities to do in Paris?",
-        }],
-        stream=True
+        messages=[
+            {
+                "role": "user",
+                "content": "What are three activities to do in Paris?",
+            }
+        ],
+        stream=True,
     )
 
     for chunk in response:
@@ -131,46 +150,67 @@ def test_paris_chat_sync():
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
-        messages=[{
-            "role": "user",
-            "content": "What are three activities to do in Paris?",
-        }],
+        messages=[
+            {
+                "role": "user",
+                "content": "What are three activities to do in Paris?",
+            }
+        ],
     )
 
-    baserun.evals.includes("Includes Eiffel Tower", response['choices'][0]['message']['content'], ["Eiffel Tower"])
-    baserun.evals.not_includes("AI Language check", response['choices'][0]['message']['content'], ["AI Language"])
-    baserun.evals.model_graded_security("Malicious", response['choices'][0]['message']['content'])
+    baserun.evals.includes(
+        "Includes Eiffel Tower",
+        response["choices"][0]["message"]["content"],
+        ["Eiffel Tower"],
+    )
+    baserun.evals.not_includes(
+        "AI Language check",
+        response["choices"][0]["message"]["content"],
+        ["AI Language"],
+    )
+    baserun.evals.model_graded_security(
+        "Malicious", response["choices"][0]["message"]["content"]
+    )
 
 
 def test_egypt_chat_sync():
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
-        messages=[{
-            "role": "user",
-            "content": "What are three activities to do in Egypt?",
-        }],
+        messages=[
+            {
+                "role": "user",
+                "content": "What are three activities to do in Egypt?",
+            }
+        ],
     )
 
-    baserun.evals.includes("Includes Pyramid", response['choices'][0]['message']['content'], ["Pyramid"])
-    baserun.evals.not_includes("AI Language check", response['choices'][0]['message']['content'], ["AI Language"])
-    baserun.evals.model_graded_security("Malicious", response['choices'][0]['message']['content'])
+    baserun.evals.includes(
+        "Includes Pyramid", response["choices"][0]["message"]["content"], ["Pyramid"]
+    )
+    baserun.evals.not_includes(
+        "AI Language check",
+        response["choices"][0]["message"]["content"],
+        ["AI Language"],
+    )
+    baserun.evals.model_graded_security(
+        "Malicious", response["choices"][0]["message"]["content"]
+    )
 
 
-@pytest.mark.parametrize("place,expected", [("Paris", "Eiffel Tower"), ("Rome", "Colosseum")])
+@pytest.mark.parametrize(
+    "place,expected", [("Paris", "Eiffel Tower"), ("Rome", "Colosseum")]
+)
 def test_trip(place, expected):
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
         messages=[
-            {
-                "role": "user",
-                "content": f"What are three activities to do in {place}?"
-            }
+            {"role": "user", "content": f"What are three activities to do in {place}?"}
         ],
     )
 
-    assert expected in response['choices'][0]['message']['content']
+    assert expected in response["choices"][0]["message"]["content"]
 
 
 def test_dogs_anthropic_sync():
@@ -189,7 +229,7 @@ def test_dogs_anthropic_sync_stream():
         model="claude-2",
         max_tokens_to_sample=300,
         prompt=f"{HUMAN_PROMPT} How many toes do dogs have?{AI_PROMPT}",
-        stream=True
+        stream=True,
     )
 
     for data in stream:
@@ -214,7 +254,7 @@ async def test_dogs_anthropic_async_stream():
         model="claude-2",
         max_tokens_to_sample=300,
         prompt=f"{HUMAN_PROMPT} How many toes do dogs have?{AI_PROMPT}",
-        stream=True
+        stream=True,
     )
 
     async for data in stream:
@@ -226,10 +266,12 @@ async def test_function_call():
     await openai.ChatCompletion.acreate(
         model="gpt-3.5-turbo",
         temperature=0.7,
-        messages=[{
-            "role": "user",
-            "content": "What's the weather like in Paris?",
-        }],
+        messages=[
+            {
+                "role": "user",
+                "content": "What's the weather like in Paris?",
+            }
+        ],
         functions=[
             {
                 "name": "get_current_weather",
@@ -239,17 +281,14 @@ async def test_function_call():
                     "properties": {
                         "location": {
                             "type": "string",
-                            "description": "The city and state, e.g. San Francisco, CA"
+                            "description": "The city and state, e.g. San Francisco, CA",
                         },
-                        "unit": {
-                            "type": "string",
-                            "enum": ["celsius", "fahrenheit"]
-                        }
+                        "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]},
                     },
-                    "required": ["location"]
-                }
+                    "required": ["location"],
+                },
             }
-        ]
+        ],
     )
 
 
@@ -258,10 +297,12 @@ async def test_function_call_stream():
     response = await openai.ChatCompletion.acreate(
         model="gpt-3.5-turbo",
         temperature=0.7,
-        messages=[{
-            "role": "user",
-            "content": "What's the weather like in Paris?",
-        }],
+        messages=[
+            {
+                "role": "user",
+                "content": "What's the weather like in Paris?",
+            }
+        ],
         functions=[
             {
                 "name": "get_current_weather",
@@ -271,18 +312,15 @@ async def test_function_call_stream():
                     "properties": {
                         "location": {
                             "type": "string",
-                            "description": "The city and state, e.g. San Francisco, CA"
+                            "description": "The city and state, e.g. San Francisco, CA",
                         },
-                        "unit": {
-                            "type": "string",
-                            "enum": ["celsius", "fahrenheit"]
-                        }
+                        "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]},
                     },
-                    "required": ["location"]
-                }
+                    "required": ["location"],
+                },
             }
         ],
-        stream=True
+        stream=True,
     )
 
     async for chunk in response:
@@ -304,14 +342,14 @@ async def test_function_call_message():
                 "content": None,
                 "function_call": {
                     "name": "get_current_weather",
-                    "arguments": "{\"location\": \"Paris\"}"
-                }
+                    "arguments": '{"location": "Paris"}',
+                },
             },
             {
                 "role": "function",
                 "name": "get_current_weather",
-                "content": "{\"temperature\": 22, \"unit\": \"celsius\", \"description\": \"Sunny\"}"
-            }
+                "content": '{"temperature": 22, "unit": "celsius", "description": "Sunny"}',
+            },
         ],
         functions=[
             {
@@ -322,32 +360,31 @@ async def test_function_call_message():
                     "properties": {
                         "location": {
                             "type": "string",
-                            "description": "The city and state, e.g. San Francisco, CA"
+                            "description": "The city and state, e.g. San Francisco, CA",
                         },
-                        "unit": {
-                            "type": "string",
-                            "enum": ["celsius", "fahrenheit"]
-                        }
+                        "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]},
                     },
-                    "required": ["location"]
-                }
+                    "required": ["location"],
+                },
             }
-        ]
+        ],
     )
 
 
 def test_threads():
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-        future_to_fn = {executor.submit(fn): fn for fn in [
-            baserun.thread_wrapper(test_paris_chat_sync),
-            baserun.thread_wrapper(test_egypt_chat_sync)
-        ]}
+        future_to_fn = {
+            executor.submit(fn): fn
+            for fn in [
+                baserun.thread_wrapper(test_paris_chat_sync),
+                baserun.thread_wrapper(test_egypt_chat_sync),
+            ]
+        }
         for future in concurrent.futures.as_completed(future_to_fn):
             response = future_to_fn[future]
             try:
                 data = future.result()
             except Exception as exc:
-                print('%r generated an exception: %s' % (response, exc))
+                print("%r generated an exception: %s" % (response, exc))
             else:
-                print('%r response is %s' % (response, data))
-
+                print("%r response is %s" % (response, data))
