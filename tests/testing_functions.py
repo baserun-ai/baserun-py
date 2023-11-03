@@ -268,6 +268,18 @@ def call_function(functions, function_name: str, parsed_args: argparse.Namespace
     return result
 
 
+@baserun.trace
+def use_sessions(prompt="What is the capitol of the US?") -> str:
+    with baserun.with_session(user_identifier="example@test.com"):
+        completion = ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        content = completion.choices[0]["message"].content
+        baserun.check_includes("openai_chat.content", content, "Washington")
+        return content
+
+
 # Allows you to call any of these functions, e.g. python tests/testing_functions.py openai_chat_functions_streaming
 if __name__ == "__main__":
     from dotenv import load_dotenv

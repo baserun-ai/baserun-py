@@ -17,6 +17,7 @@ from baserun.v1.baserun_pb2 import (
     EndUser,
     EndSessionRequest,
 )
+from . import Baserun
 from .instrumentation.span_attributes import SpanAttributes
 
 logger = logging.getLogger(__name__)
@@ -30,11 +31,15 @@ def with_session(
     tracer = tracer_provider.get_tracer("baserun")
 
     session = start_session(user_identifier, session_identifier)
+    run = Baserun.current_run()
     try:
         with tracer.start_as_current_span(
             f"baserun.session",
             kind=SpanKind.CLIENT,
-            attributes={SpanAttributes.BASERUN_SESSION_ID: session.identifier},
+            attributes={
+                SpanAttributes.BASERUN_SESSION_ID: session.identifier,
+                SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
+            },
         ):
             yield
     finally:
