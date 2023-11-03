@@ -1,6 +1,7 @@
 import os
 
 from .baserun import Baserun
+from .checks import check as check_method, check_equals as check_equals_method, check_includes as check_includes_method
 from .sessions import (
     start_session as start_session_method,
     end_session as end_session_method,
@@ -41,5 +42,8 @@ aformat_prompt = aformat_prompt_method
 aregister_template = aregister_template_method
 submit_user = submit_user_method
 asubmit_user = asubmit_user_method
+check = check_method
+check_equals = check_equals_method
+check_includes = check_includes_method
 
 api_key = os.environ.get("BASERUN_API_KEY")
