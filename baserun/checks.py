@@ -3,12 +3,19 @@ from typing import Any, Union
 from baserun import Baserun
 
 
-def check(name: str, result: Any, payload: dict[str, Any] = None, eval_type: str = None):
+def convert_to_score(x):
+    return x if isinstance(x, int) else int(x is True)
+
+
+def check(
+    name: str, result: Any, payload: dict[str, Any] = None, eval_type: str = None
+):
+    score = convert_to_score(result)
     Baserun.evals._store_eval_data(
         name=name,
         eval_type=eval_type or "match",
         result=str(result),
-        score=int(result),
+        score=score,
         submission=result,
         payload=payload or {"result": result},
     )

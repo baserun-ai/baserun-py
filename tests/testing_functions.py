@@ -3,6 +3,7 @@ import asyncio
 import inspect
 import json
 import os
+import traceback
 from threading import Thread
 
 import openai
@@ -290,7 +291,7 @@ if __name__ == "__main__":
         for name, func in traced_functions.items():
             try:
                 call_function(traced_functions, name, parsed_args)
-            except:
-                pass
+            except Exception as e:
+                traceback.print_exception(e)
     else:
         call_function(traced_functions, function_name, parsed_args)

@@ -8,8 +8,8 @@ from openai import ChatCompletion
 from baserun.evals.json import is_valid_json
 from baserun.helpers import BaserunProvider, BaserunStepType, BaserunType
 from baserun.v1.baserun_pb2 import SubmitEvalRequest, Eval
-from ..instrumentation.base_instrumentor import BaseInstrumentor
 from ..grpc import get_or_create_submission_service
+from ..instrumentation.base_instrumentor import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
 

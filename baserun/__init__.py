@@ -1,7 +1,11 @@
 import os
 
 from .baserun import Baserun
-from .checks import check as check_method, check_equals as check_equals_method, check_includes as check_includes_method
+from .checks import (
+    check as check_method,
+    check_equals as check_equals_method,
+    check_includes as check_includes_method,
+)
 from .sessions import (
     start_session as start_session_method,
     end_session as end_session_method,
