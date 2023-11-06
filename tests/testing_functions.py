@@ -3,6 +3,7 @@ import asyncio
 import inspect
 import json
 import os
+import sys
 import traceback
 from threading import Thread
 
@@ -21,6 +22,19 @@ def openai_chat(prompt="What is the capitol of the US?") -> str:
     )
     content = completion.choices[0]["message"].content
     baserun.check_includes("openai_chat.content", content, "Washington")
+    return content
+
+
+@baserun.trace
+def openai_chat_with_log(prompt="What is the capitol of the US?") -> str:
+    completion = ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+    )
+    content = completion.choices[0]["message"].content
+    baserun.check_includes("openai_chat.content", content, "Washington")
+    command = " ".join(sys.argv)
+    baserun.log(f"OpenAI Chat Results: {content}", payload={"command": command})
     return content
 
 
