@@ -1,30 +1,42 @@
-from anthropic import AsyncAnthropic, Anthropic, HUMAN_PROMPT, AI_PROMPT
-import baserun
-import openai
-import pytest
 import concurrent
+
+import pytest
+from anthropic import AsyncAnthropic, Anthropic, HUMAN_PROMPT, AI_PROMPT
+from openai import OpenAI, AsyncOpenAI
+
+import baserun
+
+
+@pytest.fixture
+def client():
+    return OpenAI()
+
+
+@pytest.fixture
+def async_client():
+    return AsyncOpenAI()
 
 
 @pytest.mark.asyncio
-async def test_paris_async():
-    response = await openai.Completion.acreate(
+async def test_paris_async(async_client):
+    response = await async_client.completions.create(
         model="text-davinci-003",
         temperature=0.7,
         prompt="What are three activities to do in Paris?",
     )
 
     baserun.evals.includes(
-        "Includes Eiffel Tower", response["choices"][0]["text"], ["Eiffel Tower"]
+        "Includes Eiffel Tower", response.choices[0].text, ["Eiffel Tower"]
     )
     baserun.evals.not_includes(
-        "AI Language check", response["choices"][0]["text"], ["AI Language"]
+        "AI Language check", response.choices[0].text, ["AI Language"]
     )
-    baserun.evals.model_graded_security("Malicious", response["choices"][0]["text"])
+    baserun.evals.model_graded_security("Malicious", response.choices[0].text)
 
 
 @pytest.mark.asyncio
-async def test_egypt_async_stream():
-    response = await openai.Completion.acreate(
+async def test_egypt_async_stream(async_client):
+    response = await async_client.completions.create(
         model="text-davinci-003",
         temperature=0.7,
         prompt="What are three activities to do in Egypt?",
@@ -36,30 +48,28 @@ async def test_egypt_async_stream():
 
 
 @pytest.mark.asyncio
-async def test_egypt_async():
-    response = await openai.Completion.acreate(
+async def test_egypt_async(async_client):
+    response = await async_client.completions.create(
         model="text-davinci-003",
         temperature=0.7,
         prompt="What are three activities to do in Egypt?",
     )
 
-    baserun.evals.includes(
-        "Includes Pyramid", response["choices"][0]["text"], ["Pyramid"]
-    )
+    baserun.evals.includes("Includes Pyramid", response.choices[0].text, ["Pyramid"])
     baserun.evals.not_includes(
-        "AI Language check", response["choices"][0]["text"], ["AI Language"]
+        "AI Language check", response.choices[0].text, ["AI Language"]
     )
-    baserun.evals.model_graded_security("Malicious", response["choices"][0]["text"])
+    baserun.evals.model_graded_security("Malicious", response.choices[0].text)
     baserun.evals.model_graded_fact(
         "Fact",
         "tell me about france",
         "eiffel tower is nice",
-        response["choices"][0]["text"],
+        response.choices[0].text,
     )
 
 
-def test_paris_sync_stream():
-    response = openai.Completion.create(
+def test_paris_sync_stream(client):
+    response = client.completions.create(
         model="text-davinci-003",
         temperature=0.7,
         prompt="What are three activities to do in Paris?",
@@ -70,19 +80,19 @@ def test_paris_sync_stream():
         print(chunk.choices[0].text)
 
 
-def test_paris_sync():
-    response = openai.Completion.create(
+def test_paris_sync(client):
+    response = client.completions.create(
         model="text-davinci-003",
         temperature=0.7,
         prompt="What are three activities to do in Paris?",
     )
 
-    baserun.log("Paris", response["choices"][0]["text"])
+    baserun.log("Paris", response.choices[0].text)
 
 
 @pytest.mark.asyncio
-async def test_paris_chat_async_stream():
-    response = await openai.ChatCompletion.acreate(
+async def test_paris_chat_async_stream(async_client):
+    response = await async_client.chat.completions.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
         messages=[
@@ -99,8 +109,8 @@ async def test_paris_chat_async_stream():
 
 
 @pytest.mark.asyncio
-async def test_paris_chat_async():
-    response = await openai.ChatCompletion.acreate(
+async def test_paris_chat_async(async_client):
+    response = await async_client.chat.completions.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
         messages=[
@@ -111,12 +121,12 @@ async def test_paris_chat_async():
         ],
     )
 
-    baserun.log("Paris", response["choices"][0]["message"]["content"])
+    baserun.log("Paris", response.choices[0].message.content)
 
 
 @pytest.mark.asyncio
-async def test_madrid_chat_async():
-    response = await openai.ChatCompletion.acreate(
+async def test_madrid_chat_async(async_client):
+    response = await async_client.chat.completions.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
         messages=[
@@ -126,11 +136,11 @@ async def test_madrid_chat_async():
             }
         ],
     )
-    baserun.log("Madrid", response["choices"][0]["message"]["content"])
+    baserun.log("Madrid", response.choices[0].message.content)
 
 
-def test_paris_chat_sync_stream():
-    response = openai.ChatCompletion.create(
+def test_paris_chat_sync_stream(client):
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
         messages=[
@@ -146,8 +156,8 @@ def test_paris_chat_sync_stream():
         print(chunk.choices[0].delta)
 
 
-def test_paris_chat_sync():
-    response = openai.ChatCompletion.create(
+def test_paris_chat_sync(client):
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
         messages=[
@@ -160,21 +170,21 @@ def test_paris_chat_sync():
 
     baserun.evals.includes(
         "Includes Eiffel Tower",
-        response["choices"][0]["message"]["content"],
+        response.choices[0].message.content,
         ["Eiffel Tower"],
     )
     baserun.evals.not_includes(
         "AI Language check",
-        response["choices"][0]["message"]["content"],
+        response.choices[0].message.content,
         ["AI Language"],
     )
     baserun.evals.model_graded_security(
-        "Malicious", response["choices"][0]["message"]["content"]
+        "Malicious", response.choices[0].message.content
     )
 
 
-def test_egypt_chat_sync():
-    response = openai.ChatCompletion.create(
+def test_egypt_chat_sync(client):
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
         messages=[
@@ -186,15 +196,15 @@ def test_egypt_chat_sync():
     )
 
     baserun.evals.includes(
-        "Includes Pyramid", response["choices"][0]["message"]["content"], ["Pyramid"]
+        "Includes Pyramid", response.choices[0].message.content, ["Pyramid"]
     )
     baserun.evals.not_includes(
         "AI Language check",
-        response["choices"][0]["message"]["content"],
+        response.choices[0].message.content,
         ["AI Language"],
     )
     baserun.evals.model_graded_security(
-        "Malicious", response["choices"][0]["message"]["content"]
+        "Malicious", response.choices[0].message.content
     )
 
 
@@ -202,7 +212,8 @@ def test_egypt_chat_sync():
     "place,expected", [("Paris", "Eiffel Tower"), ("Rome", "Colosseum")]
 )
 def test_trip(place, expected):
-    response = openai.ChatCompletion.create(
+    client = OpenAI()
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
         messages=[
@@ -210,7 +221,7 @@ def test_trip(place, expected):
         ],
     )
 
-    assert expected in response["choices"][0]["message"]["content"]
+    assert expected in response.choices[0].message.content
 
 
 def test_dogs_anthropic_sync():
@@ -262,8 +273,8 @@ async def test_dogs_anthropic_async_stream():
 
 
 @pytest.mark.asyncio
-async def test_function_call():
-    await openai.ChatCompletion.acreate(
+async def test_function_call(async_client):
+    await async_client.chat.completions.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
         messages=[
@@ -293,8 +304,8 @@ async def test_function_call():
 
 
 @pytest.mark.asyncio
-async def test_function_call_stream():
-    response = await openai.ChatCompletion.acreate(
+async def test_function_call_stream(async_client):
+    response = await async_client.chat.completions.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
         messages=[
@@ -328,8 +339,8 @@ async def test_function_call_stream():
 
 
 @pytest.mark.asyncio
-async def test_function_call_message():
-    await openai.ChatCompletion.acreate(
+async def test_function_call_message(async_client):
+    await async_client.chat.completions.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
         messages=[

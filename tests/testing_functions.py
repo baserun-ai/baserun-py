@@ -9,6 +9,7 @@ from threading import Thread
 
 import openai
 from openai import OpenAI, AsyncOpenAI, NotFoundError
+from openai.types.chat.chat_completion_message import FunctionCall
 
 import baserun
 
@@ -58,10 +59,50 @@ async def openai_chat_async(prompt="What is the capitol of the US?") -> str:
     )
     content = completion.choices[0].message.content
     baserun.check_includes("openai_chat_async.content", content, "Washington")
+    return content
 
 
 @baserun.trace
-def openai_chat_functions(prompt="Say 'hello world'") -> dict[str, str]:
+def openai_chat_tools(prompt="Say 'hello world'") -> FunctionCall:
+    client = OpenAI()
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "say",
+                "description": "Convert some text to speech",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string", "description": "The text to speak"},
+                    },
+                    "required": ["text"],
+                },
+            },
+        }
+    ]
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+        tools=tools,
+        tool_choice={"type": "function", "function": {"name": "say"}},
+    )
+    tool_calls = completion.choices[0].message.tool_calls
+    baserun.check_includes(
+        "openai_chat_functions.function_call",
+        json.dumps(
+            [
+                {"id": call.id, "type": call.type, "function": call.function.__dict__}
+                for call in tool_calls
+            ]
+        ),
+        "say",
+    )
+    return tool_calls
+
+
+@baserun.trace
+def openai_chat_functions(prompt="Say 'hello world'") -> FunctionCall:
     client = OpenAI()
     functions = [
         {
@@ -90,7 +131,7 @@ def openai_chat_functions(prompt="Say 'hello world'") -> dict[str, str]:
 
 
 @baserun.trace
-def openai_chat_functions_streaming(prompt="Say 'hello world'") -> dict[str, str]:
+def openai_chat_functions_streaming(prompt="Say 'hello world'") -> FunctionCall:
     client = OpenAI()
     functions = [
         {
@@ -177,6 +218,7 @@ def openai_chat_error(prompt="What is the capitol of the US?"):
         baserun.check_includes(
             "openai_chat_async_streaming.content", e.message, "does not exist"
         )
+        raise e
     finally:
         openai.api_type = original_api_type
 

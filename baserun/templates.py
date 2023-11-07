@@ -47,6 +47,7 @@ def get_templates() -> dict[str, Template]:
         )
         for template in response.templates:
             Baserun.templates[template.name] = template
+
     except BaseException as e:
         logger.error(
             f"Could not fetch templates from Baserun. Using {len(Baserun.templates.keys())} cached templates"
@@ -87,10 +88,14 @@ def most_similar_templates(formatted_str: str):
 
     similarity_scores = []
 
-    for template_version in Baserun.templates.values():
-        similarity_scores.append(
-            (template_version, ratio(formatted_str, template_version.template_string))
-        )
+    for template in Baserun.templates.values():
+        for template_version in template.template_versions:
+            similarity_scores.append(
+                (
+                    template_version,
+                    ratio(formatted_str, template_version.template_string),
+                )
+            )
 
     # Sort the templates by similarity ratio, in descending order
     sorted_results = sorted(similarity_scores, key=lambda x: x[1], reverse=True)
@@ -317,14 +322,14 @@ def register_template(
     template_tag: str = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
     parameter_definition: dict[str, Any] = None,
-) -> TemplateVersion:
+) -> Template:
     from baserun import Baserun
 
     if not Baserun.templates:
         Baserun.templates = {}
 
-    if version := Baserun.templates.get(template_name):
-        return version
+    if template := Baserun.templates.get(template_name):
+        return template
 
     version = construct_template_version(
         template_string=template_string,
@@ -340,8 +345,9 @@ def register_template(
     )
 
     response_version = response.template_version
-    Baserun.templates[version.template.name] = response_version
-    return response_version
+    template = response_version.template
+    Baserun.templates[version.template.name] = template
+    return template
 
 
 async def aregister_template(
@@ -350,14 +356,14 @@ async def aregister_template(
     template_tag: str = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
     parameter_definition: dict[str, Any] = None,
-) -> TemplateVersion:
+) -> Template:
     from baserun import Baserun
 
     if not Baserun.templates:
         Baserun.templates = {}
 
-    if version := Baserun.templates.get(template_name):
-        return version
+    if template := Baserun.templates.get(template_name):
+        return template
 
     version = construct_template_version(
         template_string=template_string,
@@ -373,5 +379,6 @@ async def aregister_template(
     )
 
     response_version = response.template_version
-    Baserun.templates[version.template.name] = response_version
-    return response_version
+    template = response_version.template
+    Baserun.templates[version.template.name] = template
+    return template

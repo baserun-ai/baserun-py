@@ -10,7 +10,14 @@ from baserun.instrumentation.span_attributes import (
     SpanAttributes,
     ANTHROPIC_VENDOR_NAME,
 )
-from baserun.v1.baserun_pb2 import Status, Message, Span, SubmitSpanRequest
+from baserun.v1.baserun_pb2 import (
+    Status,
+    Message,
+    Span,
+    SubmitSpanRequest,
+    ToolCall,
+    ToolFunction,
+)
 from .grpc import get_or_create_submission_service
 
 logger = logging.getLogger(__name__)
@@ -52,8 +59,10 @@ class BaserunExporter(SpanExporter):
             ]
 
             completions = []
-            for message_attrs in self._extract_prefix_dicts(
-                span.attributes, SpanAttributes.LLM_COMPLETIONS
+            for i, message_attrs in enumerate(
+                self._extract_prefix_dicts(
+                    span.attributes, SpanAttributes.LLM_COMPLETIONS
+                )
             ):
                 if "function_name" in message_attrs:
                     message_attrs["function_call"] = json.dumps(
@@ -62,7 +71,23 @@ class BaserunExporter(SpanExporter):
                             "arguments": message_attrs.pop("function_arguments"),
                         }
                     )
-                completions.append(Message(**message_attrs))
+
+                message_attrs.pop("tool_calls", "")
+                message = Message(**message_attrs)
+
+                tool_calls_prefix = f"{SpanAttributes.LLM_COMPLETIONS}.{i}.tool_calls"
+                for tool_attrs in self._extract_prefix_dicts(
+                    span.attributes, tool_calls_prefix
+                ):
+                    tool_name = tool_attrs.pop("name")
+                    tool_args = tool_attrs.pop("function_arguments")
+                    tool_attrs["function"] = ToolFunction(
+                        name=tool_name, arguments=tool_args
+                    )
+                    tool_call = ToolCall(**tool_attrs)
+                    message.tool_calls.append(tool_call)
+
+                completions.append(message)
 
             # Trace IDs are huge integers, so they must be encoded as bytes
             trace_id_int = span.context.trace_id
@@ -131,7 +156,24 @@ class BaserunExporter(SpanExporter):
                     span_message, "api_base", span, SpanAttributes.OPENAI_API_BASE
                 )
                 set_span_attr(
+                    span_message, "api_base", span, SpanAttributes.OPENAI_API_BASE
+                )
+                set_span_attr(
                     span_message, "api_type", span, SpanAttributes.OPENAI_API_TYPE
+                )
+                set_span_attr(
+                    span_message,
+                    "response_format",
+                    span,
+                    SpanAttributes.LLM_RESPONSE_FORMAT,
+                )
+                set_span_attr(span_message, "seed", span, SpanAttributes.LLM_SEED)
+                set_span_attr(span_message, "tools", span, SpanAttributes.LLM_TOOLS)
+                set_span_attr(
+                    span_message,
+                    "tool_choice",
+                    span,
+                    SpanAttributes.LLM_TOOL_CHOICE,
                 )
                 set_span_attr(
                     span_message, "functions", span, SpanAttributes.LLM_FUNCTIONS

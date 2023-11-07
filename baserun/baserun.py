@@ -29,7 +29,7 @@ from .v1.baserun_pb2 import (
     EndRunRequest,
     TestSuite,
     StartRunRequest,
-    TemplateVersion,
+    Template,
 )
 from .v1.baserun_pb2_grpc import SubmissionServiceStub
 
@@ -49,7 +49,7 @@ class Baserun:
 
     evals = Evals
 
-    templates: dict[str, TemplateVersion] = None
+    templates: dict[str, Template] = None
     used_template_parameters: dict[str, list[dict[str, Any]]] = None
 
     submission_service: SubmissionServiceStub = None

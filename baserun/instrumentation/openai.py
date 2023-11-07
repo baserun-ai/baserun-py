@@ -64,8 +64,11 @@ class OpenAIInstrumentor(BaseInstrumentor):
         span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, get_session_id())
 
         span.set_attribute(SpanAttributes.LLM_VENDOR, OPENAI_VENDOR_NAME)
-        span.set_attribute(SpanAttributes.OPENAI_API_BASE, openai.base_url)
-        span.set_attribute(SpanAttributes.OPENAI_API_TYPE, openai.api_type)
+        span.set_attribute(
+            SpanAttributes.OPENAI_API_BASE,
+            openai.base_url or "https://api.openai.com/v1",
+        )
+        span.set_attribute(SpanAttributes.OPENAI_API_TYPE, openai.api_type or "open_ai")
         span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model"))
 
         max_tokens = kwargs.get("max_tokens")
@@ -101,6 +104,17 @@ class OpenAIInstrumentor(BaseInstrumentor):
             span.set_attribute(
                 SpanAttributes.LLM_FUNCTION_CALL,
                 json.dumps(kwargs.get("function_call")),
+            )
+
+        if "tools" in kwargs:
+            span.set_attribute(
+                SpanAttributes.LLM_TOOLS, json.dumps(kwargs.get("tools"))
+            )
+
+        if "tool_choice" in kwargs:
+            span.set_attribute(
+                SpanAttributes.LLM_TOOL_CHOICE,
+                json.dumps(kwargs.get("tool_choice")),
             )
 
         if "n" in kwargs:
@@ -191,8 +205,20 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 if content := message.content:
                     span.set_attribute(f"{prefix}.content", content)
 
-                if "function_call" in message:
-                    function_call = message.function_call
+                if tool_calls := message.tool_calls:
+                    for tool_index, tool_call in enumerate(tool_calls):
+                        tool_prefix = f"{prefix}.tool_calls.{tool_index}"
+                        span.set_attribute(f"{tool_prefix}.id", tool_call.id)
+                        span.set_attribute(f"{tool_prefix}.type", tool_call.type)
+                        span.set_attribute(
+                            f"{tool_prefix}.name", tool_call.function.name
+                        )
+                        span.set_attribute(
+                            f"{tool_prefix}.function_arguments",
+                            tool_call.function.arguments,
+                        )
+
+                if function_call := message.function_call:
                     span.set_attribute(f"{prefix}.function_name", function_call.name)
                     span.set_attribute(
                         f"{prefix}.function_arguments", function_call.arguments

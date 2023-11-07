@@ -9,7 +9,6 @@ from baserun.evals.json import is_valid_json
 from baserun.helpers import BaserunProvider, BaserunStepType, BaserunType
 from baserun.v1.baserun_pb2 import SubmitEvalRequest, Eval
 from ..grpc import get_or_create_submission_service
-from ..instrumentation.base_instrumentor import BaseInstrumentor
 
 logger = logging.getLogger(__name__)
 
@@ -233,12 +232,7 @@ class Evals:
             client = OpenAI()
 
         start_time = time.time()
-        if BaseInstrumentor.original_methods:
-            response = BaseInstrumentor.original_methods.get("ChatCompletion.create")(
-                **model_config
-            )
-        else:
-            response = client.completions.create(**model_config)
+        response = client.chat.completions.create(**model_config)
 
         end_time = time.time()
 
@@ -257,7 +251,7 @@ class Evals:
                 "output": output,
                 "startTimestamp": start_time,
                 "completionTimestamp": end_time,
-                "usage": response.usage,
+                "usage": response.usage.__dict__,
             },
         }
 
