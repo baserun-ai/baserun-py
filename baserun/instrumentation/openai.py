@@ -1,9 +1,11 @@
 import collections.abc
 import json
 import logging
-from typing import Collection, Any, TYPE_CHECKING
+from typing import Collection, Any, TYPE_CHECKING, Union
 
 import openai
+from openai.types import CompletionChoice
+from openai.types.chat.chat_completion import Choice
 from opentelemetry.sdk.trace import _Span
 
 from baserun.helpers import get_session_id
@@ -25,27 +27,31 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
     @staticmethod
     def wrapped_methods() -> list[dict[str, Any]]:
-        from openai import ChatCompletion, Completion
+        from openai.resources import Completions, AsyncCompletions
+        from openai.resources.chat import (
+            Completions as ChatCompletions,
+            AsyncCompletions as AsyncChatCompletions,
+        )
 
         return [
             {
-                "class": ChatCompletion,
-                "function": ChatCompletion.create,
+                "class": ChatCompletions,
+                "function": ChatCompletions.create,
                 "span_name": "openai.chat",
             },
             {
-                "class": ChatCompletion,
-                "function": ChatCompletion.acreate,
+                "class": AsyncChatCompletions,
+                "function": AsyncChatCompletions.create,
                 "span_name": "openai.chat",
             },
             {
-                "class": Completion,
-                "function": Completion.create,
+                "class": Completions,
+                "function": Completions.create,
                 "span_name": "openai.completion",
             },
             {
-                "class": Completion,
-                "function": Completion.acreate,
+                "class": AsyncCompletions,
+                "function": AsyncCompletions.create,
                 "span_name": "openai.completion",
             },
         ]
@@ -58,7 +64,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
         span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, get_session_id())
 
         span.set_attribute(SpanAttributes.LLM_VENDOR, OPENAI_VENDOR_NAME)
-        span.set_attribute(SpanAttributes.OPENAI_API_BASE, openai.api_base)
+        span.set_attribute(SpanAttributes.OPENAI_API_BASE, openai.base_url)
         span.set_attribute(SpanAttributes.OPENAI_API_TYPE, openai.api_type)
         span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model"))
 
@@ -170,44 +176,40 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 )
 
     @staticmethod
-    def set_response_attributes(span: _Span, response: "OpenAIObject"):
-        choices = response.get("choices", [])
+    def set_response_attributes(span: _Span, response: Union[Choice, CompletionChoice]):
+        choices = response.choices
         for i, choice in enumerate(choices):
             prefix = f"{SpanAttributes.LLM_COMPLETIONS}.{i}"
-            span.set_attribute(f"{prefix}.finish_reason", choice.get("finish_reason"))
+            span.set_attribute(f"{prefix}.finish_reason", choice.finish_reason)
 
-            message = choice.get("message")
-            text = choice.get("text")
-            if message:
-                span.set_attribute(f"{prefix}.role", message.get("role"))
+            if isinstance(choice, CompletionChoice):
+                span.set_attribute(f"{prefix}.content", choice.text)
+            else:
+                message = choice.message
+                span.set_attribute(f"{prefix}.role", message.role)
 
-                if content := message.get("content"):
+                if content := message.content:
                     span.set_attribute(f"{prefix}.content", content)
 
                 if "function_call" in message:
-                    function_call = message.get("function_call")
+                    function_call = message.function_call
+                    span.set_attribute(f"{prefix}.function_name", function_call.name)
                     span.set_attribute(
-                        f"{prefix}.function_name", function_call.get("name")
-                    )
-                    span.set_attribute(
-                        f"{prefix}.function_arguments", function_call.get("arguments")
+                        f"{prefix}.function_arguments", function_call.arguments
                     )
 
-            elif text:
-                span.set_attribute(f"{prefix}.content", text)
-
-        usage = response.get("usage")
+        usage = response.usage
         if usage:
             span.set_attribute(
-                SpanAttributes.LLM_USAGE_TOTAL_TOKENS, usage.get("total_tokens")
+                SpanAttributes.LLM_USAGE_TOTAL_TOKENS, usage.total_tokens
             )
             span.set_attribute(
                 SpanAttributes.LLM_USAGE_COMPLETION_TOKENS,
-                usage.get("completion_tokens"),
+                usage.completion_tokens,
             )
             span.set_attribute(
                 SpanAttributes.LLM_USAGE_PROMPT_TOKENS,
-                usage.get("prompt_tokens"),
+                usage.prompt_tokens,
             )
 
     @staticmethod
@@ -234,9 +236,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
         if hasattr(choice, "delta"):
             # Chat
             delta = choice.delta
-            role = delta.get("role")
-            new_content = delta.get("content")
-            new_function_call: "OpenAIObject" = delta.get("function_call")
+            role = delta.role
+            new_content = delta.content
+            new_function_call: "OpenAIObject" = delta.function_call
         else:
             # Completion
             role = None
@@ -257,11 +259,11 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
         if new_function_call:
             function_name = span.attributes.get(function_name_attribute, "")
-            if name_delta := new_function_call.get("name"):
+            if name_delta := new_function_call.name:
                 span.set_attribute(function_name_attribute, function_name + name_delta)
 
             function_arguments = span.attributes.get(function_arguments_attribute, "")
-            if arguments_delta := new_function_call.get("arguments"):
+            if arguments_delta := new_function_call.arguments:
                 span.set_attribute(
                     function_arguments_attribute, function_arguments + arguments_delta
                 )

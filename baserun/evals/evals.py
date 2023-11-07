@@ -3,7 +3,7 @@ import logging
 import time
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
-from openai import ChatCompletion
+from openai import OpenAI
 
 from baserun.evals.json import is_valid_json
 from baserun.helpers import BaserunProvider, BaserunStepType, BaserunType
@@ -227,18 +227,22 @@ class Evals:
         get_choice_and_score_func: Callable[[str], Tuple[str, Optional[float]]],
         submission: str,
         payload: Dict,
+        client: OpenAI = None,
     ) -> str:
+        if not client:
+            client = OpenAI()
+
         start_time = time.time()
         if BaseInstrumentor.original_methods:
             response = BaseInstrumentor.original_methods.get("ChatCompletion.create")(
                 **model_config
             )
         else:
-            response = ChatCompletion.create(**model_config)
+            response = client.completions.create(**model_config)
 
         end_time = time.time()
 
-        output = response["choices"][0]["message"]["content"]
+        output = response.choices[0].message.content
         choice, score = get_choice_and_score_func(output)
         messages = model_config.pop("messages")
 
@@ -253,7 +257,7 @@ class Evals:
                 "output": output,
                 "startTimestamp": start_time,
                 "completionTimestamp": end_time,
-                "usage": response["usage"],
+                "usage": response.usage,
             },
         }
 
