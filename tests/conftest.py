@@ -1,6 +1,6 @@
 import os
 from typing import Generator
-from unittest.mock import call, Mock, create_autospec
+from unittest.mock import call, Mock, create_autospec, AsyncMock
 
 import openai
 import pytest
@@ -30,10 +30,10 @@ def mock_services() -> Generator[dict[str, Mock], None, None]:
     get_or_create_async_submission_service()
     get_or_create_submission_service()
 
-    services = [
-        "submission_service",
-        "async_submission_service",
-    ]
+    services = {
+        "submission_service": create_autospec,
+        "async_submission_service": AsyncMock,
+    }
     rpcs = [
         "EndRun",
         "EndSession",
@@ -54,19 +54,26 @@ def mock_services() -> Generator[dict[str, Mock], None, None]:
     mock_dict = {}
 
     # Create mocks for each service
-    for service in services:
+    for service, mocking_fn in services.items():
         original_service = getattr(Baserun, service)
-        mock_service = create_autospec(original_service, instance=True)
+        if mocking_fn == AsyncMock:
+            mock_service = mocking_fn(spec=original_service)
+        else:
+            mock_service = mocking_fn(original_service, instance=True)
+
         setattr(Baserun, service, mock_service)
         mock_dict[service] = mock_service
 
         # Mock each RPC method in the service
         for rpc in rpcs:
-            setattr(
-                mock_service,
-                rpc,
-                create_autospec(getattr(original_service, rpc, None), instance=True),
-            )
+            rpc_attr = getattr(original_service, rpc, None)
+
+            if mocking_fn == AsyncMock:
+                mock_method = mocking_fn(spec=rpc_attr)
+            else:
+                mock_method = mocking_fn(rpc_attr, instance=True)
+
+            setattr(mock_service, rpc, mock_method)
 
     # Yield the dictionary of mock services
     yield mock_dict

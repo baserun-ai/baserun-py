@@ -56,7 +56,7 @@ class BaseInstrumentor(OTelInstrumentor):
             original_class = method_spec["class"]
 
             BaseInstrumentor.original_methods[
-                f"{original_class.__name__}.{original_method.__name__}"
+                f"{original_class.__module__}.{original_class.__name__}.{original_method.__name__}"
             ] = original_method
 
             unwrapped_method = original_method

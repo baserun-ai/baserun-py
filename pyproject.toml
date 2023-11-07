@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "baserun"
-version = "0.7.0b3"
+version = "0.8.0b1"
 description = "Tools for testing, debugging, and evaluating LLM features."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -14,7 +14,7 @@ authors = [
 requires-python = ">=3.7.1"
 dependencies = [
     "requests>=2.31.0",
-    "openai>=0.27.2",
+    "openai>=1.1.1",
     "wrapt~=1.15.0",
     "opentelemetry-instrumentation~=0.41b0",
     "opentelemetry-sdk~=1.20.0",

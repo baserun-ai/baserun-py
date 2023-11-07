@@ -34,22 +34,50 @@ class Status(_message.Message):
         code: _Optional[_Union[Status.StatusCode, str]] = ...,
     ) -> None: ...
 
+class ToolFunction(_message.Message):
+    __slots__ = ["name", "arguments"]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    ARGUMENTS_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    arguments: str
+    def __init__(
+        self, name: _Optional[str] = ..., arguments: _Optional[str] = ...
+    ) -> None: ...
+
+class ToolCall(_message.Message):
+    __slots__ = ["id", "type", "function"]
+    ID_FIELD_NUMBER: _ClassVar[int]
+    TYPE_FIELD_NUMBER: _ClassVar[int]
+    FUNCTION_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    type: str
+    function: ToolFunction
+    def __init__(
+        self,
+        id: _Optional[str] = ...,
+        type: _Optional[str] = ...,
+        function: _Optional[_Union[ToolFunction, _Mapping]] = ...,
+    ) -> None: ...
+
 class Message(_message.Message):
-    __slots__ = ["role", "content", "finish_reason", "function_call"]
+    __slots__ = ["role", "content", "finish_reason", "function_call", "tool_calls"]
     ROLE_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     FINISH_REASON_FIELD_NUMBER: _ClassVar[int]
     FUNCTION_CALL_FIELD_NUMBER: _ClassVar[int]
+    TOOL_CALLS_FIELD_NUMBER: _ClassVar[int]
     role: str
     content: str
     finish_reason: str
     function_call: str
+    tool_calls: _containers.RepeatedCompositeFieldContainer[ToolCall]
     def __init__(
         self,
         role: _Optional[str] = ...,
         content: _Optional[str] = ...,
         finish_reason: _Optional[str] = ...,
         function_call: _Optional[str] = ...,
+        tool_calls: _Optional[_Iterable[_Union[ToolCall, _Mapping]]] = ...,
     ) -> None: ...
 
 class Run(_message.Message):
@@ -249,6 +277,10 @@ class Span(_message.Message):
         "end_user",
         "template_id",
         "template_parameters",
+        "tools",
+        "tool_choice",
+        "seed",
+        "response_format",
     ]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     TRACE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -288,6 +320,10 @@ class Span(_message.Message):
     END_USER_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_ID_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_PARAMETERS_FIELD_NUMBER: _ClassVar[int]
+    TOOLS_FIELD_NUMBER: _ClassVar[int]
+    TOOL_CHOICE_FIELD_NUMBER: _ClassVar[int]
+    SEED_FIELD_NUMBER: _ClassVar[int]
+    RESPONSE_FORMAT_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     trace_id: bytes
     span_id: int
@@ -326,6 +362,10 @@ class Span(_message.Message):
     end_user: EndUser
     template_id: str
     template_parameters: str
+    tools: str
+    tool_choice: str
+    seed: int
+    response_format: str
     def __init__(
         self,
         run_id: _Optional[str] = ...,
@@ -366,6 +406,10 @@ class Span(_message.Message):
         end_user: _Optional[_Union[EndUser, _Mapping]] = ...,
         template_id: _Optional[str] = ...,
         template_parameters: _Optional[str] = ...,
+        tools: _Optional[str] = ...,
+        tool_choice: _Optional[str] = ...,
+        seed: _Optional[int] = ...,
+        response_format: _Optional[str] = ...,
     ) -> None: ...
 
 class Eval(_message.Message):

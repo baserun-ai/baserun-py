@@ -1,6 +1,6 @@
 import pytest
 from google import protobuf
-from openai.error import InvalidAPIType
+from openai import NotFoundError
 from opentelemetry.trace import StatusCode
 
 from baserun.v1.baserun_pb2 import Run, Span
@@ -158,8 +158,8 @@ def test_openai_chat_with_functions(mock_services):
     name = "test_openai_chat_with_functions"
     prompt = "Say 'hello world'"
     function_call = openai_chat_functions(prompt=prompt)
-    assert function_call.get("name") == "say"
-    assert "hello world" in function_call.get("arguments")
+    assert function_call.name == "say"
+    assert "hello world" in function_call.arguments
 
     started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
 
@@ -195,16 +195,16 @@ def test_chat_completion_streaming(mock_services):
 def test_chat_completion_error(mock_services):
     """Tests when a call to OpenAI fails (rate limit, service unavailable, etc)"""
     name = "test_chat_completion_error"
-    with pytest.raises(InvalidAPIType):
+    with pytest.raises(NotFoundError):
         openai_chat_error()
 
     started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
 
     basic_run_asserts(run=started_run, name=name)
     basic_run_asserts(run=submitted_run, name=name)
-    basic_run_asserts(run=ended_run, name=name, result="", error="InvalidAPIType")
+    basic_run_asserts(run=ended_run, name=name, result="", error="does not exist")
 
-    basic_span_asserts(span, status_code=StatusCode.ERROR.value, api_type="somegarbage")
+    basic_span_asserts(span, status_code=StatusCode.ERROR.value)
 
 
 def test_traced_fn_error(mock_services):

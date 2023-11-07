@@ -3,7 +3,7 @@ class SpanAttributes:
     BASERUN_SESSION_ID = "baserun.session_id"
     BASERUN_TEMPLATE_ID = "baserun.template_id"
     BASERUN_TEMPLATE_PARAMETERS = "baserun.template_parameters"
-    # Matches opentelemetry-semconv-llm
+    # Superset of opentelemetry-semconv-llm
     LLM_VENDOR = "llm.vendor"
     LLM_REQUEST_TYPE = "llm.request.type"
     LLM_REQUEST_MODEL = "llm.request.model"
@@ -23,9 +23,13 @@ class SpanAttributes:
     LLM_FUNCTION_CALL = "llm.function_call"
     LLM_FUNCTIONS = "llm.functions"
     LLM_N = "llm.n"
+    LLM_RESPONSE_FORMAT = "llm.response_format"
+    LLM_SEED = "llm.seed"
     LLM_STREAM = "llm.stream"
     LLM_STOP = "llm.stop"
     LLM_LOGIT_BIAS = "llm.logit_bias"
+    LLM_TOOL_CHOICE = "llm.tool_choice"
+    LLM_TOOLS = "llm.tools"
     LLM_USER = "llm.user"
     LLM_BEST_OF = "llm.best_of"
     LLM_LOGPROBS = "llm.logprobs"
