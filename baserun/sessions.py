@@ -16,6 +16,7 @@ from baserun.v1.baserun_pb2 import (
     Session,
     EndUser,
     EndSessionRequest,
+    Run,
 )
 from . import Baserun
 from .instrumentation.span_attributes import SpanAttributes
@@ -30,8 +31,10 @@ def with_session(
     tracer_provider = trace.get_tracer_provider()
     tracer = tracer_provider.get_tracer("baserun")
 
-    session = start_session(user_identifier, session_identifier)
     run = Baserun.current_run()
+    session = start_session(
+        user_identifier=user_identifier, session_identifier=session_identifier, run=run
+    )
     try:
         with tracer.start_as_current_span(
             f"baserun.session",
@@ -51,13 +54,14 @@ def start_session(
     user_identifier: str,
     start_timestamp: datetime = None,
     session_identifier: str = None,
+    run: Run = None,
 ) -> Session:
     session = Session(
         identifier=session_identifier or str(uuid4()),
         end_user=EndUser(identifier=user_identifier),
     )
     session.start_timestamp.FromDatetime(start_timestamp or datetime.utcnow())
-    session_request = StartSessionRequest(session=session)
+    session_request = StartSessionRequest(session=session, run=run)
     try:
         response = get_or_create_submission_service().StartSession(session_request)
         return response.session
