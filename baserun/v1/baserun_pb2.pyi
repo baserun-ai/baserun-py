@@ -642,10 +642,16 @@ class EndTestSuiteResponse(_message.Message):
     def __init__(self, message: _Optional[str] = ...) -> None: ...
 
 class StartSessionRequest(_message.Message):
-    __slots__ = ["session"]
+    __slots__ = ["session", "run"]
     SESSION_FIELD_NUMBER: _ClassVar[int]
+    RUN_FIELD_NUMBER: _ClassVar[int]
     session: Session
-    def __init__(self, session: _Optional[_Union[Session, _Mapping]] = ...) -> None: ...
+    run: Run
+    def __init__(
+        self,
+        session: _Optional[_Union[Session, _Mapping]] = ...,
+        run: _Optional[_Union[Run, _Mapping]] = ...,
+    ) -> None: ...
 
 class StartSessionResponse(_message.Message):
     __slots__ = ["message", "session"]
