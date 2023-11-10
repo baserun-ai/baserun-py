@@ -387,6 +387,11 @@ class Baserun:
             return
 
         run = Baserun.current_run()
+        if not run:
+            logger.warning("Cannot send logs to baserun as there is no current trace active.")
+            return
+
+
         log_message = Log(
             run_id=run.run_id,
             name=name,
