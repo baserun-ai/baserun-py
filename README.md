@@ -8,15 +8,17 @@
 
 **[Baserun](https://baserun.ai)** is the testing and observability platform for LLM apps.
 
-## Quick Start
+# Quick Start
 
-### 1. Install Baserun
+## 1. Install Baserun
 
 ```bash
 pip install baserun
 ```
 
-### 2. Generate an API key
+## 2. Set up Baserun in your application
+
+###  Set the Baserun API key
 Create an account at [https://baserun.ai](https://baserun.ai). Then generate an API key for your project in the [settings](https://baserun.ai/settings) tab. Set it as an environment variable:
 
 ```bash
@@ -29,7 +31,61 @@ Or set `baserun.api_key` to its value:
 baserun.api_key = "br-..."
 ```
 
-### 3. Start testing
+###  Initialize Baserun
+
+At some point during your application's startup you need to call `baserun.init()`. This sets up the observability system and enables Baserun. If `init` is not called, Baserun will be disabled.
+
+## 3. Set up your traces
+
+A trace comprises a series of events executed within an your application. Tracing enables Baserun to display an LLM chain’s entire lifecycle, whether synchronous or asynchronous.
+
+To start tracing add the `@baserun.trace` decorator to the function you want to observe (e.g. a request/response handler or your `main` function).
+
+Here is a simple example. In this case, Baserun is initialized at application startup and the `answer_question` function is traced. The LLM call within that function will now be traced.
+
+```python
+import sys
+from openai import OpenAI
+import baserun
+
+
+@baserun.trace
+def answer_question(question: str) -> str:
+    client = OpenAI()
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": question}],
+    )
+    return response["choices"][0]["message"]["content"]
+
+
+if __name__ == "__main__":
+    baserun.init()
+    print(answer_question(sys.argv[-1]))
+```
+
+## 4. (Optional) Set up User Sessions
+
+If your application involves interaction with a user and you wish to associate logs and traces with a particular user, you can use User Sessions. You can do this using `with_sessions`:
+
+```python
+from openai import OpenAI
+import baserun
+
+@baserun.trace
+def use_sessions(prompt="What is the capitol of the US?") -> str:
+    client = OpenAI()
+    with baserun.with_session(user_identifier="example@test.com"):
+        completion = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        content = completion.choices[0].message.content
+        return content
+```
+
+
+## 5. (Optional) Set up your test suite
 
 Use our [pytest](https://docs.pytest.org) plugin and start immediately testing with Baserun. By default all OpenAI and Anthropic requests will be automatically logged.
 
@@ -63,69 +119,25 @@ Test results available at: https://baserun.ai/runs/<id>
 =======================================================
 ```
 
-### Production usage
+## 6. (Optional) Set up checks
 
-You can use Baserun for production observability as well. To do so, simply call `baserun.init()` somewhere during your application's startup, and add the `@baserun.trace` decorator to the function you want to observe (e.g. a request/response handler). For example,
+Baserun supports checks (also more broadly known as "evaluations"). These are assertions that the LLM response you received matches whatever criteria you require. To use a check, you can use `baserun.check` like so:
 
 ```python
-import sys
-import openai
+from openai import OpenAI
 import baserun
 
-
-@baserun.trace
-def answer_question(question: str) -> str:
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": question}],
-    )
-    return response["choices"][0]["message"]["content"]
-
-
-if __name__ == "__main__":
-    baserun.init()
-    print(answer_question(sys.argv[-1]))
+client = OpenAI()
+completion = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[{"role": "user", "content": "What is the capital of the United States?"}],
+)
+content = completion.choices[0].message.content
+baserun.check(name="capital_answer", result="Washington" in content)
 ```
 
-## Documentation
+## Further Documentation
 For a deeper dive on all capabilities and more advanced usage, please refer to our [Documentation](https://docs.baserun.ai).
-
-## Contributing
-
-Contributions to baserun-py are welcome! Below are some guidelines to help you get started.
-
-### Dependencies
-Install the dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-Install the dev dependencies with:
-```bash
-pip install -r requirements-dev.txt
-```
-
-### Tests
-
-You can run tests using `pytest`. Note is that in pytest the remote server is mocked, so network requests are not actually made to Baserun's backend.
-
-If you want to emulate production tracing, we have a utility for that:
-
-```bash
-python tests/testing_functions.py {function_to_test}
-```
-
-Take a look at the list of functions in that file: any function with the `@baserun.trace` decorator can be used.
-
-### gRPC and Protobuf
-If you're making changes to `baserun.proto`, you'll need to compile those changes. Run the following command:
-
-```
-python -m grpc_tools.protoc -Ibaserun --python_out=baserun --pyi_out=baserun --grpc_python_out=baserun baserun/v1/baserun.proto
-```
-
-### A Note on Breaking Changes
-Be cautious when making breaking changes to protobuf definitions. These could impact backward compatibility and require corresponding server-side changes, so be sure to discuss it with our maintainers.
 
 ## License
 
