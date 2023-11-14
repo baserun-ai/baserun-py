@@ -1,3 +1,5 @@
+import json
+from numbers import Number
 from typing import Any, Union
 
 from baserun import Baserun
@@ -8,40 +10,48 @@ def convert_to_score(x):
 
 
 def check(
-    name: str, result: Any, payload: dict[str, Any] = None, eval_type: str = None
+    name: str,
+    actual: Any,
+    expected: Any,
+    score: Number,
+    metadata: dict[str, Any] = None,
+    eval_type: str = None,
 ):
-    score = convert_to_score(result)
     Baserun.evals._store_eval_data(
         name=name,
         eval_type=eval_type or "match",
-        result=str(result),
+        result=json.dumps(actual),
         score=score,
-        submission=result,
-        payload=payload or {"result": result},
+        submission=json.dumps(expected),
+        payload=metadata or {},
     )
 
-    return result
+    return actual
 
 
-def check_equals(name: str, actual: str, compare: Union[str, list[str]]):
-    expected_list = [compare] if isinstance(compare, str) else compare
-    result = any(actual.startswith(item) for item in compare)
+def check_equals(name: str, actual: str, expected: Union[str, list[str]], metadata: dict[str, Any] = None):
+    expected_list = [expected] if isinstance(expected, str) else expected
+    result = any(actual == item for item in expected_list)
 
     return check(
         name=name,
         eval_type="match",
-        result=str(result).lower(),
-        payload={"expected": expected_list},
+        metadata=metadata,
+        actual=actual,
+        expected=expected,
+        score=1 if result else 0,
     )
 
 
-def check_includes(name: str, actual: str, compare: Union[str, list[str]]):
-    expected_list = [compare] if isinstance(compare, str) else compare
-    result = any(actual in item for item in compare)
+def check_includes(name: str, actual: str, expected: Union[str, list[str]], metadata: dict[str, Any] = None):
+    expected_list = [expected] if isinstance(expected, str) else expected
+    result = any(actual in item for item in expected_list)
 
     return check(
         name=name,
         eval_type="match",
-        result=str(result).lower(),
-        payload={"expected": expected_list},
+        metadata=metadata,
+        actual=actual,
+        expected=expected,
+        score=1 if result else 0,
     )

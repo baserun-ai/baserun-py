@@ -6,6 +6,7 @@ import openai
 from openai import OpenAI
 
 import baserun
+from baserun.checks import check_includes
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
@@ -69,7 +70,12 @@ def main():
                     content = completion.choices[0].message.content
 
                     answer_check = GPT_QUESTIONS[question]
-                    baserun.evals.includes("openai_chat.content", content, [answer_check])
+                    check_includes(
+                        "openai_chat.content",
+                        content,
+                        [answer_check],
+                        metadata={"answer": content, "question": question},
+                    )
                     baserun.log("OpenAI Chat Results", payload={"answer": content, "question": question})
 
                     print(content)
