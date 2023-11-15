@@ -12,10 +12,11 @@ from openai import OpenAI, AsyncOpenAI, NotFoundError
 from openai.types.chat.chat_completion_message import FunctionCall
 
 import baserun
+from baserun.capture import Capture
 
 
 @baserun.trace
-def openai_chat(prompt="What is the capitol of the US?") -> str:
+def openai_chat(prompt="What is the capital of the US?") -> str:
     client = OpenAI()
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -27,7 +28,7 @@ def openai_chat(prompt="What is the capitol of the US?") -> str:
 
 
 @baserun.trace
-def openai_chat_with_log(prompt="What is the capitol of the US?") -> str:
+def openai_chat_with_log(prompt="What is the capital of the US?") -> str:
     client = OpenAI()
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -36,11 +37,11 @@ def openai_chat_with_log(prompt="What is the capitol of the US?") -> str:
     content = completion.choices[0].message.content
     baserun.check_includes("openai_chat.content", content, "Washington")
     command = " ".join(sys.argv)
-    baserun.log(f"OpenAI Chat Results: {content}", payload={"command": command})
+    baserun.log(f"OpenAI Chat Results", payload={"command": command})
     return content
 
 
-def openai_chat_unwrapped(prompt="What is the capitol of the US?", **kwargs) -> str:
+def openai_chat_unwrapped(prompt="What is the capital of the US?", **kwargs) -> str:
     client = OpenAI()
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo", messages=[{"role": "user", "content": prompt}], **kwargs
@@ -51,7 +52,7 @@ def openai_chat_unwrapped(prompt="What is the capitol of the US?", **kwargs) -> 
 
 
 @baserun.trace
-async def openai_chat_async(prompt="What is the capitol of the US?") -> str:
+async def openai_chat_async(prompt="What is the capital of the US?") -> str:
     client = AsyncOpenAI()
     completion = await client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -162,7 +163,7 @@ def openai_chat_functions_streaming(prompt="Say 'hello world'") -> FunctionCall:
 
 
 @baserun.trace
-def openai_chat_streaming(prompt="What is the capitol of the US?") -> str:
+def openai_chat_streaming(prompt="What is the capital of the US?") -> str:
     client = OpenAI()
     completion_generator = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -179,7 +180,7 @@ def openai_chat_streaming(prompt="What is the capitol of the US?") -> str:
 
 
 @baserun.trace
-async def openai_chat_async_streaming(prompt="What is the capitol of the US?") -> str:
+async def openai_chat_async_streaming(prompt="What is the capital of the US?") -> str:
     client = AsyncOpenAI()
     completion_generator = await client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -196,7 +197,7 @@ async def openai_chat_async_streaming(prompt="What is the capitol of the US?") -
 
 
 @baserun.trace
-def openai_chat_error(prompt="What is the capitol of the US?"):
+def openai_chat_error(prompt="What is the capital of the US?"):
     client = OpenAI()
 
     original_api_type = openai.api_type
@@ -218,7 +219,7 @@ def traced_fn_error():
 
     client.chat.completions.create(
         model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": "What is the capitol of the US?"}],
+        messages=[{"role": "user", "content": "What is the capital of the US?"}],
     )
     raise ValueError("Something went wrong")
 
@@ -277,16 +278,16 @@ def openai_threaded():
     threads = [
         Thread(
             target=baserun.thread_wrapper(openai_chat_unwrapped),
-            args=("What is the capitol of the state of Georgia?",),
+            args=("What is the capital of the state of Georgia?",),
         ),
         Thread(
             target=baserun.thread_wrapper(openai_chat_unwrapped),
-            args=("What is the capitol of the California?",),
+            args=("What is the capital of the California?",),
             kwargs={"top_p": 0.5},
         ),
         Thread(
             target=baserun.thread_wrapper(openai_chat_unwrapped),
-            args=("What is the capitol of the Montana?",),
+            args=("What is the capital of the Montana?",),
             kwargs={"temperature": 1},
         ),
     ]
@@ -295,7 +296,7 @@ def openai_threaded():
 
 
 @baserun.trace
-def openai_chat_response_format(prompt="What is the capitol of the US?") -> str:
+def openai_chat_response_format(prompt="What is the capital of the US?") -> str:
     client = OpenAI()
     completion = client.chat.completions.create(
         model="gpt-4-1106-preview",
@@ -311,7 +312,7 @@ def openai_chat_response_format(prompt="What is the capitol of the US?") -> str:
 
 
 @baserun.trace
-def openai_chat_seed(prompt="What is the capitol of the US?") -> str:
+def openai_chat_seed(prompt="What is the capital of the US?") -> str:
     client = OpenAI()
     completion = client.chat.completions.create(
         model="gpt-4-1106-preview",
@@ -323,7 +324,7 @@ def openai_chat_seed(prompt="What is the capitol of the US?") -> str:
     return content
 
 
-def openai_contextmanager(prompt="What is the capitol of the US?", name: str = "This is a run that is named") -> str:
+def openai_contextmanager(prompt="What is the capital of the US?", name: str = "This is a run that is named") -> str:
     client = OpenAI()
     with baserun.start_trace(name=name) as run:
         completion = client.chat.completions.create(
@@ -334,12 +335,33 @@ def openai_contextmanager(prompt="What is the capitol of the US?", name: str = "
         run.result = content
 
 
+TEMPLATES = {"Question & Answer": "Answer the following question in the form of a limerick: {question}"}
+
+
+@baserun.trace
+async def use_template(question="What is the capital of the US?", template_name: str = "Question & Answer"):
+    prompt = await baserun.aformat_prompt(
+        template_string=TEMPLATES.get(template_name),
+        template_name=template_name,
+        parameters={"question": question},
+    )
+    client = OpenAI()
+    completion = client.chat.completions.create(
+        model="gpt-4-1106-preview",
+        messages=[{"role": "system", "content": prompt}],
+        seed=1234,
+    )
+    content = completion.choices[0].message.content
+    baserun.check_includes("openai_chat.content", content, "Washington")
+    return content
+
+
 @baserun.trace
 def display_templates():
     templates = baserun.get_templates()
     for template_name, template in templates.items():
         print(template_name)
-        for version in template.template_versions:
+        for version in template.get("versions"):
             padded_string = "\n  | ".join(version.template_string.split("\n"))
             print(f"| Tag: {version.tag}")
             print(f"| Template: ")
@@ -350,8 +372,43 @@ def display_templates():
     return "Done"
 
 
+@baserun.trace
+def use_sessions(prompt="What is the capital of the US?", user_identifier="example@test.com") -> str:
+    client = OpenAI()
+    with baserun.with_session(user_identifier=user_identifier):
+        completion = client.chat.completions.create(
+            model="gpt-4-1106-preview",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        content = completion.choices[0].message.content
+        baserun.check_includes("openai_chat.content", content, "Washington")
+        baserun.log(f"OpenAI Chat Results", payload={"result": content, "input": prompt})
+        return content
+
+
+@baserun.trace
+async def use_capture(question="What is the capital of the US?") -> str:
+    client = OpenAI()
+
+    completion = client.chat.completions.create(
+        model="gpt-4-1106-preview",
+        messages=[{"role": "user", "content": question}],
+    )
+    content = completion.choices[0].message.content
+
+    async with Capture.aperform_capture(completion=completion) as capture:
+        capture.feedback(score=0.4)
+        capture.check_includes("openai_chat.content", "Washington", content)
+        capture.log(f"OpenAI Chat Results", metadata={"result": content, "input": question})
+
+    return content
+
+
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):
     function_to_call = functions.get(function_name)
+    if function_to_call is None:
+        function_to_call = {f: globals().get(f) for f in globals()}.get(function_name)
+
     if inspect.iscoroutinefunction(function_to_call):
         if parsed_args.prompt:
             result = asyncio.run(function_to_call(parsed_args.prompt))
@@ -365,20 +422,6 @@ def call_function(functions, function_name: str, parsed_args: argparse.Namespace
 
     print(result)
     return result
-
-
-@baserun.trace
-def use_sessions(prompt="What is the capitol of the US?", user_identifier="example@test.com") -> str:
-    client = OpenAI()
-    with baserun.with_session(user_identifier=user_identifier):
-        completion = client.chat.completions.create(
-            model="gpt-4-1106-preview",
-            messages=[{"role": "user", "content": prompt}],
-        )
-        content = completion.choices[0].message.content
-        baserun.check_includes("openai_chat.content", content, "Washington")
-        baserun.log(f"OpenAI Chat Results: {content}", payload={"result": content, "input": prompt})
-        return content
 
 
 # Allows you to call any of these functions, e.g. python tests/testing_functions.py openai_chat_functions_streaming
@@ -405,7 +448,7 @@ if __name__ == "__main__":
             print(f"===== Calling function {name} =====\n")
             try:
                 result = call_function(traced_functions, name, parsed_args)
-                print(f"----- {name} result: {result} -----")
+                print(f"----- {name} result:\n{result}\n-----")
             except Exception as e:
                 traceback.print_exception(e)
     else:

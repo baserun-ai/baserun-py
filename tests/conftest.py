@@ -42,6 +42,7 @@ def mock_services() -> Generator[dict[str, Mock], None, None]:
         "StartRun",
         "StartSession",
         "StartTestSuite",
+        "SubmitCapture",
         "SubmitEval",
         "SubmitLog",
         "SubmitModelConfig",

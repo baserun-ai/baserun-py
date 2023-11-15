@@ -41,7 +41,7 @@ def basic_span_asserts(
     api_type="open_ai",
     prompt_role="user",
     completion_role="assistant",
-    prompt="What is the capitol of the US?",
+    prompt="What is the capital of the US?",
     result: str = "washington",
 ):
     assert isinstance(span.run_id, str)

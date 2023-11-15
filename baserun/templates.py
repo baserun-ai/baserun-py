@@ -36,22 +36,19 @@ logger = logging.getLogger(__name__)
 
 
 @memoize_for_time(os.environ.get("BASERUN_CACHE_INTERVAL", 600))
-def get_templates() -> dict[str, Template]:
+# TODO: Probably clean up this data type
+def get_templates() -> dict[str, dict[str, Union[Template, list[TemplateVersion]]]]:
     if not Baserun.templates:
         Baserun.templates = {}
 
     try:
         request = GetTemplatesRequest()
-        response: GetTemplatesResponse = (
-            get_or_create_submission_service().GetTemplates(request)
-        )
+        response: GetTemplatesResponse = get_or_create_submission_service().GetTemplates(request)
         for template in response.templates:
-            Baserun.templates[template.name] = template
+            Baserun.templates[template.name] = {"template": template, "versions": template.template_versions}
 
     except BaseException as e:
-        logger.error(
-            f"Could not fetch templates from Baserun. Using {len(Baserun.templates.keys())} cached templates"
-        )
+        logger.error(f"Could not fetch templates from Baserun. Using {len(Baserun.templates.keys())} cached templates")
         logger.info(traceback.format_exception(e))
 
     return Baserun.templates
@@ -61,23 +58,17 @@ def get_template(name: str, version: str = None) -> TemplateVersion:
     templates = get_templates()
     template = templates.get(name)
     if not template:
-        logger.info(
-            f"Attempted to get template {name} but no template with that name exists"
-        )
+        logger.info(f"Attempted to get template {name} but no template with that name exists")
         return None
 
     if version:
         try:
-            template_version = next(
-                v for v in template.template_versions if v.tag == version
-            )
+            template_version = next(v for v in template.get("versions") if v.tag == version)
             return template_version
         except StopIteration:
-            logger.info(
-                f"Could not find template version {name}.{version}. Using latest version instead."
-            )
+            logger.info(f"Could not find template version {name}.{version}. Using latest version instead.")
 
-    return template.template_versions[-1]
+    return template.get("versions")[-1]
 
 
 def most_similar_templates(formatted_str: str):
@@ -88,8 +79,8 @@ def most_similar_templates(formatted_str: str):
 
     similarity_scores = []
 
-    for template in Baserun.templates.values():
-        for template_version in template.template_versions:
+    for template_spec in Baserun.templates.values():
+        for template_version in template_spec.get("versions"):
             similarity_scores.append(
                 (
                     template_version,
@@ -106,9 +97,7 @@ def most_similar_templates(formatted_str: str):
     return sorted_templates
 
 
-def best_guess_template_parameters(
-    prompt: str, template_version: TemplateVersion
-) -> dict[str, Any]:
+def best_guess_template_parameters(prompt: str, template_version: TemplateVersion) -> dict[str, Any]:
     """Given a prompt and a TemplateVersion will attempt to find the parameters that were used to generate the prompt
     Major caveats apply: this only works if the template was registered and formatted using `format_prompt` and/or
     the parameters were registered with `capture_parameters`. It's also pretty fragile because it's based on simple
@@ -119,11 +108,7 @@ def best_guess_template_parameters(
     used_parameter_list = Baserun.used_template_parameters.get(template_version.id, [])
     for used_parameters in used_parameter_list:
         # TODO: This only works for string parameters
-        match = all(
-            parameter in prompt
-            for parameter in used_parameters.values()
-            if isinstance(parameter, str)
-        )
+        match = all(parameter in prompt for parameter in used_parameters.values() if isinstance(parameter, str))
         if match:
             return used_parameters
 
@@ -147,10 +132,7 @@ def extract_strings_in_braces(input_string):
 
 def get_template_type_enum(template_type: str = None):
     template_type = template_type or "unknown"
-    if (
-        template_type == Template.TEMPLATE_TYPE_JINJA2
-        or template_type.lower().startswith("jinja")
-    ):
+    if template_type == Template.TEMPLATE_TYPE_JINJA2 or template_type.lower().startswith("jinja"):
         template_type_enum = Template.TEMPLATE_TYPE_JINJA2
     else:
         template_type_enum = Template.TEMPLATE_TYPE_FORMATTED_STRING
@@ -158,9 +140,7 @@ def get_template_type_enum(template_type: str = None):
     return template_type_enum
 
 
-def apply_template(
-    template_string: str, parameters: dict[str, Any], template_type_enum
-) -> str:
+def apply_template(template_string: str, parameters: dict[str, Any], template_type_enum) -> str:
     if template_type_enum == Template.TEMPLATE_TYPE_JINJA2:
         try:
             # noinspection PyUnresolvedReferences
@@ -169,9 +149,7 @@ def apply_template(
             template = JinjaTemplate(template_string)
             return template.render(parameters)
         except ImportError:
-            logger.warning(
-                "Cannot render Jinja2 template as jinja2 package is not installed"
-            )
+            logger.warning("Cannot render Jinja2 template as jinja2 package is not installed")
             # TODO: Is this OK? should we raise? or return blank string?
             return template_string
 
@@ -204,10 +182,7 @@ def create_langchain_template(
         caller = inspect.stack()[1].function
         template_name = f"{caller}_template"
 
-    if (
-        template_type == Template.TEMPLATE_TYPE_JINJA2
-        or template_type.lower().startswith("jinja")
-    ):
+    if template_type == Template.TEMPLATE_TYPE_JINJA2 or template_type.lower().startswith("jinja"):
         template = PromptTemplate(
             template=template_string,
             input_variables=input_variables,
@@ -216,9 +191,7 @@ def create_langchain_template(
         )
 
     else:
-        template = PromptTemplate(
-            template=template_string, input_variables=input_variables, tools=tools
-        )
+        template = PromptTemplate(template=template_string, input_variables=input_variables, tools=tools)
 
     template_type_enum = get_template_type_enum(template_type)
     # Support only strings for now
@@ -298,9 +271,7 @@ def construct_template_version(
 
     # Automatically generate a name based on the template's contents
     if not template_name:
-        template_name = hashlib.sha256(
-            f"{template_string}{parameter_definition}".encode()
-        ).hexdigest()[:5]
+        template_name = hashlib.sha256(f"{template_string}{parameter_definition}".encode()).hexdigest()[:5]
 
     if not template_tag:
         template_tag = hashlib.sha256(template_string.encode()).hexdigest()[:5]
@@ -340,13 +311,15 @@ def register_template(
     )
 
     request = SubmitTemplateVersionRequest(template_version=version)
-    response: SubmitTemplateVersionResponse = (
-        get_or_create_submission_service().SubmitTemplateVersion(request)
-    )
+    response: SubmitTemplateVersionResponse = get_or_create_submission_service().SubmitTemplateVersion(request)
 
     response_version = response.template_version
     template = response_version.template
-    Baserun.templates[version.template.name] = template
+    if template.name in Baserun.templates:
+        Baserun.templates[template.name]["versions"].append(response_version)
+    else:
+        Baserun.templates[template.name] = {"template": template, "versions": [response_version]}
+
     return template
 
 
@@ -374,11 +347,15 @@ async def aregister_template(
     )
 
     request = SubmitTemplateVersionRequest(template_version=version)
-    response: SubmitTemplateVersionResponse = (
-        await get_or_create_async_submission_service().SubmitTemplateVersion(request)
+    response: SubmitTemplateVersionResponse = await get_or_create_async_submission_service().SubmitTemplateVersion(
+        request
     )
 
     response_version = response.template_version
     template = response_version.template
-    Baserun.templates[version.template.name] = template
+    if template.name in Baserun.templates:
+        Baserun.templates[template.name]["versions"].append(response_version)
+    else:
+        Baserun.templates[template.name] = {"template": template, "versions": [response_version]}
+
     return template

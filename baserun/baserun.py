@@ -138,9 +138,7 @@ class Baserun:
         try:
             run.completion_timestamp.FromDatetime(datetime.utcnow())
             if span:
-                span.set_attribute(
-                    SpanAttributes.BASERUN_RUN, Baserun.serialize_run(run)
-                )
+                span.set_attribute(SpanAttributes.BASERUN_RUN, Baserun.serialize_run(run))
             get_or_create_submission_service().EndRun(EndRunRequest(run=run))
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
@@ -162,11 +160,7 @@ class Baserun:
 
         run_id = str(uuid.uuid4())
         if not trace_type:
-            trace_type = (
-                Run.RunType.RUN_TYPE_TEST
-                if Baserun.current_test_suite
-                else Run.RunType.RUN_TYPE_PRODUCTION
-            )
+            trace_type = Run.RunType.RUN_TYPE_TEST if Baserun.current_test_suite else Run.RunType.RUN_TYPE_PRODUCTION
 
         if not name:
             raise ValueError("Could not initialize run without a name")
@@ -208,10 +202,10 @@ class Baserun:
         return inputs
 
     @staticmethod
-    def _trace(func: Callable, run_type: Run.RunType, metadata: Optional[Dict] = None):
+    def _trace(func: Callable, run_type: Run.RunType, name: str = None, metadata: Optional[Dict] = None):
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
-        run_name = func.__name__
+        run_name = name or func.__name__
         if Baserun.current_test_suite:
             suite_id = Baserun.current_test_suite.id
         else:
@@ -320,13 +314,11 @@ class Baserun:
         return wrapper
 
     @staticmethod
-    def trace(func: Callable, metadata: Optional[Dict] = None):
+    def trace(func: Callable, name: str = None, metadata: Optional[Dict] = None):
         if Baserun.current_test_suite:
             return Baserun.test(func=func, metadata=metadata)
 
-        return Baserun._trace(
-            func=func, run_type=Run.RunType.RUN_TYPE_PRODUCTION, metadata=metadata
-        )
+        return Baserun._trace(func=func, run_type=Run.RunType.RUN_TYPE_PRODUCTION, metadata=metadata, name=name)
 
     @staticmethod
     @contextmanager
@@ -377,9 +369,7 @@ class Baserun:
 
     @staticmethod
     def test(func: Callable, metadata: Optional[Dict] = None):
-        return Baserun._trace(
-            func=func, run_type=Run.RunType.RUN_TYPE_TEST, metadata=metadata
-        )
+        return Baserun._trace(func=func, run_type=Run.RunType.RUN_TYPE_TEST, metadata=metadata)
 
     @staticmethod
     def log(name: str, payload: Union[str, Dict]):
@@ -390,7 +380,6 @@ class Baserun:
         if not run:
             logger.warning("Cannot send logs to baserun as there is no current trace active.")
             return
-
 
         log_message = Log(
             run_id=run.run_id,
@@ -405,3 +394,5 @@ class Baserun:
             get_or_create_submission_service().SubmitLog(log_request)
         except Exception as e:
             logger.warning(f"Failed to submit log to Baserun: {e}")
+
+        return log_message
