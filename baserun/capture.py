@@ -139,7 +139,9 @@ class Capture:
         capture_message = CapturedCompletion(
             completion_id=self.completion_id, checks=self.checks, logs=self.logs, feedback=self.feedback_list
         )
-        get_or_create_submission_service().SubmitCapture(SubmitCaptureRequest(capture=capture_message, run=self.run))
+        get_or_create_submission_service().SubmitCapture.future(
+            SubmitCaptureRequest(capture=capture_message, run=self.run)
+        )
 
     async def asubmit(self):
         capture_message = CapturedCompletion(

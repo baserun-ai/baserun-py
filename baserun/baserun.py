@@ -11,7 +11,7 @@ from typing import Any, Type
 from typing import Callable, Dict, Optional, Union
 
 from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider, _Span
+from opentelemetry.sdk.trace import TracerProvider, _Span, SpanProcessor
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import SpanKind, get_current_span
 
@@ -65,7 +65,7 @@ class Baserun:
             Baserun.instrument()
 
     @staticmethod
-    def instrument(processor_class: Type = BatchSpanProcessor):
+    def instrument(processor_class: Type[SpanProcessor] = None):
         if not Baserun._instrumentors:
             Baserun._instrumentors = []
 
@@ -78,6 +78,7 @@ class Baserun:
             tracer_provider = TracerProvider()
             trace.set_tracer_provider(tracer_provider)
 
+        processor_class = processor_class or BatchSpanProcessor
         processor = processor_class(BaserunExporter())
         tracer_provider.add_span_processor(processor)
 
@@ -139,7 +140,7 @@ class Baserun:
             run.completion_timestamp.FromDatetime(datetime.utcnow())
             if span:
                 span.set_attribute(SpanAttributes.BASERUN_RUN, Baserun.serialize_run(run))
-            get_or_create_submission_service().EndRun(EndRunRequest(run=run))
+            get_or_create_submission_service().EndRun.future(EndRunRequest(run=run))
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
 
@@ -183,7 +184,7 @@ class Baserun:
             run.completion_timestamp.FromDatetime(completion_timestamp)
 
         try:
-            get_or_create_submission_service().StartRun(StartRunRequest(run=run))
+            get_or_create_submission_service().StartRun.future(StartRunRequest(run=run)).result()
         except Exception as e:
             logger.warning(f"Failed to submit run start to Baserun: {e}")
 
@@ -391,7 +392,7 @@ class Baserun:
 
         # noinspection PyBroadException
         try:
-            get_or_create_submission_service().SubmitLog(log_request)
+            get_or_create_submission_service().SubmitLog.future(log_request)
         except Exception as e:
             logger.warning(f"Failed to submit log to Baserun: {e}")
 

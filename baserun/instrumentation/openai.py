@@ -174,8 +174,8 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
         if template_version:
             span.set_attribute(
-                SpanAttributes.BASERUN_TEMPLATE_ID,
-                template_version.template.id,
+                SpanAttributes.BASERUN_TEMPLATE_VERSION_ID,
+                template_version.id,
             )
             matched_parameters = best_guess_template_parameters(
                 template_version=template_version, prompt=formatted_prompt

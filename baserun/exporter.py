@@ -1,5 +1,6 @@
 import json
 import logging
+from time import sleep
 from typing import Sequence, Any
 
 from opentelemetry.sdk.trace import ReadableSpan
@@ -113,7 +114,7 @@ class BaserunExporter(SpanExporter):
             span_message.start_time.FromNanoseconds(span.start_time)
             span_message.end_time.FromNanoseconds(span.end_time)
 
-            set_span_attr(span_message, "template_id", span, SpanAttributes.BASERUN_TEMPLATE_ID)
+            set_span_attr(span_message, "template_id", span, SpanAttributes.BASERUN_TEMPLATE_VERSION_ID)
             set_span_attr(
                 span_message,
                 "template_parameters",
@@ -178,7 +179,12 @@ class BaserunExporter(SpanExporter):
                 get_or_create_submission_service().SubmitSpan(span_request)
             except Exception as e:
                 if hasattr(e, "details"):
-                    logger.warning(f"Failed to submit span to Baserun: {e.details()}")
+                    # Race condition where the span is submitted before the run start call finishes
+                    if "not found" in e.details():
+                        sleep(5)
+                        get_or_create_submission_service().SubmitSpan(span_request)
+                    else:
+                        logger.warning(f"Failed to submit span to Baserun: {e.details()}")
                 else:
                     logger.warning(f"Failed to submit span to Baserun: {e}")
 

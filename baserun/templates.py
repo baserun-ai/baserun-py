@@ -66,9 +66,9 @@ def get_template(name: str, version: str = None) -> TemplateVersion:
             template_version = next(v for v in template.get("versions") if v.tag == version)
             return template_version
         except StopIteration:
-            logger.info(f"Could not find template version {name}.{version}. Using latest version instead.")
+            logger.info(f"Could not find template version {name}.{version}. Using active version instead.")
 
-    return template.get("versions")[-1]
+    return template.get("active_version")
 
 
 def most_similar_templates(formatted_str: str):

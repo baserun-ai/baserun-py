@@ -5,7 +5,8 @@ from typing import Union
 from uuid import uuid4
 
 from opentelemetry import trace
-from opentelemetry.trace import SpanKind
+from opentelemetry.sdk.trace import _Span
+from opentelemetry.trace import SpanKind, get_current_span
 
 from baserun.grpc import (
     get_or_create_submission_service,
@@ -19,32 +20,37 @@ from baserun.v1.baserun_pb2 import (
     Run,
 )
 from . import Baserun
+from .constants import UNTRACED_SPAN_PARENT_NAME
 from .instrumentation.span_attributes import SpanAttributes
 
 logger = logging.getLogger(__name__)
 
 
 @contextmanager
-def with_session(
-    user_identifier: str, session_identifier: str = None, auto_end: bool = True
-):
+def with_session(user_identifier: str, session_identifier: str = None, auto_end: bool = True):
     tracer_provider = trace.get_tracer_provider()
     tracer = tracer_provider.get_tracer("baserun")
 
-    run = Baserun.current_run()
-    session = start_session(
-        user_identifier=user_identifier, session_identifier=session_identifier, run=run
+    run = Baserun.get_or_create_current_run(
+        name=UNTRACED_SPAN_PARENT_NAME,
+        trace_type=Run.RunType.RUN_TYPE_PRODUCTION,
     )
+    session = start_session(user_identifier=user_identifier, session_identifier=session_identifier, run=run)
     try:
-        with tracer.start_as_current_span(
-            f"baserun.session",
-            kind=SpanKind.CLIENT,
-            attributes={
-                SpanAttributes.BASERUN_SESSION_ID: session.identifier,
-                SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
-            },
-        ):
+        # In case they start the session outside a trace we need to ensure there is an active parent span
+        parent_span: _Span = get_current_span()
+        if parent_span.is_recording:
             yield
+        else:
+            with tracer.start_as_current_span(
+                UNTRACED_SPAN_PARENT_NAME,
+                kind=SpanKind.CLIENT,
+                attributes={
+                    SpanAttributes.BASERUN_SESSION_ID: session.identifier,
+                    SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
+                },
+            ):
+                yield
     finally:
         if auto_end:
             end_session(session)
@@ -87,7 +93,7 @@ def end_session(
     session.completion_timestamp.FromDatetime(completion_timestamp or datetime.utcnow())
     session_request = EndSessionRequest(session=session)
     try:
-        get_or_create_submission_service().EndSession(session_request)
+        get_or_create_submission_service().EndSession.future(session_request)
     except Exception as e:
         if hasattr(e, "details"):
             logger.warning(f"Failed to submit session to Baserun: {e.details()}")

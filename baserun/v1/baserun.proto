@@ -140,6 +140,7 @@ message Span {
     EndUser end_user = 36;
     optional string template_id = 37;
     optional string template_parameters = 38; // JSONified map<str, any>
+    optional string template_string = 45;
 
     optional string tools = 39; // JSONified array<map<str, any>>
     optional string tool_choice = 40; // JSONified map<str, any>
@@ -201,6 +202,7 @@ message Template {
 
     TemplateType template_type = 3;
     repeated TemplateVersion template_versions = 4;
+    TemplateVersion active_version = 5;
 }
 
 message TemplateVersion {

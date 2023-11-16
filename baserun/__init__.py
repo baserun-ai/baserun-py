@@ -35,6 +35,7 @@ evals = Baserun.evals
 api_key = os.environ.get("BASERUN_API_KEY")
 
 __all__ = [
+    "Baserun",
     "api_key",
     "init",
     "start_trace",

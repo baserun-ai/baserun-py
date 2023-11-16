@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 import collections.abc
+import json
 import logging
 from typing import Collection, Any
 
 from opentelemetry.sdk.trace import _Span
 
+from baserun import Baserun
 from baserun.instrumentation.base_instrumentor import BaseInstrumentor
 from baserun.instrumentation.span_attributes import (
     SpanAttributes,
     ANTHROPIC_VENDOR_NAME,
 )
-from baserun.templates import most_similar_templates
+from baserun.templates import most_similar_templates, best_guess_template_parameters
 
 logger = logging.getLogger(__name__)
 
@@ -56,16 +58,12 @@ class AnthropicInstrumentor(BaseInstrumentor):
             span.set_attribute(SpanAttributes.LLM_STREAM, kwargs.get("stream"))
 
         if "temperature" in kwargs:
-            span.set_attribute(
-                SpanAttributes.LLM_TEMPERATURE, kwargs.get("temperature")
-            )
+            span.set_attribute(SpanAttributes.LLM_TEMPERATURE, kwargs.get("temperature"))
 
         if stop_sequences := kwargs.get("stop_sequences"):
             span.set_attribute(SpanAttributes.LLM_CHAT_STOP_SEQUENCES, stop_sequences)
 
-        span.set_attribute(
-            SpanAttributes.LLM_REQUEST_MAX_TOKENS, kwargs.get("max_tokens_to_sample")
-        )
+        span.set_attribute(SpanAttributes.LLM_REQUEST_MAX_TOKENS, kwargs.get("max_tokens_to_sample"))
 
         prompt = kwargs.get("prompt")
         prefix = f"{SpanAttributes.LLM_PROMPTS}.0"
@@ -73,11 +71,14 @@ class AnthropicInstrumentor(BaseInstrumentor):
 
         templates_by_similarity = most_similar_templates(prompt)
         if templates_by_similarity and templates_by_similarity[0].template:
-            # how do i get template parameters from here
-            span.set_attribute(
-                SpanAttributes.BASERUN_TEMPLATE_ID,
-                templates_by_similarity[0].template.id,
-            )
+            most_similar_version = templates_by_similarity[0]
+            if most_similar_version.id not in Baserun.used_template_parameters:
+                most_similar_version = most_similar_version.template.active_version
+
+            matched_parameters = best_guess_template_parameters(template_version=most_similar_version, prompt=prompt)
+
+            span.set_attribute(SpanAttributes.BASERUN_TEMPLATE_VERSION_ID, most_similar_version.id)
+            span.set_attribute(SpanAttributes.BASERUN_TEMPLATE_PARAMETERS, json.dumps(matched_parameters))
 
     @staticmethod
     def set_response_attributes(span: _Span, response):
@@ -94,9 +95,7 @@ class AnthropicInstrumentor(BaseInstrumentor):
             yield value
 
     @staticmethod
-    async def async_generator_wrapper(
-        original_generator: collections.abc.AsyncIterator, span: _Span
-    ):
+    async def async_generator_wrapper(original_generator: collections.abc.AsyncIterator, span: _Span):
         async for value in original_generator:
             AnthropicInstrumentor._handle_generator_value(value, span)
 
