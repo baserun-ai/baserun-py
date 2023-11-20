@@ -60,17 +60,32 @@ class ToolCall(_message.Message):
     ) -> None: ...
 
 class Message(_message.Message):
-    __slots__ = ["role", "content", "finish_reason", "function_call", "tool_calls"]
+    __slots__ = [
+        "role",
+        "content",
+        "finish_reason",
+        "function_call",
+        "tool_calls",
+        "tool_call_id",
+        "name",
+        "system_fingerprint",
+    ]
     ROLE_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     FINISH_REASON_FIELD_NUMBER: _ClassVar[int]
     FUNCTION_CALL_FIELD_NUMBER: _ClassVar[int]
     TOOL_CALLS_FIELD_NUMBER: _ClassVar[int]
+    TOOL_CALL_ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    SYSTEM_FINGERPRINT_FIELD_NUMBER: _ClassVar[int]
     role: str
     content: str
     finish_reason: str
     function_call: str
     tool_calls: _containers.RepeatedCompositeFieldContainer[ToolCall]
+    tool_call_id: str
+    name: str
+    system_fingerprint: str
     def __init__(
         self,
         role: _Optional[str] = ...,
@@ -78,6 +93,9 @@ class Message(_message.Message):
         finish_reason: _Optional[str] = ...,
         function_call: _Optional[str] = ...,
         tool_calls: _Optional[_Iterable[_Union[ToolCall, _Mapping]]] = ...,
+        tool_call_id: _Optional[str] = ...,
+        name: _Optional[str] = ...,
+        system_fingerprint: _Optional[str] = ...,
     ) -> None: ...
 
 class Run(_message.Message):
@@ -277,10 +295,13 @@ class Span(_message.Message):
         "end_user",
         "template_id",
         "template_parameters",
+        "template_string",
         "tools",
         "tool_choice",
         "seed",
         "response_format",
+        "error_stacktrace",
+        "completion_id",
     ]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     TRACE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -320,10 +341,13 @@ class Span(_message.Message):
     END_USER_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_ID_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_PARAMETERS_FIELD_NUMBER: _ClassVar[int]
+    TEMPLATE_STRING_FIELD_NUMBER: _ClassVar[int]
     TOOLS_FIELD_NUMBER: _ClassVar[int]
     TOOL_CHOICE_FIELD_NUMBER: _ClassVar[int]
     SEED_FIELD_NUMBER: _ClassVar[int]
     RESPONSE_FORMAT_FIELD_NUMBER: _ClassVar[int]
+    ERROR_STACKTRACE_FIELD_NUMBER: _ClassVar[int]
+    COMPLETION_ID_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     trace_id: bytes
     span_id: int
@@ -362,10 +386,13 @@ class Span(_message.Message):
     end_user: EndUser
     template_id: str
     template_parameters: str
+    template_string: str
     tools: str
     tool_choice: str
     seed: int
     response_format: str
+    error_stacktrace: str
+    completion_id: str
     def __init__(
         self,
         run_id: _Optional[str] = ...,
@@ -406,10 +433,13 @@ class Span(_message.Message):
         end_user: _Optional[_Union[EndUser, _Mapping]] = ...,
         template_id: _Optional[str] = ...,
         template_parameters: _Optional[str] = ...,
+        template_string: _Optional[str] = ...,
         tools: _Optional[str] = ...,
         tool_choice: _Optional[str] = ...,
         seed: _Optional[int] = ...,
         response_format: _Optional[str] = ...,
+        error_stacktrace: _Optional[str] = ...,
+        completion_id: _Optional[str] = ...,
     ) -> None: ...
 
 class Eval(_message.Message):
@@ -436,6 +466,66 @@ class Eval(_message.Message):
         payload: _Optional[str] = ...,
     ) -> None: ...
 
+class Check(_message.Message):
+    __slots__ = ["name", "methodology", "expected", "actual", "score", "metadata"]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    METHODOLOGY_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_FIELD_NUMBER: _ClassVar[int]
+    ACTUAL_FIELD_NUMBER: _ClassVar[int]
+    SCORE_FIELD_NUMBER: _ClassVar[int]
+    METADATA_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    methodology: str
+    expected: str
+    actual: str
+    score: float
+    metadata: str
+    def __init__(
+        self,
+        name: _Optional[str] = ...,
+        methodology: _Optional[str] = ...,
+        expected: _Optional[str] = ...,
+        actual: _Optional[str] = ...,
+        score: _Optional[float] = ...,
+        metadata: _Optional[str] = ...,
+    ) -> None: ...
+
+class Feedback(_message.Message):
+    __slots__ = ["name", "score", "metadata", "end_user"]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    SCORE_FIELD_NUMBER: _ClassVar[int]
+    METADATA_FIELD_NUMBER: _ClassVar[int]
+    END_USER_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    score: float
+    metadata: str
+    end_user: EndUser
+    def __init__(
+        self,
+        name: _Optional[str] = ...,
+        score: _Optional[float] = ...,
+        metadata: _Optional[str] = ...,
+        end_user: _Optional[_Union[EndUser, _Mapping]] = ...,
+    ) -> None: ...
+
+class CapturedCompletion(_message.Message):
+    __slots__ = ["completion_id", "checks", "logs", "feedback"]
+    COMPLETION_ID_FIELD_NUMBER: _ClassVar[int]
+    CHECKS_FIELD_NUMBER: _ClassVar[int]
+    LOGS_FIELD_NUMBER: _ClassVar[int]
+    FEEDBACK_FIELD_NUMBER: _ClassVar[int]
+    completion_id: str
+    checks: _containers.RepeatedCompositeFieldContainer[Check]
+    logs: _containers.RepeatedCompositeFieldContainer[Log]
+    feedback: _containers.RepeatedCompositeFieldContainer[Feedback]
+    def __init__(
+        self,
+        completion_id: _Optional[str] = ...,
+        checks: _Optional[_Iterable[_Union[Check, _Mapping]]] = ...,
+        logs: _Optional[_Iterable[_Union[Log, _Mapping]]] = ...,
+        feedback: _Optional[_Iterable[_Union[Feedback, _Mapping]]] = ...,
+    ) -> None: ...
+
 class TestSuite(_message.Message):
     __slots__ = ["id", "name", "start_timestamp", "completion_timestamp"]
     ID_FIELD_NUMBER: _ClassVar[int]
@@ -457,7 +547,7 @@ class TestSuite(_message.Message):
     ) -> None: ...
 
 class Template(_message.Message):
-    __slots__ = ["id", "name", "template_type", "template_versions"]
+    __slots__ = ["id", "name", "template_type", "template_versions", "active_version"]
 
     class TemplateType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = []
@@ -471,10 +561,12 @@ class Template(_message.Message):
     NAME_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_TYPE_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_VERSIONS_FIELD_NUMBER: _ClassVar[int]
+    ACTIVE_VERSION_FIELD_NUMBER: _ClassVar[int]
     id: str
     name: str
     template_type: Template.TemplateType
     template_versions: _containers.RepeatedCompositeFieldContainer[TemplateVersion]
+    active_version: TemplateVersion
     def __init__(
         self,
         id: _Optional[str] = ...,
@@ -483,6 +575,7 @@ class Template(_message.Message):
         template_versions: _Optional[
             _Iterable[_Union[TemplateVersion, _Mapping]]
         ] = ...,
+        active_version: _Optional[_Union[TemplateVersion, _Mapping]] = ...,
     ) -> None: ...
 
 class TemplateVersion(_message.Message):
@@ -752,3 +845,21 @@ class GetTemplatesResponse(_message.Message):
     def __init__(
         self, templates: _Optional[_Iterable[_Union[Template, _Mapping]]] = ...
     ) -> None: ...
+
+class SubmitCaptureRequest(_message.Message):
+    __slots__ = ["capture", "run"]
+    CAPTURE_FIELD_NUMBER: _ClassVar[int]
+    RUN_FIELD_NUMBER: _ClassVar[int]
+    capture: CapturedCompletion
+    run: Run
+    def __init__(
+        self,
+        capture: _Optional[_Union[CapturedCompletion, _Mapping]] = ...,
+        run: _Optional[_Union[Run, _Mapping]] = ...,
+    ) -> None: ...
+
+class SubmitCaptureResponse(_message.Message):
+    __slots__ = ["message"]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    message: str
+    def __init__(self, message: _Optional[str] = ...) -> None: ...

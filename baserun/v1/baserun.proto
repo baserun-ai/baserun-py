@@ -17,14 +17,14 @@ message Status {
 }
 
 message ToolFunction {
-  string name = 1;
-  string arguments = 2;
+    string name = 1;
+    string arguments = 2;
 }
 
 message ToolCall {
-  string id = 1;
-  string type = 2;
-  ToolFunction function = 3;
+    string id = 1;
+    string type = 2;
+    ToolFunction function = 3;
 }
 
 message Message {
@@ -33,6 +33,9 @@ message Message {
     string finish_reason = 3;
     string function_call = 4;
     repeated ToolCall tool_calls = 5;
+    string tool_call_id = 6;
+    string name = 7;
+    string system_fingerprint = 8;
 }
 
 message Run {
@@ -137,11 +140,15 @@ message Span {
     EndUser end_user = 36;
     optional string template_id = 37;
     optional string template_parameters = 38; // JSONified map<str, any>
+    optional string template_string = 45;
 
     optional string tools = 39; // JSONified array<map<str, any>>
     optional string tool_choice = 40; // JSONified map<str, any>
     optional int32 seed = 41;
     optional string response_format = 42;// JSONified map<str, any>
+
+    optional string error_stacktrace = 43;
+    optional string completion_id = 44;
 }
 
 message Eval {
@@ -151,6 +158,29 @@ message Eval {
     optional double score = 5;
     string submission = 6;
     string payload = 7; // JSONified map<string, any>
+}
+
+message Check {
+    string name = 1;
+    string methodology = 2;
+    string expected = 3;  // JSONified map<string, any>
+    string actual = 4; // JSONified map<string, any>
+    double score = 5;
+    string metadata = 6; // JSONified map<string, any>
+}
+
+message Feedback {
+    string name = 1;
+    double score = 2;
+    string metadata = 3; // JSONified map<string, any>
+    EndUser end_user = 4;
+}
+
+message CapturedCompletion {
+    string completion_id = 1;
+    repeated Check checks = 2;
+    repeated Log logs = 3;
+    repeated Feedback feedback = 4;
 }
 
 message TestSuite {
@@ -172,6 +202,7 @@ message Template {
 
     TemplateType template_type = 3;
     repeated TemplateVersion template_versions = 4;
+    TemplateVersion active_version = 5;
 }
 
 message TemplateVersion {
@@ -304,6 +335,15 @@ message GetTemplatesResponse {
     repeated Template templates = 1;
 }
 
+message SubmitCaptureRequest {
+    CapturedCompletion capture = 1;
+    Run run = 2;
+}
+
+message SubmitCaptureResponse {
+    string message = 1;
+}
+
 service SubmissionService {
     rpc StartRun (StartRunRequest) returns (StartRunResponse);
     rpc SubmitLog (SubmitLogRequest) returns (SubmitLogResponse);
@@ -318,4 +358,5 @@ service SubmissionService {
     rpc SubmitModelConfig (SubmitModelConfigRequest) returns (SubmitModelConfigResponse);
     rpc SubmitUser (SubmitUserRequest) returns (SubmitUserResponse);
     rpc GetTemplates (GetTemplatesRequest) returns (GetTemplatesResponse);
+    rpc SubmitCapture (SubmitCaptureRequest) returns (SubmitCaptureResponse);
 }

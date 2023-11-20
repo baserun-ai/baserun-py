@@ -1,9 +1,10 @@
 class SpanAttributes:
     BASERUN_RUN = "baserun.run"
     BASERUN_SESSION_ID = "baserun.session_id"
-    BASERUN_TEMPLATE_ID = "baserun.template_id"
+    BASERUN_TEMPLATE_VERSION_ID = "baserun.template_version_id"
     BASERUN_TEMPLATE_PARAMETERS = "baserun.template_parameters"
     # Superset of opentelemetry-semconv-llm
+    LLM_COMPLETION_ID = "llm.completion_id"
     LLM_VENDOR = "llm.vendor"
     LLM_REQUEST_TYPE = "llm.request.type"
     LLM_REQUEST_MODEL = "llm.request.model"

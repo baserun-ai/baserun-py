@@ -79,6 +79,11 @@ class SubmissionServiceStub(object):
             request_serializer=v1_dot_baserun__pb2.GetTemplatesRequest.SerializeToString,
             response_deserializer=v1_dot_baserun__pb2.GetTemplatesResponse.FromString,
         )
+        self.SubmitCapture = channel.unary_unary(
+            "/baserun.v1.SubmissionService/SubmitCapture",
+            request_serializer=v1_dot_baserun__pb2.SubmitCaptureRequest.SerializeToString,
+            response_deserializer=v1_dot_baserun__pb2.SubmitCaptureResponse.FromString,
+        )
 
 
 class SubmissionServiceServicer(object):
@@ -162,6 +167,12 @@ class SubmissionServiceServicer(object):
         context.set_details("Method not implemented!")
         raise NotImplementedError("Method not implemented!")
 
+    def SubmitCapture(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
+
 
 def add_SubmissionServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -230,6 +241,11 @@ def add_SubmissionServiceServicer_to_server(servicer, server):
             request_deserializer=v1_dot_baserun__pb2.GetTemplatesRequest.FromString,
             response_serializer=v1_dot_baserun__pb2.GetTemplatesResponse.SerializeToString,
         ),
+        "SubmitCapture": grpc.unary_unary_rpc_method_handler(
+            servicer.SubmitCapture,
+            request_deserializer=v1_dot_baserun__pb2.SubmitCaptureRequest.FromString,
+            response_serializer=v1_dot_baserun__pb2.SubmitCaptureResponse.SerializeToString,
+        ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
         "baserun.v1.SubmissionService", rpc_method_handlers
@@ -243,16 +259,16 @@ class SubmissionService(object):
 
     @staticmethod
     def StartRun(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
+            request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None,
     ):
         return grpc.experimental.unary_unary(
             request,
@@ -272,16 +288,16 @@ class SubmissionService(object):
 
     @staticmethod
     def SubmitLog(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
+            request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None,
     ):
         return grpc.experimental.unary_unary(
             request,
@@ -301,16 +317,16 @@ class SubmissionService(object):
 
     @staticmethod
     def SubmitSpan(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
+            request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None,
     ):
         return grpc.experimental.unary_unary(
             request,
@@ -330,16 +346,16 @@ class SubmissionService(object):
 
     @staticmethod
     def EndRun(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
+            request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None,
     ):
         return grpc.experimental.unary_unary(
             request,
@@ -359,16 +375,16 @@ class SubmissionService(object):
 
     @staticmethod
     def SubmitEval(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
+            request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None,
     ):
         return grpc.experimental.unary_unary(
             request,
@@ -388,16 +404,16 @@ class SubmissionService(object):
 
     @staticmethod
     def StartTestSuite(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
+            request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None,
     ):
         return grpc.experimental.unary_unary(
             request,
@@ -417,16 +433,16 @@ class SubmissionService(object):
 
     @staticmethod
     def EndTestSuite(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
+            request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None,
     ):
         return grpc.experimental.unary_unary(
             request,
@@ -446,16 +462,16 @@ class SubmissionService(object):
 
     @staticmethod
     def StartSession(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
+            request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None,
     ):
         return grpc.experimental.unary_unary(
             request,
@@ -475,16 +491,16 @@ class SubmissionService(object):
 
     @staticmethod
     def EndSession(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
+            request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None,
     ):
         return grpc.experimental.unary_unary(
             request,
@@ -504,16 +520,16 @@ class SubmissionService(object):
 
     @staticmethod
     def SubmitTemplateVersion(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
+            request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None,
     ):
         return grpc.experimental.unary_unary(
             request,
@@ -533,16 +549,16 @@ class SubmissionService(object):
 
     @staticmethod
     def SubmitModelConfig(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
+            request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None,
     ):
         return grpc.experimental.unary_unary(
             request,
@@ -562,16 +578,16 @@ class SubmissionService(object):
 
     @staticmethod
     def SubmitUser(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
+            request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None,
     ):
         return grpc.experimental.unary_unary(
             request,
@@ -591,16 +607,16 @@ class SubmissionService(object):
 
     @staticmethod
     def GetTemplates(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
+            request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None,
     ):
         return grpc.experimental.unary_unary(
             request,
@@ -608,6 +624,35 @@ class SubmissionService(object):
             "/baserun.v1.SubmissionService/GetTemplates",
             v1_dot_baserun__pb2.GetTemplatesRequest.SerializeToString,
             v1_dot_baserun__pb2.GetTemplatesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
+
+    @staticmethod
+    def SubmitCapture(
+            request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            "/baserun.v1.SubmissionService/SubmitCapture",
+            v1_dot_baserun__pb2.SubmitCaptureRequest.SerializeToString,
+            v1_dot_baserun__pb2.SubmitCaptureResponse.FromString,
             options,
             channel_credentials,
             insecure,
