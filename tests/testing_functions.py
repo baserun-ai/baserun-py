@@ -389,7 +389,7 @@ def use_sessions(prompt="What is the capital of the US?", user_identifier="examp
 async def use_capture(question="What is the capital of the US?") -> str:
     client = OpenAI()
 
-    with baserun.start_trace() as trace:
+    with baserun.start_trace(name="use_capture"):
         completion = client.chat.completions.create(
             model="gpt-4-1106-preview",
             messages=[{"role": "user", "content": question}],
