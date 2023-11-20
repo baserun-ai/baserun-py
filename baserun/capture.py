@@ -68,7 +68,12 @@ class Capture:
                 logger.warning(f"Could not submit capture to baserun: {e}")
 
     def feedback(
-        self, thumbsup: bool = None, stars: Number = None, score: Number = None, metadata: dict[str, Any] = None
+        self,
+        name: str = None,
+        thumbsup: bool = None,
+        stars: Number = None,
+        score: Number = None,
+        metadata: dict[str, Any] = None,
     ):
         if score is None:
             if thumbsup is not None:
@@ -79,7 +84,7 @@ class Capture:
                 logger.info("Could not calculate feedback score, please pass a score, thumbsup, or stars")
                 score = 0
 
-        feedback = Feedback(score=score, metadata=metadata)
+        feedback = Feedback(name=name or "General Feedback", score=score, metadata=json.dumps(metadata))
         self.feedback_list.append(feedback)
 
     def check(

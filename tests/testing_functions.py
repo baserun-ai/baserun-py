@@ -386,20 +386,22 @@ def use_sessions(prompt="What is the capital of the US?", user_identifier="examp
         return content
 
 
-@baserun.trace
 async def use_capture(question="What is the capital of the US?") -> str:
     client = OpenAI()
 
-    completion = client.chat.completions.create(
-        model="gpt-4-1106-preview",
-        messages=[{"role": "user", "content": question}],
-    )
-    content = completion.choices[0].message.content
+    with baserun.start_trace() as trace:
+        completion = client.chat.completions.create(
+            model="gpt-4-1106-preview",
+            messages=[{"role": "user", "content": question}],
+        )
+        content = completion.choices[0].message.content
 
-    async with Capture.aperform_capture(completion=completion) as capture:
-        capture.feedback(score=0.4)
-        capture.check_includes("openai_chat.content", "Washington", content)
-        capture.log(f"OpenAI Chat Results", metadata={"result": content, "input": question})
+        async with Capture.aperform_capture(completion=completion) as capture:
+            capture.feedback(
+                name="use_capture_feedback", score=0.8, metadata={"comment": "This is correct but not concise enough"}
+            )
+            capture.check_includes("openai_chat.content", "Washington", content)
+            capture.log(f"OpenAI Chat Results", metadata={"result": content, "input": question})
 
     return content
 
