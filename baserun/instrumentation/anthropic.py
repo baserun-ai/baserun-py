@@ -58,12 +58,16 @@ class AnthropicInstrumentor(BaseInstrumentor):
             span.set_attribute(SpanAttributes.LLM_STREAM, kwargs.get("stream"))
 
         if "temperature" in kwargs:
-            span.set_attribute(SpanAttributes.LLM_TEMPERATURE, kwargs.get("temperature"))
+            span.set_attribute(
+                SpanAttributes.LLM_TEMPERATURE, kwargs.get("temperature")
+            )
 
         if stop_sequences := kwargs.get("stop_sequences"):
             span.set_attribute(SpanAttributes.LLM_CHAT_STOP_SEQUENCES, stop_sequences)
 
-        span.set_attribute(SpanAttributes.LLM_REQUEST_MAX_TOKENS, kwargs.get("max_tokens_to_sample"))
+        span.set_attribute(
+            SpanAttributes.LLM_REQUEST_MAX_TOKENS, kwargs.get("max_tokens_to_sample")
+        )
 
         prompt = kwargs.get("prompt")
         prefix = f"{SpanAttributes.LLM_PROMPTS}.0"
@@ -75,10 +79,17 @@ class AnthropicInstrumentor(BaseInstrumentor):
             if most_similar_version.id not in Baserun.used_template_parameters:
                 most_similar_version = most_similar_version.template.active_version
 
-            matched_parameters = best_guess_template_parameters(template_version=most_similar_version, prompt=prompt)
+            matched_parameters = best_guess_template_parameters(
+                template_version=most_similar_version, prompt=prompt
+            )
 
-            span.set_attribute(SpanAttributes.BASERUN_TEMPLATE_VERSION_ID, most_similar_version.id)
-            span.set_attribute(SpanAttributes.BASERUN_TEMPLATE_PARAMETERS, json.dumps(matched_parameters))
+            span.set_attribute(
+                SpanAttributes.BASERUN_TEMPLATE_VERSION_ID, most_similar_version.id
+            )
+            span.set_attribute(
+                SpanAttributes.BASERUN_TEMPLATE_PARAMETERS,
+                json.dumps(matched_parameters),
+            )
 
     @staticmethod
     def set_response_attributes(span: _Span, response):
@@ -95,7 +106,9 @@ class AnthropicInstrumentor(BaseInstrumentor):
             yield value
 
     @staticmethod
-    async def async_generator_wrapper(original_generator: collections.abc.AsyncIterator, span: _Span):
+    async def async_generator_wrapper(
+        original_generator: collections.abc.AsyncIterator, span: _Span
+    ):
         async for value in original_generator:
             AnthropicInstrumentor._handle_generator_value(value, span)
 

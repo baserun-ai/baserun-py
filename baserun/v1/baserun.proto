@@ -176,7 +176,7 @@ message Feedback {
     EndUser end_user = 4;
 }
 
-message CapturedCompletion {
+message CompletionAnnotations {
     string completion_id = 1;
     repeated Check checks = 2;
     repeated Log logs = 3;
@@ -202,7 +202,6 @@ message Template {
 
     TemplateType template_type = 3;
     repeated TemplateVersion template_versions = 4;
-    TemplateVersion active_version = 5;
 }
 
 message TemplateVersion {
@@ -335,12 +334,12 @@ message GetTemplatesResponse {
     repeated Template templates = 1;
 }
 
-message SubmitCaptureRequest {
-    CapturedCompletion capture = 1;
+message SubmitAnnotationsRequest {
+    CompletionAnnotations annotations = 1;
     Run run = 2;
 }
 
-message SubmitCaptureResponse {
+message SubmitAnnotationsResponse {
     string message = 1;
 }
 
@@ -358,5 +357,5 @@ service SubmissionService {
     rpc SubmitModelConfig (SubmitModelConfigRequest) returns (SubmitModelConfigResponse);
     rpc SubmitUser (SubmitUserRequest) returns (SubmitUserResponse);
     rpc GetTemplates (GetTemplatesRequest) returns (GetTemplatesResponse);
-    rpc SubmitCapture (SubmitCaptureRequest) returns (SubmitCaptureResponse);
+    rpc SubmitAnnotations (SubmitAnnotationsRequest) returns (SubmitAnnotationsResponse);
 }

@@ -27,7 +27,9 @@ logger = logging.getLogger(__name__)
 
 
 @contextmanager
-def with_session(user_identifier: str, session_identifier: str = None, auto_end: bool = True):
+def with_session(
+    user_identifier: str, session_identifier: str = None, auto_end: bool = True
+):
     tracer_provider = trace.get_tracer_provider()
     tracer = tracer_provider.get_tracer("baserun")
 
@@ -35,7 +37,9 @@ def with_session(user_identifier: str, session_identifier: str = None, auto_end:
         name=UNTRACED_SPAN_PARENT_NAME,
         trace_type=Run.RunType.RUN_TYPE_PRODUCTION,
     )
-    session = start_session(user_identifier=user_identifier, session_identifier=session_identifier, run=run)
+    session = start_session(
+        user_identifier=user_identifier, session_identifier=session_identifier, run=run
+    )
     try:
         # In case they start the session outside a trace we need to ensure there is an active parent span
         parent_span: _Span = get_current_span()

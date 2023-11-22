@@ -7,7 +7,7 @@ from base64 import b64encode, b64decode
 from contextlib import contextmanager
 from datetime import datetime
 from importlib.util import find_spec
-from typing import Any, Type
+from typing import Any, Type, TYPE_CHECKING
 from typing import Callable, Dict, Optional, Union
 
 from opentelemetry import trace
@@ -34,6 +34,9 @@ from .v1.baserun_pb2 import (
 from .v1.baserun_pb2_grpc import SubmissionServiceStub
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from baserun.annotation import Annotation
 
 
 class BaserunEvaluationFailedException(Exception):
@@ -139,7 +142,9 @@ class Baserun:
         try:
             run.completion_timestamp.FromDatetime(datetime.utcnow())
             if span:
-                span.set_attribute(SpanAttributes.BASERUN_RUN, Baserun.serialize_run(run))
+                span.set_attribute(
+                    SpanAttributes.BASERUN_RUN, Baserun.serialize_run(run)
+                )
             get_or_create_submission_service().EndRun.future(EndRunRequest(run=run))
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
@@ -161,7 +166,11 @@ class Baserun:
 
         run_id = str(uuid.uuid4())
         if not trace_type:
-            trace_type = Run.RunType.RUN_TYPE_TEST if Baserun.current_test_suite else Run.RunType.RUN_TYPE_PRODUCTION
+            trace_type = (
+                Run.RunType.RUN_TYPE_TEST
+                if Baserun.current_test_suite
+                else Run.RunType.RUN_TYPE_PRODUCTION
+            )
 
         if not name:
             raise ValueError("Could not initialize run without a name")
@@ -184,7 +193,9 @@ class Baserun:
             run.completion_timestamp.FromDatetime(completion_timestamp)
 
         try:
-            get_or_create_submission_service().StartRun.future(StartRunRequest(run=run)).result()
+            get_or_create_submission_service().StartRun.future(
+                StartRunRequest(run=run)
+            ).result()
         except Exception as e:
             logger.warning(f"Failed to submit run start to Baserun: {e}")
 
@@ -203,7 +214,12 @@ class Baserun:
         return inputs
 
     @staticmethod
-    def _trace(func: Callable, run_type: Run.RunType, name: str = None, metadata: Optional[Dict] = None):
+    def _trace(
+        func: Callable,
+        run_type: Run.RunType,
+        name: str = None,
+        metadata: Optional[Dict] = None,
+    ) -> Run:
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
         run_name = name or func.__name__
@@ -315,15 +331,20 @@ class Baserun:
         return wrapper
 
     @staticmethod
-    def trace(func: Callable, name: str = None, metadata: Optional[Dict] = None):
+    def trace(func: Callable, name: str = None, metadata: Optional[Dict] = None) -> Run:
         if Baserun.current_test_suite:
             return Baserun.test(func=func, metadata=metadata)
 
-        return Baserun._trace(func=func, run_type=Run.RunType.RUN_TYPE_PRODUCTION, metadata=metadata, name=name)
+        return Baserun._trace(
+            func=func,
+            run_type=Run.RunType.RUN_TYPE_PRODUCTION,
+            metadata=metadata,
+            name=name,
+        )
 
     @staticmethod
     @contextmanager
-    def start_trace(*args, name: str = None, **kwargs):
+    def start_trace(*args, name: str = None, **kwargs) -> Run:
         if not Baserun._initialized:
             yield
 
@@ -369,17 +390,21 @@ class Baserun:
                 Baserun._finish_run(run, span)
 
     @staticmethod
-    def test(func: Callable, metadata: Optional[Dict] = None):
-        return Baserun._trace(func=func, run_type=Run.RunType.RUN_TYPE_TEST, metadata=metadata)
+    def test(func: Callable, metadata: Optional[Dict] = None) -> Run:
+        return Baserun._trace(
+            func=func, run_type=Run.RunType.RUN_TYPE_TEST, metadata=metadata
+        )
 
     @staticmethod
-    def log(name: str, payload: Union[str, Dict]):
+    def log(name: str, payload: Union[str, Dict]) -> Log:
         if not Baserun._initialized:
             return
 
         run = Baserun.current_run()
         if not run:
-            logger.warning("Cannot send logs to baserun as there is no current trace active.")
+            logger.warning(
+                "Cannot send logs to baserun as there is no current trace active."
+            )
             return
 
         log_message = Log(
@@ -397,3 +422,12 @@ class Baserun:
             logger.warning(f"Failed to submit log to Baserun: {e}")
 
         return log_message
+
+    @staticmethod
+    def annotate(
+        completion_id: str = None, run: Run = None, trace: Run = None
+    ) -> "Annotation":
+        """Capture annotations for a particular run and/or completion. the `trace` kwarg here is simply an alias"""
+        from baserun.annotation import Annotation
+
+        return Annotation(completion_id=completion_id, run=run or trace)

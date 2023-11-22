@@ -78,7 +78,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
             span.set_attribute(SpanAttributes.LLM_REQUEST_MAX_TOKENS, max_tokens)
 
         if "temperature" in kwargs:
-            span.set_attribute(SpanAttributes.LLM_TEMPERATURE, kwargs.get("temperature"))
+            span.set_attribute(
+                SpanAttributes.LLM_TEMPERATURE, kwargs.get("temperature")
+            )
 
         if "top_p" in kwargs:
             span.set_attribute(SpanAttributes.LLM_TOP_P, kwargs.get("top_p"))
@@ -96,7 +98,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
             )
 
         if "functions" in kwargs:
-            span.set_attribute(SpanAttributes.LLM_FUNCTIONS, json.dumps(kwargs.get("functions")))
+            span.set_attribute(
+                SpanAttributes.LLM_FUNCTIONS, json.dumps(kwargs.get("functions"))
+            )
 
         if "function_call" in kwargs:
             span.set_attribute(
@@ -105,7 +109,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
             )
 
         if "tools" in kwargs:
-            span.set_attribute(SpanAttributes.LLM_TOOLS, json.dumps(kwargs.get("tools")))
+            span.set_attribute(
+                SpanAttributes.LLM_TOOLS, json.dumps(kwargs.get("tools"))
+            )
 
         if "tool_choice" in kwargs:
             span.set_attribute(
@@ -126,7 +132,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 span.set_attribute(SpanAttributes.LLM_CHAT_STOP_SEQUENCES, stop)
 
         if "logit_bias" in kwargs:
-            span.set_attribute(SpanAttributes.LLM_LOGIT_BIAS, json.dumps(kwargs.get("logit_bias")))
+            span.set_attribute(
+                SpanAttributes.LLM_LOGIT_BIAS, json.dumps(kwargs.get("logit_bias"))
+            )
 
         if "logprobs" in kwargs:
             span.set_attribute(SpanAttributes.LLM_LOGPROBS, kwargs.get("logprobs"))
@@ -187,7 +195,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 )
 
     @staticmethod
-    def set_response_attributes(span: _Span, response: Union[ChatCompletion, Stream[ChatCompletionChunk]]):
+    def set_response_attributes(
+        span: _Span, response: Union[ChatCompletion, Stream[ChatCompletionChunk]]
+    ):
         span.set_attribute(SpanAttributes.LLM_COMPLETION_ID, response.id)
 
         choices = response.choices
@@ -209,7 +219,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
                         tool_prefix = f"{prefix}.tool_calls.{tool_index}"
                         span.set_attribute(f"{tool_prefix}.id", tool_call.id)
                         span.set_attribute(f"{tool_prefix}.type", tool_call.type)
-                        span.set_attribute(f"{tool_prefix}.name", tool_call.function.name)
+                        span.set_attribute(
+                            f"{tool_prefix}.name", tool_call.function.name
+                        )
                         span.set_attribute(
                             f"{tool_prefix}.function_arguments",
                             tool_call.function.arguments,
@@ -217,11 +229,15 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
                 if function_call := message.function_call:
                     span.set_attribute(f"{prefix}.function_name", function_call.name)
-                    span.set_attribute(f"{prefix}.function_arguments", function_call.arguments)
+                    span.set_attribute(
+                        f"{prefix}.function_arguments", function_call.arguments
+                    )
 
         usage = response.usage
         if usage:
-            span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, usage.total_tokens)
+            span.set_attribute(
+                SpanAttributes.LLM_USAGE_TOTAL_TOKENS, usage.total_tokens
+            )
             span.set_attribute(
                 SpanAttributes.LLM_USAGE_COMPLETION_TOKENS,
                 usage.completion_tokens,
@@ -239,7 +255,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
             yield value
 
     @staticmethod
-    async def async_generator_wrapper(original_generator: collections.abc.AsyncIterator, span: _Span):
+    async def async_generator_wrapper(
+        original_generator: collections.abc.AsyncIterator, span: _Span
+    ):
         async for value in original_generator:
             OpenAIInstrumentor._handle_generator_value(value, span)
 
@@ -281,7 +299,11 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
             function_arguments = span.attributes.get(function_arguments_attribute, "")
             if arguments_delta := new_function_call.arguments:
-                span.set_attribute(function_arguments_attribute, function_arguments + arguments_delta)
+                span.set_attribute(
+                    function_arguments_attribute, function_arguments + arguments_delta
+                )
 
-        if ((new_content is None and not new_function_call) or choice.finish_reason) and span.is_recording():
+        if (
+            (new_content is None and not new_function_call) or choice.finish_reason
+        ) and span.is_recording():
             span.end()

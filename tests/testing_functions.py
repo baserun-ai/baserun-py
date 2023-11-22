@@ -12,7 +12,6 @@ from openai import OpenAI, AsyncOpenAI, NotFoundError
 from openai.types.chat.chat_completion_message import FunctionCall
 
 import baserun
-from baserun.capture import Capture
 
 
 @baserun.trace
@@ -386,22 +385,23 @@ def use_sessions(prompt="What is the capital of the US?", user_identifier="examp
         return content
 
 
-async def use_capture(question="What is the capital of the US?") -> str:
+@baserun.trace
+async def use_annotation(question="What is the capital of the US?") -> str:
     client = OpenAI()
 
-    with baserun.start_trace(name="use_capture"):
-        completion = client.chat.completions.create(
-            model="gpt-4-1106-preview",
-            messages=[{"role": "user", "content": question}],
-        )
-        content = completion.choices[0].message.content
+    completion = client.chat.completions.create(
+        model="gpt-4-1106-preview",
+        messages=[{"role": "user", "content": question}],
+    )
+    content = completion.choices[0].message.content
 
-        async with Capture.aperform_capture(completion=completion) as capture:
-            capture.feedback(
-                name="use_capture_feedback", score=0.8, metadata={"comment": "This is correct but not concise enough"}
-            )
-            capture.check_includes("openai_chat.content", "Washington", content)
-            capture.log(f"OpenAI Chat Results", metadata={"result": content, "input": question})
+    annotation = baserun.annotate(completion.id)
+    annotation.feedback(
+        name="use_annotation_feedback", score=0.8, metadata={"comment": "This is correct but not concise enough"}
+    )
+    annotation.check_includes("openai_chat.content", "Washington", content)
+    annotation.log(f"OpenAI Chat Results", metadata={"result": content, "input": question})
+    annotation.submit()
 
     return content
 
