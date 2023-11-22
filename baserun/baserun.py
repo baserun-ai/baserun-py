@@ -7,7 +7,7 @@ from base64 import b64encode, b64decode
 from contextlib import contextmanager
 from datetime import datetime
 from importlib.util import find_spec
-from typing import Any, Type
+from typing import Any, Type, TYPE_CHECKING
 from typing import Callable, Dict, Optional, Union
 
 from opentelemetry import trace
@@ -34,6 +34,9 @@ from .v1.baserun_pb2 import (
 from .v1.baserun_pb2_grpc import SubmissionServiceStub
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from baserun.annotation import Annotation
 
 
 class BaserunEvaluationFailedException(Exception):
@@ -203,7 +206,7 @@ class Baserun:
         return inputs
 
     @staticmethod
-    def _trace(func: Callable, run_type: Run.RunType, name: str = None, metadata: Optional[Dict] = None):
+    def _trace(func: Callable, run_type: Run.RunType, name: str = None, metadata: Optional[Dict] = None) -> Run:
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
         run_name = name or func.__name__
@@ -315,7 +318,7 @@ class Baserun:
         return wrapper
 
     @staticmethod
-    def trace(func: Callable, name: str = None, metadata: Optional[Dict] = None):
+    def trace(func: Callable, name: str = None, metadata: Optional[Dict] = None) -> Run:
         if Baserun.current_test_suite:
             return Baserun.test(func=func, metadata=metadata)
 
@@ -323,7 +326,7 @@ class Baserun:
 
     @staticmethod
     @contextmanager
-    def start_trace(*args, name: str = None, **kwargs):
+    def start_trace(*args, name: str = None, **kwargs) -> Run:
         if not Baserun._initialized:
             yield
 
@@ -369,11 +372,11 @@ class Baserun:
                 Baserun._finish_run(run, span)
 
     @staticmethod
-    def test(func: Callable, metadata: Optional[Dict] = None):
+    def test(func: Callable, metadata: Optional[Dict] = None) -> Run:
         return Baserun._trace(func=func, run_type=Run.RunType.RUN_TYPE_TEST, metadata=metadata)
 
     @staticmethod
-    def log(name: str, payload: Union[str, Dict]):
+    def log(name: str, payload: Union[str, Dict]) -> Log:
         if not Baserun._initialized:
             return
 
@@ -397,3 +400,10 @@ class Baserun:
             logger.warning(f"Failed to submit log to Baserun: {e}")
 
         return log_message
+
+    @staticmethod
+    def annotate(completion_id: str = None, run: Run = None, trace: Run = None) -> "Annotation":
+        """Capture annotations for a particular run and/or completion. the `trace` kwarg here is simply an alias"""
+        from baserun.annotation import Annotation
+
+        return Annotation(completion_id=completion_id, run=run or trace)
