@@ -12,20 +12,27 @@ from opentelemetry.trace import get_current_span, Span
 from baserun import Baserun
 from baserun.constants import PARENT_SPAN_NAME
 from baserun.grpc import get_or_create_submission_service, get_or_create_async_submission_service
-from baserun.v1.baserun_pb2 import Log, Check, Feedback, SubmitCaptureRequest, CapturedCompletion
+from baserun.v1.baserun_pb2 import (
+    Log,
+    Check,
+    Feedback,
+    Run,
+    SubmitAnnotationsRequest,
+    CompletionAnnotations,
+)
 
 logger = logging.getLogger(__name__)
 
 
-class Capture:
+class Annotation:
     completion_id: str
     span: Span
     logs: list[Log]
     checks: list[Check]
     feedback_list: list[Feedback]
 
-    def __init__(self, completion_id: str = None):
-        self.run = Baserun.get_or_create_current_run()
+    def __init__(self, completion_id: str = None, run: Run = None):
+        self.run = run or Baserun.get_or_create_current_run()
         self.span = self.try_get_span()
         self.completion_id = completion_id
         self.logs = []
@@ -33,39 +40,39 @@ class Capture:
         self.feedback_list = []
 
     @classmethod
-    def capture(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
+    def annotate(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
         completion_id = completion.id if completion else None
         return cls(completion_id=completion_id)
 
     @classmethod
     @asynccontextmanager
-    async def aperform_capture(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
+    async def aanotate(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
         if not Baserun._initialized:
             yield
 
-        capture = cls.capture(completion=completion)
+        annotation = cls.annotate(completion=completion)
         try:
-            yield capture
+            yield annotation
         finally:
             try:
-                await capture.asubmit()
+                await annotation.asubmit()
             except BaseException as e:
-                logger.warning(f"Could not submit capture to baserun: {e}")
+                logger.warning(f"Could not submit annotation to baserun: {e}")
 
     @classmethod
     @contextmanager
-    def perform_capture(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
+    def annotate(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
         if not Baserun._initialized:
             yield
 
-        capture = cls.capture(completion=completion)
+        annotation = cls.annotate(completion=completion)
         try:
-            yield capture
+            yield annotation
         finally:
             try:
-                capture.submit()
+                annotation.submit()
             except BaseException as e:
-                logger.warning(f"Could not submit capture to baserun: {e}")
+                logger.warning(f"Could not submit annotation to baserun: {e}")
 
     def feedback(
         self,
@@ -141,18 +148,18 @@ class Capture:
         return None
 
     def submit(self):
-        capture_message = CapturedCompletion(
+        annotation_message = CompletionAnnotations(
             completion_id=self.completion_id, checks=self.checks, logs=self.logs, feedback=self.feedback_list
         )
-        get_or_create_submission_service().SubmitCapture.future(
-            SubmitCaptureRequest(capture=capture_message, run=self.run)
+        get_or_create_submission_service().SubmitAnnotations.future(
+            SubmitAnnotationsRequest(annotations=annotation_message, run=self.run)
         )
 
     async def asubmit(self):
-        capture_message = CapturedCompletion(
+        annotation_message = CompletionAnnotations(
             completion_id=self.completion_id, checks=self.checks, logs=self.logs, feedback=self.feedback_list
         )
 
-        await get_or_create_async_submission_service().SubmitCapture(
-            SubmitCaptureRequest(capture=capture_message, run=self.run)
+        await get_or_create_async_submission_service().SubmitAnnotations(
+            SubmitAnnotationsRequest(annotations=annotation_message, run=self.run)
         )

@@ -508,7 +508,7 @@ class Feedback(_message.Message):
         end_user: _Optional[_Union[EndUser, _Mapping]] = ...,
     ) -> None: ...
 
-class CapturedCompletion(_message.Message):
+class CompletionAnnotations(_message.Message):
     __slots__ = ["completion_id", "checks", "logs", "feedback"]
     COMPLETION_ID_FIELD_NUMBER: _ClassVar[int]
     CHECKS_FIELD_NUMBER: _ClassVar[int]
@@ -547,7 +547,7 @@ class TestSuite(_message.Message):
     ) -> None: ...
 
 class Template(_message.Message):
-    __slots__ = ["id", "name", "template_type", "template_versions", "active_version"]
+    __slots__ = ["id", "name", "template_type", "template_versions"]
 
     class TemplateType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = []
@@ -561,12 +561,10 @@ class Template(_message.Message):
     NAME_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_TYPE_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_VERSIONS_FIELD_NUMBER: _ClassVar[int]
-    ACTIVE_VERSION_FIELD_NUMBER: _ClassVar[int]
     id: str
     name: str
     template_type: Template.TemplateType
     template_versions: _containers.RepeatedCompositeFieldContainer[TemplateVersion]
-    active_version: TemplateVersion
     def __init__(
         self,
         id: _Optional[str] = ...,
@@ -575,7 +573,6 @@ class Template(_message.Message):
         template_versions: _Optional[
             _Iterable[_Union[TemplateVersion, _Mapping]]
         ] = ...,
-        active_version: _Optional[_Union[TemplateVersion, _Mapping]] = ...,
     ) -> None: ...
 
 class TemplateVersion(_message.Message):
@@ -846,19 +843,19 @@ class GetTemplatesResponse(_message.Message):
         self, templates: _Optional[_Iterable[_Union[Template, _Mapping]]] = ...
     ) -> None: ...
 
-class SubmitCaptureRequest(_message.Message):
-    __slots__ = ["capture", "run"]
-    CAPTURE_FIELD_NUMBER: _ClassVar[int]
+class SubmitAnnotationsRequest(_message.Message):
+    __slots__ = ["annotations", "run"]
+    ANNOTATIONS_FIELD_NUMBER: _ClassVar[int]
     RUN_FIELD_NUMBER: _ClassVar[int]
-    capture: CapturedCompletion
+    annotations: CompletionAnnotations
     run: Run
     def __init__(
         self,
-        capture: _Optional[_Union[CapturedCompletion, _Mapping]] = ...,
+        annotations: _Optional[_Union[CompletionAnnotations, _Mapping]] = ...,
         run: _Optional[_Union[Run, _Mapping]] = ...,
     ) -> None: ...
 
-class SubmitCaptureResponse(_message.Message):
+class SubmitAnnotationsResponse(_message.Message):
     __slots__ = ["message"]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     message: str

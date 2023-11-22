@@ -33,6 +33,7 @@ trace = Baserun.trace
 log = Baserun.log
 evals = Baserun.evals
 api_key = os.environ.get("BASERUN_API_KEY")
+annotate = Baserun.annotate
 
 __all__ = [
     "Baserun",
@@ -40,6 +41,7 @@ __all__ = [
     "init",
     "start_trace",
     "trace",
+    "annotate",
     "log",
     "evals",
     "thread_wrapper",
