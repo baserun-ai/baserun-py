@@ -296,6 +296,7 @@ class Span(_message.Message):
         "template_id",
         "template_parameters",
         "template_string",
+        "template_version_id",
         "tools",
         "tool_choice",
         "seed",
@@ -342,6 +343,7 @@ class Span(_message.Message):
     TEMPLATE_ID_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_PARAMETERS_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_STRING_FIELD_NUMBER: _ClassVar[int]
+    TEMPLATE_VERSION_ID_FIELD_NUMBER: _ClassVar[int]
     TOOLS_FIELD_NUMBER: _ClassVar[int]
     TOOL_CHOICE_FIELD_NUMBER: _ClassVar[int]
     SEED_FIELD_NUMBER: _ClassVar[int]
@@ -387,6 +389,7 @@ class Span(_message.Message):
     template_id: str
     template_parameters: str
     template_string: str
+    template_version_id: str
     tools: str
     tool_choice: str
     seed: int
@@ -434,6 +437,7 @@ class Span(_message.Message):
         template_id: _Optional[str] = ...,
         template_parameters: _Optional[str] = ...,
         template_string: _Optional[str] = ...,
+        template_version_id: _Optional[str] = ...,
         tools: _Optional[str] = ...,
         tool_choice: _Optional[str] = ...,
         seed: _Optional[int] = ...,
@@ -547,7 +551,7 @@ class TestSuite(_message.Message):
     ) -> None: ...
 
 class Template(_message.Message):
-    __slots__ = ["id", "name", "template_type", "template_versions"]
+    __slots__ = ["id", "name", "template_type", "template_versions", "active_version"]
 
     class TemplateType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = []
@@ -561,10 +565,12 @@ class Template(_message.Message):
     NAME_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_TYPE_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_VERSIONS_FIELD_NUMBER: _ClassVar[int]
+    ACTIVE_VERSION_FIELD_NUMBER: _ClassVar[int]
     id: str
     name: str
     template_type: Template.TemplateType
     template_versions: _containers.RepeatedCompositeFieldContainer[TemplateVersion]
+    active_version: TemplateVersion
     def __init__(
         self,
         id: _Optional[str] = ...,
@@ -573,6 +579,7 @@ class Template(_message.Message):
         template_versions: _Optional[
             _Iterable[_Union[TemplateVersion, _Mapping]]
         ] = ...,
+        active_version: _Optional[_Union[TemplateVersion, _Mapping]] = ...,
     ) -> None: ...
 
 class TemplateVersion(_message.Message):

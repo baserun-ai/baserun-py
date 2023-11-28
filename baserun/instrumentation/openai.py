@@ -63,7 +63,9 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
     @staticmethod
     def set_request_attributes(span: _Span, kwargs: dict[str, Any]):
-        span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, get_session_id())
+        session_id = get_session_id()
+        if session_id:
+            span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, session_id)
 
         span.set_attribute(SpanAttributes.LLM_VENDOR, OPENAI_VENDOR_NAME)
         span.set_attribute(
@@ -176,6 +178,10 @@ class OpenAIInstrumentor(BaseInstrumentor):
             span.set_attribute(
                 SpanAttributes.BASERUN_TEMPLATE_VERSION_ID,
                 template_version.id,
+            )
+            span.set_attribute(
+                SpanAttributes.BASERUN_TEMPLATE_STRING,
+                template_version.template_string,
             )
             matched_parameters = best_guess_template_parameters(
                 template_version=template_version, prompt=formatted_prompt

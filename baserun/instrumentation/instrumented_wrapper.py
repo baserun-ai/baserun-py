@@ -1,4 +1,5 @@
 import logging
+import traceback
 from collections.abc import AsyncIterator, Iterator
 from typing import Callable, TYPE_CHECKING
 
@@ -23,9 +24,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def async_instrumented_wrapper(
-    wrapped_fn: Callable, instrumentor: "BaseInstrumentor", span_name: str
-):
+def async_instrumented_wrapper(wrapped_fn: Callable, instrumentor: "BaseInstrumentor", span_name: str):
     """Generates a function (`instrumented_function`) which instruments the original function (`wrapped_fn`)"""
 
     async def instrumented_function(*args, **kwargs):
@@ -48,21 +47,20 @@ def async_instrumented_wrapper(
                 kind=SpanKind.CLIENT,
                 attributes={
                     SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
-                    SpanAttributes.BASERUN_SESSION_ID: get_session_id(),
                 },
             )
 
-        span = tracer.start_span(
-            **setup_span(span_name=span_name, parent_span=parent_span)
-        )
+        session_id = get_session_id()
+        span = tracer.start_span(**setup_span(span_name=span_name, parent_span=parent_span))
+        if session_id:
+            span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, session_id)
+
         auto_end_span = True
         try:
             # Activate the span in the current context, but don't end it automatically
             with trace.use_span(span, end_on_exit=False):
                 # Capture request attributes
-                set_request_attributes(
-                    instrumentor=instrumentor, span=span, kwargs=kwargs
-                )
+                set_request_attributes(instrumentor=instrumentor, span=span, kwargs=kwargs)
 
                 # Actually call the wrapped method
                 try:
@@ -80,9 +78,7 @@ def async_instrumented_wrapper(
 
                 # If this is a streaming response, wrap it, so we can capture each chunk
                 if isinstance(response, AsyncIterator):
-                    wrapped_response = instrumentor.async_generator_wrapper(
-                        response, span
-                    )
+                    wrapped_response = instrumentor.async_generator_wrapper(response, span)
                     # The span will be ended inside the generator once it's finished
                     auto_end_span = False
                     return wrapped_response
@@ -105,9 +101,7 @@ def async_instrumented_wrapper(
     return instrumented_function
 
 
-def instrumented_wrapper(
-    wrapped_fn: Callable, instrumentor: "BaseInstrumentor", span_name: str = None
-):
+def instrumented_wrapper(wrapped_fn: Callable, instrumentor: "BaseInstrumentor", span_name: str = None):
     """Generates a function (`instrumented_function`) which instruments the original function (`wrapped_fn`)"""
 
     def instrumented_function(*args, **kwargs):
@@ -126,7 +120,7 @@ def instrumented_wrapper(
         # If a call is made outside of a traced function we need to create a parent
         if not parent_span.is_recording() and not Baserun.current_test_suite:
             run = Baserun.get_or_create_current_run(
-                name="untraced",
+                name=wrapped_fn.__name__,
                 trace_type=Run.RunType.RUN_TYPE_PRODUCTION,
             )
             parent_span = tracer.start_span(
@@ -134,22 +128,20 @@ def instrumented_wrapper(
                 kind=SpanKind.CLIENT,
                 attributes={
                     SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
-                    SpanAttributes.BASERUN_SESSION_ID: get_session_id(),
                 },
             )
 
-        span = tracer.start_span(
-            **setup_span(span_name=span_name, parent_span=parent_span)
-        )
+        session_id = get_session_id()
+        span = tracer.start_span(**setup_span(span_name=span_name, parent_span=parent_span))
+        if session_id:
+            span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, session_id)
 
         auto_end_span = True
         try:
             # Activate the span in the current context, but don't end it automatically
             with trace.use_span(span, end_on_exit=False):
                 # Capture request attributes
-                set_request_attributes(
-                    instrumentor=instrumentor, span=span, kwargs=kwargs
-                )
+                set_request_attributes(instrumentor=instrumentor, span=span, kwargs=kwargs)
 
                 # Actually call the wrapped method
                 try:
@@ -201,12 +193,11 @@ def setup_span(span_name: str, parent_span: _Span) -> dict:
     }
 
 
-def set_request_attributes(
-    instrumentor: "BaseInstrumentor", span: _Span, kwargs: dict
-) -> _Span:
+def set_request_attributes(instrumentor: "BaseInstrumentor", span: _Span, kwargs: dict) -> _Span:
     try:
         instrumentor.set_request_attributes(span, kwargs)
     except Exception as e:
+        traceback.print_exception(e)
         logger.warning(f"Failed to set input attributes for Baserun span, error: {e}")
 
     return span
@@ -228,9 +219,7 @@ def handle_response(instrumentor: "BaseInstrumentor", span: _Span, response):
         try:
             instrumentor.set_response_attributes(span, response)
         except Exception as e:
-            logger.warning(
-                f"Failed to set response attributes for Baserun span, error: {e}"
-            )
+            logger.warning(f"Failed to set response attributes for Baserun span, error: {e}")
     else:
         # This will happen if the user doesn't return anything from their traced function
         span.set_status(

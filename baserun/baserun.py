@@ -29,7 +29,8 @@ from .v1.baserun_pb2 import (
     EndRunRequest,
     TestSuite,
     StartRunRequest,
-    Template,
+    EndUser,
+    TemplateVersion,
 )
 from .v1.baserun_pb2_grpc import SubmissionServiceStub
 
@@ -49,10 +50,11 @@ class Baserun:
     _instrumentors: list[BaseInstrumentor] = None
 
     current_test_suite: TestSuite = None
+    sessions: dict[str, EndUser] = None
 
     evals = Evals
 
-    templates: dict[str, Template] = None
+    templates: dict[str, TemplateVersion] = None
     used_template_parameters: dict[str, list[dict[str, Any]]] = None
 
     submission_service: SubmissionServiceStub = None
@@ -64,6 +66,8 @@ class Baserun:
             return
 
         Baserun._initialized = True
+        Baserun.templates = {}
+        Baserun.used_template_parameters = {}
         if instrument:
             Baserun.instrument()
 
@@ -169,6 +173,9 @@ class Baserun:
         if not name:
             raise ValueError("Could not initialize run without a name")
 
+        if not session_id:
+            session_id = get_session_id()
+
         run_data = {
             "run_id": run_id,
             "run_type": trace_type,
@@ -221,21 +228,19 @@ class Baserun:
                 if not Baserun._initialized:
                     return await func(*args, **kwargs)
 
+                session_id = get_session_id()
                 run = Baserun.get_or_create_current_run(
-                    name=run_name,
-                    trace_type=run_type,
-                    metadata=metadata,
-                    suite_id=suite_id,
-                    session_id=get_session_id(),
+                    name=run_name, trace_type=run_type, metadata=metadata, suite_id=suite_id, session_id=session_id
                 )
                 with tracer.start_as_current_span(
                     f"{PARENT_SPAN_NAME}.{func.__name__}",
                     kind=SpanKind.CLIENT,
                     attributes={
                         SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
-                        SpanAttributes.BASERUN_SESSION_ID: get_session_id(),
                     },
                 ) as span:
+                    if session_id:
+                        span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, session_id)
                     try:
                         result = await func(*args, **kwargs)
                         run.result = str(result) if result is not None else ""
@@ -253,12 +258,9 @@ class Baserun:
                     async for item in func(*args, **kwargs):
                         yield item
 
+                session_id = get_session_id()
                 run = Baserun.get_or_create_current_run(
-                    name=run_name,
-                    trace_type=run_type,
-                    metadata=metadata,
-                    suite_id=suite_id,
-                    session_id=get_session_id(),
+                    name=run_name, trace_type=run_type, metadata=metadata, suite_id=suite_id, session_id=session_id
                 )
 
                 with tracer.start_as_current_span(
@@ -266,9 +268,11 @@ class Baserun:
                     kind=SpanKind.CLIENT,
                     attributes={
                         SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
-                        SpanAttributes.BASERUN_SESSION_ID: get_session_id(),
                     },
                 ) as span:
+                    if session_id:
+                        span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, session_id)
+
                     try:
                         result = []
                         async for item in func(*args, **kwargs):
@@ -288,12 +292,9 @@ class Baserun:
                 if not Baserun._initialized:
                     return func(*args, **kwargs)
 
+                session_id = get_session_id()
                 run = Baserun.get_or_create_current_run(
-                    name=run_name,
-                    trace_type=run_type,
-                    metadata=metadata,
-                    suite_id=suite_id,
-                    session_id=get_session_id(),
+                    name=run_name, trace_type=run_type, metadata=metadata, suite_id=suite_id, session_id=session_id
                 )
 
                 # Create a parent span so we can attach the run to it, all child spans are part of this run.
@@ -302,9 +303,11 @@ class Baserun:
                     kind=SpanKind.CLIENT,
                     attributes={
                         SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
-                        SpanAttributes.BASERUN_SESSION_ID: get_session_id(),
                     },
                 ) as span:
+                    if session_id:
+                        span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, session_id)
+
                     try:
                         result = func(*args, **kwargs)
                         run.result = str(result) if result is not None else ""
@@ -318,7 +321,7 @@ class Baserun:
         return wrapper
 
     @staticmethod
-    def trace(func: Callable, name: str = None, metadata: Optional[Dict] = None) -> Run:
+    def trace(func: Callable, name: str = None, metadata: Optional[Dict] = None):
         if Baserun.current_test_suite:
             return Baserun.test(func=func, metadata=metadata)
 
@@ -333,7 +336,8 @@ class Baserun:
         # If given a name, ensure that the run has that name. If not, it will only be set when a new run is created
         explicitly_named = name is not None
         if not explicitly_named:
-            name = inspect.stack()[1].function
+            # stack[0] = start_trace, stack[1] = context manager, stack[2] = user function
+            name = inspect.stack()[2].function
 
         if Baserun.current_test_suite:
             run_type = Run.RunType.RUN_TYPE_TEST

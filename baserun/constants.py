@@ -1,4 +1,3 @@
 PARENT_SPAN_NAME = "baserun.parent"
-SESSION_SPAN_NAME = "baserun.session"
 UNTRACED_SPAN_PARENT_NAME = f"{PARENT_SPAN_NAME}.untraced"
 INNER_THREAD_SPAN_PARENT_NAME = f"{PARENT_SPAN_NAME}.inner_thread"

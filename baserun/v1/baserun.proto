@@ -138,9 +138,10 @@ message Span {
     optional double top_k = 35;
 
     EndUser end_user = 36;
-    optional string template_id = 37;
+    optional string template_id = 37; // Deprecated, use template_version_id
     optional string template_parameters = 38; // JSONified map<str, any>
-    optional string template_string = 45;
+    optional string template_string = 45; // Deprecated, register_template is required to be done first
+    optional string template_version_id = 46;
 
     optional string tools = 39; // JSONified array<map<str, any>>
     optional string tool_choice = 40; // JSONified map<str, any>
@@ -202,6 +203,7 @@ message Template {
 
     TemplateType template_type = 3;
     repeated TemplateVersion template_versions = 4;
+    optional TemplateVersion active_version = 5;
 }
 
 message TemplateVersion {

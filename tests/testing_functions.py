@@ -401,7 +401,7 @@ async def use_annotation(question="What is the capital of the US?") -> str:
     )
     annotation.check_includes("openai_chat.content", "Washington", content)
     annotation.log(f"OpenAI Chat Results", metadata={"result": content, "input": question})
-    annotation.submit()
+    await annotation.asubmit()
 
     return content
 

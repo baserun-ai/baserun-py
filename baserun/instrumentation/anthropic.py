@@ -79,6 +79,10 @@ class AnthropicInstrumentor(BaseInstrumentor):
 
             span.set_attribute(SpanAttributes.BASERUN_TEMPLATE_VERSION_ID, most_similar_version.id)
             span.set_attribute(SpanAttributes.BASERUN_TEMPLATE_PARAMETERS, json.dumps(matched_parameters))
+            span.set_attribute(
+                SpanAttributes.BASERUN_TEMPLATE_STRING,
+                most_similar_version.template_string,
+            )
 
     @staticmethod
     def set_response_attributes(span: _Span, response):
