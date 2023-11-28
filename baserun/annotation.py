@@ -91,7 +91,17 @@ class Annotation:
                 logger.info("Could not calculate feedback score, please pass a score, thumbsup, or stars")
                 score = 0
 
-        feedback = Feedback(name=name or "General Feedback", score=score, metadata=json.dumps(metadata))
+        run = Baserun.get_or_create_current_run()
+        feedback_kwargs = {"name": name or "General Feedback", "score": score}
+        if metadata:
+            feedback_kwargs["metadata"] = json.dumps(metadata)
+
+        if run.session_id:
+            end_user = Baserun.sessions.get(run.session_id)
+            if end_user:
+                feedback_kwargs["end_user"] = end_user
+
+        feedback = Feedback(**feedback_kwargs)
         self.feedback_list.append(feedback)
 
     def check(

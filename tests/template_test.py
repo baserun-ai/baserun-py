@@ -73,11 +73,12 @@ def test_get_template(mock_services):
     mock_get_templates = mock_services["submission_service"].GetTemplates
     mock_get_templates.return_value = GetTemplatesResponse(templates=[template])
 
-    found_template = get_template(name=template_name)
+    found_template_version = get_template(name=template_name)
+    found_template = found_template_version.template
 
-    assert found_template.template.name == template_name
-    assert found_template.template.active_version.id == template_version.id
-    assert found_template.tag == tag
+    assert found_template.name == template_name
+    assert found_template.active_version.id == template_version.id
+    assert found_template_version.tag == tag
 
 
 @pytest.mark.asyncio

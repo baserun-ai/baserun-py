@@ -5,8 +5,7 @@ from typing import Union
 from uuid import uuid4
 
 from opentelemetry import trace
-from opentelemetry.sdk.trace import _Span
-from opentelemetry.trace import SpanKind, get_current_span
+from opentelemetry.trace import get_current_span
 
 from baserun.grpc import (
     get_or_create_submission_service,
@@ -17,7 +16,6 @@ from baserun.v1.baserun_pb2 import (
     Session,
     EndUser,
     EndSessionRequest,
-    Run,
 )
 from . import Baserun
 from .constants import UNTRACED_SPAN_PARENT_NAME
@@ -28,48 +26,59 @@ logger = logging.getLogger(__name__)
 
 @contextmanager
 def with_session(user_identifier: str, session_identifier: str = None, auto_end: bool = True):
-    tracer_provider = trace.get_tracer_provider()
-    tracer = tracer_provider.get_tracer("baserun")
-
-    run = Baserun.get_or_create_current_run(
-        name=UNTRACED_SPAN_PARENT_NAME,
-        trace_type=Run.RunType.RUN_TYPE_PRODUCTION,
-    )
-    session = start_session(user_identifier=user_identifier, session_identifier=session_identifier, run=run)
-    try:
-        # In case they start the session outside a trace we need to ensure there is an active parent span
-        parent_span: _Span = get_current_span()
-        if parent_span.is_recording:
+    # If there's a current span, start the session in that context. Otherwise, create a parent span
+    current_span = get_current_span()
+    if current_span.is_recording():
+        session = start_session(user_identifier=user_identifier, session_identifier=session_identifier)
+        try:
             yield
-        else:
-            with tracer.start_as_current_span(
-                UNTRACED_SPAN_PARENT_NAME,
-                kind=SpanKind.CLIENT,
-                attributes={
-                    SpanAttributes.BASERUN_SESSION_ID: session.identifier,
-                    SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
-                },
-            ):
+        finally:
+            if auto_end:
+                end_session(session)
+
+    else:
+        tracer_provider = trace.get_tracer_provider()
+        tracer = tracer_provider.get_tracer("baserun")
+        with tracer.start_as_current_span(name=UNTRACED_SPAN_PARENT_NAME):
+            session = start_session(user_identifier=user_identifier, session_identifier=session_identifier)
+            try:
                 yield
-    finally:
-        if auto_end:
-            end_session(session)
+            finally:
+                if auto_end:
+                    end_session(session)
 
 
 def start_session(
     user_identifier: str,
     start_timestamp: datetime = None,
     session_identifier: str = None,
-    run: Run = None,
 ) -> Session:
-    session = Session(
-        identifier=session_identifier or str(uuid4()),
-        end_user=EndUser(identifier=user_identifier),
-    )
+    """Start a session without a context manager. If this function is called directly:
+    - A current span must be active
+    - `end_session` must be called
+    """
+    end_user = EndUser(identifier=user_identifier)
+    session = Session(identifier=session_identifier or str(uuid4()), end_user=end_user)
     session.start_timestamp.FromDatetime(start_timestamp or datetime.utcnow())
-    session_request = StartSessionRequest(session=session, run=run)
+
+    session_request = StartSessionRequest(session=session)
     try:
         response = get_or_create_submission_service().StartSession(session_request)
+        session.id = response.session.id
+
+        if not Baserun.sessions:
+            Baserun.sessions = {}
+        Baserun.sessions[session.id] = end_user
+
+        # If they're already in a trace go ahead and attach the session to it
+        run = Baserun.current_run()
+        if run:
+            run.session_id = session.id
+
+        # Set the session and user info on the span context
+        current_span = get_current_span()
+        current_span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, session.id)
+        current_span.set_attribute(SpanAttributes.BASERUN_USER_ID, user_identifier)
         return response.session
     except Exception as e:
         if hasattr(e, "details"):
