@@ -29,7 +29,12 @@ def check(
     return actual
 
 
-def check_equals(name: str, actual: str, expected: Union[str, list[str]], metadata: dict[str, Any] = None):
+def check_equals(
+    name: str,
+    actual: str,
+    expected: Union[str, list[str]],
+    metadata: dict[str, Any] = None,
+):
     expected_list = [expected] if isinstance(expected, str) else expected
     result = any(actual == item for item in expected_list)
 
@@ -43,7 +48,12 @@ def check_equals(name: str, actual: str, expected: Union[str, list[str]], metada
     )
 
 
-def check_includes(name: str, actual: str, expected: Union[str, list[str]], metadata: dict[str, Any] = None):
+def check_includes(
+    name: str,
+    actual: str,
+    expected: Union[str, list[str]],
+    metadata: dict[str, Any] = None,
+):
     expected_list = [expected] if isinstance(expected, str) else expected
     result = any(actual in item for item in expected_list)
 

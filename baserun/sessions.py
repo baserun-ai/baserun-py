@@ -25,11 +25,15 @@ logger = logging.getLogger(__name__)
 
 
 @contextmanager
-def with_session(user_identifier: str, session_identifier: str = None, auto_end: bool = True):
+def with_session(
+    user_identifier: str, session_identifier: str = None, auto_end: bool = True
+):
     # If there's a current span, start the session in that context. Otherwise, create a parent span
     current_span = get_current_span()
     if current_span.is_recording():
-        session = start_session(user_identifier=user_identifier, session_identifier=session_identifier)
+        session = start_session(
+            user_identifier=user_identifier, session_identifier=session_identifier
+        )
         try:
             yield
         finally:
@@ -40,7 +44,9 @@ def with_session(user_identifier: str, session_identifier: str = None, auto_end:
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
         with tracer.start_as_current_span(name=UNTRACED_SPAN_PARENT_NAME):
-            session = start_session(user_identifier=user_identifier, session_identifier=session_identifier)
+            session = start_session(
+                user_identifier=user_identifier, session_identifier=session_identifier
+            )
             try:
                 yield
             finally:

@@ -63,7 +63,10 @@ def main():
                     completion = client.chat.completions.create(
                         model="gpt-4-1106-preview",
                         messages=[
-                            {"role": "system", "content": "Provide a concise answer to the user's question"},
+                            {
+                                "role": "system",
+                                "content": "Provide a concise answer to the user's question",
+                            },
                             {"role": "user", "content": question},
                         ],
                     )
@@ -76,7 +79,10 @@ def main():
                         [answer_check],
                         metadata={"answer": content, "question": question},
                     )
-                    baserun.log("OpenAI Chat Results", payload={"answer": content, "question": question})
+                    baserun.log(
+                        "OpenAI Chat Results",
+                        payload={"answer": content, "question": question},
+                    )
 
                     print(content)
                     print("-----------")

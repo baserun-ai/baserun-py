@@ -45,7 +45,11 @@ def get_choice_and_score(choice_scores: Dict[str, float]):
     def inner(output: str) -> Tuple[str, float]:
         choices = list(choice_scores.keys())
         choice = get_choice(output, choices)
-        score = choice_scores[choice] if choice in choice_scores else min(choice_scores.values())
+        score = (
+            choice_scores[choice]
+            if choice in choice_scores
+            else min(choice_scores.values())
+        )
         return choice, score
 
     return inner
@@ -75,7 +79,9 @@ class Evals:
 
         run = Baserun.current_run()
         try:
-            get_or_create_submission_service().SubmitEval.future(SubmitEvalRequest(eval=eval_message, run=run))
+            get_or_create_submission_service().SubmitEval.future(
+                SubmitEvalRequest(eval=eval_message, run=run)
+            )
         except Exception as e:
             logger.warning(f"Failed to submit eval to Baserun: {e}")
 
@@ -108,7 +114,9 @@ class Evals:
         return result
 
     @staticmethod
-    def fuzzy_match(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
+    def fuzzy_match(
+        name: str, submission: str, expected: Union[str, List[str]]
+    ) -> bool:
         expected_list = [expected] if isinstance(expected, str) else expected
         result = any(submission in item or item in submission for item in expected)
         Evals._store_eval_data(
@@ -136,7 +144,9 @@ class Evals:
         return result
 
     @staticmethod
-    def not_includes(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
+    def not_includes(
+        name: str, submission: str, expected: Union[str, List[str]]
+    ) -> bool:
         expected_list = [expected] if isinstance(expected, str) else expected
         result = not any(item in submission for item in expected)
         Evals._store_eval_data(
@@ -150,7 +160,9 @@ class Evals:
         return result
 
     @staticmethod
-    def not_fuzzy_match(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
+    def not_fuzzy_match(
+        name: str, submission: str, expected: Union[str, List[str]]
+    ) -> bool:
         expected_list = [expected] if isinstance(expected, str) else expected
         result = not any(submission in item or item in submission for item in expected)
         Evals._store_eval_data(
@@ -177,7 +189,9 @@ class Evals:
         return result
 
     @staticmethod
-    def custom(name: str, submission: str, eval_function: Callable[[str], bool]) -> bool:
+    def custom(
+        name: str, submission: str, eval_function: Callable[[str], bool]
+    ) -> bool:
         result = eval_function(submission)
         Evals._store_eval_data(
             name=name,
@@ -190,7 +204,9 @@ class Evals:
         return result
 
     @staticmethod
-    async def custom_async(name: str, submission: str, evaluation_func: Callable[[str], Awaitable[bool]]) -> bool:
+    async def custom_async(
+        name: str, submission: str, evaluation_func: Callable[[str], Awaitable[bool]]
+    ) -> bool:
         result = await evaluation_func(submission)
         Evals._store_eval_data(
             name=name,
@@ -250,7 +266,9 @@ class Evals:
         return choice
 
     @staticmethod
-    def model_graded_fact(name: str, question: str, expert: str, submission: str) -> str:
+    def model_graded_fact(
+        name: str, question: str, expert: str, submission: str
+    ) -> str:
         choices = ["A", "B", "C", "D", "E"]
         model_config = {
             "model": "gpt-4-0613",
@@ -287,7 +305,9 @@ class Evals:
         )
 
     @staticmethod
-    def model_graded_closedqa(name: str, task: str, submission: str, criterion: str) -> str:
+    def model_graded_closedqa(
+        name: str, task: str, submission: str, criterion: str
+    ) -> str:
         choice_scores = {"Yes": 1.0, "No": 0.0}
         choices = list(choice_scores.keys())
         model_config = {
