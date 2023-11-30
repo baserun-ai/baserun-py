@@ -71,6 +71,7 @@ def mock_services() -> Generator[dict[str, Mock], None, None]:
 
             if mocking_fn == AsyncMock:
                 mock_method = mocking_fn(spec=rpc_attr)
+                mock_method.future = mocking_fn(spec=rpc_attr)
             else:
                 mock_method = mocking_fn(rpc_attr, instance=True)
 
@@ -100,7 +101,7 @@ def pytest_sessionstart(session):
 def get_mock_objects(mock_services) -> tuple[Run, Span, Run, Run]:
     mock_start_run = mock_services["submission_service"].StartRun.future
     mock_end_run = mock_services["submission_service"].EndRun.future
-    mock_submit_span = mock_services["submission_service"].SubmitSpan.future
+    mock_submit_span = mock_services["submission_service"].SubmitSpan
 
     mock_start_run.assert_called_once()
     run_call: call = mock_start_run.call_args_list[0]

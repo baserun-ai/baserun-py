@@ -7,7 +7,7 @@ def test_submit_user(mock_services):
     user_identifier = "foo@test.com"
     submit_user(user_identifier)
 
-    mock_submit_user = mock_services["submission_service"].SubmitUser
+    mock_submit_user = mock_services["submission_service"].SubmitUser.future
     assert mock_submit_user.call_count == 1
     args, kwargs = mock_submit_user.call_args_list[0]
 

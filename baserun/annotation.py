@@ -11,7 +11,10 @@ from opentelemetry.trace import get_current_span, Span
 
 from baserun import Baserun
 from baserun.constants import PARENT_SPAN_NAME
-from baserun.grpc import get_or_create_submission_service, get_or_create_async_submission_service
+from baserun.grpc import (
+    get_or_create_submission_service,
+    get_or_create_async_submission_service,
+)
 from baserun.v1.baserun_pb2 import (
     Log,
     Check,
@@ -40,13 +43,17 @@ class Annotation:
         self.feedback_list = []
 
     @classmethod
-    def annotate(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
+    def annotate(
+        cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None
+    ):
         completion_id = completion.id if completion else None
         return cls(completion_id=completion_id)
 
     @classmethod
     @asynccontextmanager
-    async def aanotate(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
+    async def aanotate(
+        cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None
+    ):
         if not Baserun._initialized:
             yield
 
@@ -61,7 +68,9 @@ class Annotation:
 
     @classmethod
     @contextmanager
-    def annotate(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
+    def annotate(
+        cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None
+    ):
         if not Baserun._initialized:
             yield
 
@@ -88,7 +97,9 @@ class Annotation:
             elif stars is not None:
                 score = stars / 5
             else:
-                logger.info("Could not calculate feedback score, please pass a score, thumbsup, or stars")
+                logger.info(
+                    "Could not calculate feedback score, please pass a score, thumbsup, or stars"
+                )
                 score = 0
 
         run = Baserun.get_or_create_current_run()
@@ -159,7 +170,10 @@ class Annotation:
 
     def submit(self):
         annotation_message = CompletionAnnotations(
-            completion_id=self.completion_id, checks=self.checks, logs=self.logs, feedback=self.feedback_list
+            completion_id=self.completion_id,
+            checks=self.checks,
+            logs=self.logs,
+            feedback=self.feedback_list,
         )
         get_or_create_submission_service().SubmitAnnotations.future(
             SubmitAnnotationsRequest(annotations=annotation_message, run=self.run)
@@ -167,7 +181,10 @@ class Annotation:
 
     async def asubmit(self):
         annotation_message = CompletionAnnotations(
-            completion_id=self.completion_id, checks=self.checks, logs=self.logs, feedback=self.feedback_list
+            completion_id=self.completion_id,
+            checks=self.checks,
+            logs=self.logs,
+            feedback=self.feedback_list,
         )
 
         await get_or_create_async_submission_service().SubmitAnnotations(

@@ -23,7 +23,7 @@ def test_end_session(mock_services):
     session_identifier = str(uuid4())
     end_session(session_identifier)
 
-    mock_end_session = mock_services["submission_service"].EndSession
+    mock_end_session = mock_services["submission_service"].EndSession.future
     assert mock_end_session.call_count == 1
     args, kwargs = mock_end_session.call_args_list[0]
 

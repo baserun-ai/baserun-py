@@ -46,6 +46,7 @@ __all__ = [
     "evals",
     "thread_wrapper",
     "with_session",
+    "start_session",
     "end_session",
     "astart_session",
     "aend_session",

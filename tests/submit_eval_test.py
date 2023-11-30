@@ -9,7 +9,7 @@ def test_eval_includes(mock_services):
     eval_name = "TestEval"
     Baserun.evals.includes(eval_name, "Contains some words", ["Contains"])
 
-    mock_submit_eval = mock_services["submission_service"].SubmitEval
+    mock_submit_eval = mock_services["submission_service"].SubmitEval.future
     assert mock_submit_eval.call_count == 1
     args, kwargs = mock_submit_eval.call_args_list[0]
     submit_eval_request = args[0]
@@ -28,7 +28,7 @@ def test_eval_not_includes(mock_services):
     eval_name = "TestEval"
     Baserun.evals.not_includes(eval_name, "Does not contain some words", ["contains"])
 
-    mock_submit_eval = mock_services["submission_service"].SubmitEval
+    mock_submit_eval = mock_services["submission_service"].SubmitEval.future
     assert mock_submit_eval.call_count == 1
     args, kwargs = mock_submit_eval.call_args_list[0]
     submit_eval_request = args[0]
@@ -47,7 +47,7 @@ def test_eval_match(mock_services):
     eval_name = "TestEval"
     Baserun.evals.match(eval_name, "Matches some string", ["Match"])
 
-    mock_submit_eval = mock_services["submission_service"].SubmitEval
+    mock_submit_eval = mock_services["submission_service"].SubmitEval.future
     assert mock_submit_eval.call_count == 1
     args, kwargs = mock_submit_eval.call_args_list[0]
     submit_eval_request = args[0]
@@ -66,7 +66,7 @@ def test_eval_not_match(mock_services):
     eval_name = "TestEval"
     Baserun.evals.not_match(eval_name, "Does not match some string", ["matches"])
 
-    mock_submit_eval = mock_services["submission_service"].SubmitEval
+    mock_submit_eval = mock_services["submission_service"].SubmitEval.future
     assert mock_submit_eval.call_count == 1
     args, kwargs = mock_submit_eval.call_args_list[0]
     submit_eval_request = args[0]
@@ -85,7 +85,7 @@ def test_eval_fuzzy_match(mock_services):
     eval_name = "TestEval"
     Baserun.evals.fuzzy_match(eval_name, "Fuzzy matches some string", ["Fuzz"])
 
-    mock_submit_eval = mock_services["submission_service"].SubmitEval
+    mock_submit_eval = mock_services["submission_service"].SubmitEval.future
     assert mock_submit_eval.call_count == 1
     args, kwargs = mock_submit_eval.call_args_list[0]
     submit_eval_request = args[0]
@@ -104,7 +104,7 @@ def test_eval_not_fuzzy_match(mock_services):
     eval_name = "TestEval"
     Baserun.evals.not_fuzzy_match(eval_name, "Fuzzy matches some string", ["Fizz"])
 
-    mock_submit_eval = mock_services["submission_service"].SubmitEval
+    mock_submit_eval = mock_services["submission_service"].SubmitEval.future
     assert mock_submit_eval.call_count == 1
     args, kwargs = mock_submit_eval.call_args_list[0]
     submit_eval_request = args[0]
@@ -124,7 +124,7 @@ def test_eval_valid_json_valid(mock_services):
     valid_json = json.dumps({"foo": "bar"})
     Baserun.evals.valid_json(eval_name, valid_json)
 
-    mock_submit_eval = mock_services["submission_service"].SubmitEval
+    mock_submit_eval = mock_services["submission_service"].SubmitEval.future
     assert mock_submit_eval.call_count == 1
     args, kwargs = mock_submit_eval.call_args_list[0]
     submit_eval_request = args[0]
@@ -144,7 +144,7 @@ def test_eval_valid_json_invalid(mock_services):
     invalid_json = json.dumps({"foo": "bar"}) + "}}}"
     Baserun.evals.valid_json(eval_name, invalid_json)
 
-    mock_submit_eval = mock_services["submission_service"].SubmitEval
+    mock_submit_eval = mock_services["submission_service"].SubmitEval.future
     assert mock_submit_eval.call_count == 1
     args, kwargs = mock_submit_eval.call_args_list[0]
     submit_eval_request = args[0]
@@ -166,7 +166,7 @@ def test_eval_custom(mock_services):
     eval_name = "TestEval"
     Baserun.evals.custom(eval_name, "some comparison", custom_eval)
 
-    mock_submit_eval = mock_services["submission_service"].SubmitEval
+    mock_submit_eval = mock_services["submission_service"].SubmitEval.future
     assert mock_submit_eval.call_count == 1
     args, kwargs = mock_submit_eval.call_args_list[0]
     submit_eval_request = args[0]
@@ -188,7 +188,7 @@ async def test_eval_custom_async(mock_services):
 
     eval_name = "TestEval"
     await Baserun.evals.custom_async(eval_name, "some comparison", custom_eval)
-    mock_submit_eval = mock_services["submission_service"].SubmitEval
+    mock_submit_eval = mock_services["submission_service"].SubmitEval.future
     assert mock_submit_eval.call_count == 1
     args, kwargs = mock_submit_eval.call_args_list[0]
     submit_eval_request = args[0]
@@ -214,7 +214,7 @@ def test_eval_model_graded_fact(mock_services):
     )
 
     assert result == "A"
-    mock_submit_eval = mock_services["submission_service"].SubmitEval
+    mock_submit_eval = mock_services["submission_service"].SubmitEval.future
     assert mock_submit_eval.call_count == 1
     args, kwargs = mock_submit_eval.call_args_list[0]
     submit_eval_request = args[0]
@@ -248,7 +248,7 @@ def test_eval_model_graded_security(mock_services):
     )
 
     assert result == "Yes"
-    mock_submit_eval = mock_services["submission_service"].SubmitEval
+    mock_submit_eval = mock_services["submission_service"].SubmitEval.future
     assert mock_submit_eval.call_count == 1
     args, kwargs = mock_submit_eval.call_args_list[0]
     submit_eval_request = args[0]
@@ -283,7 +283,7 @@ def test_eval_model_graded_closedqa(mock_services):
     )
 
     assert result == "Yes"
-    mock_submit_eval = mock_services["submission_service"].SubmitEval
+    mock_submit_eval = mock_services["submission_service"].SubmitEval.future
     assert mock_submit_eval.call_count == 1
     args, kwargs = mock_submit_eval.call_args_list[0]
     submit_eval_request = args[0]
