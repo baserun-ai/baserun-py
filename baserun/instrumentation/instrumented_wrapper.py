@@ -44,7 +44,7 @@ def async_instrumented_wrapper(
                 name=UNTRACED_SPAN_PARENT_NAME,
                 trace_type=Run.RunType.RUN_TYPE_PRODUCTION,
             )
-            parent_span = tracer.start_as_current_span(
+            parent_span = tracer.start_span(
                 UNTRACED_SPAN_PARENT_NAME,
                 kind=SpanKind.CLIENT,
                 attributes={
@@ -53,9 +53,9 @@ def async_instrumented_wrapper(
             )
 
         session_id = get_session_id()
-        span = tracer.start_span(
-            **setup_span(span_name=span_name, parent_span=parent_span)
-        )
+        with trace.use_span(parent_span, end_on_exit=False):
+            span = tracer.start_span(**setup_span(span_name=span_name, parent_span=parent_span))
+
         if session_id:
             span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, session_id)
 
