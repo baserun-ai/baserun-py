@@ -86,9 +86,6 @@ class BaserunExporter(SpanExporter):
 
             run: Run = get_value(SpanAttributes.BASERUN_RUN, Baserun.contexts.get(span.get_span_context().trace_id))
             if not run:
-                import pdb
-
-                pdb.set_trace()
                 logger.warning("Could not submit span because a run could not be found.")
                 return
 
