@@ -18,6 +18,11 @@ load_dotenv()
 
 
 @pytest.fixture(autouse=True)
+def clear_context():
+    Baserun.contexts = {}
+
+
+@pytest.fixture(autouse=True)
 def set_openai_api_key():
     api_key = os.environ.get("OPENAI_API_KEY")
 
