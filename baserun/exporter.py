@@ -48,10 +48,20 @@ class BaserunExporter(SpanExporter):
                 continue
 
             status = Status(message=span.status.description, code=span.status.status_code.value)
-            prompt_messages = [
-                Message(**message_attrs)
-                for message_attrs in self._extract_prefix_dicts(span.attributes, SpanAttributes.LLM_PROMPTS)
-            ]
+            prompt_messages = []
+            for i, message_attrs in enumerate(self._extract_prefix_dicts(span.attributes, SpanAttributes.LLM_PROMPTS)):
+                message_attrs.pop("tool_calls", "")
+                message = Message(**message_attrs)
+
+                tool_calls_prefix = f"{SpanAttributes.LLM_PROMPTS}.{i}.tool_calls"
+                for tool_attrs in self._extract_prefix_dicts(span.attributes, tool_calls_prefix):
+                    tool_name = tool_attrs.pop("name")
+                    tool_args = tool_attrs.pop("function_arguments")
+                    tool_attrs["function"] = ToolFunction(name=tool_name, arguments=tool_args)
+                    tool_call = ToolCall(**tool_attrs)
+                    message.tool_calls.append(tool_call)
+
+                prompt_messages.append(message)
 
             completions = []
             for i, message_attrs in enumerate(
