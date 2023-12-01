@@ -3,7 +3,6 @@ import json
 import logging
 import traceback
 import uuid
-from base64 import b64encode, b64decode
 from contextlib import contextmanager
 from datetime import datetime
 from importlib.util import find_spec
@@ -11,6 +10,7 @@ from typing import Any, Type, TYPE_CHECKING
 from typing import Callable, Dict, Optional, Union
 
 from opentelemetry import trace
+from opentelemetry.context import Context, set_value, get_value
 from opentelemetry.sdk.trace import TracerProvider, _Span, SpanProcessor
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import SpanKind, get_current_span
@@ -59,6 +59,7 @@ class Baserun:
 
     submission_service: SubmissionServiceStub = None
     async_submission_service: SubmissionServiceStub = None
+    contexts: dict[bytes, Context] = None
 
     @staticmethod
     def init(instrument: bool = True) -> None:
@@ -68,8 +69,37 @@ class Baserun:
         Baserun._initialized = True
         Baserun.templates = {}
         Baserun.used_template_parameters = {}
+
+        current_span = get_current_span()
+        Baserun.contexts = {current_span.get_span_context().trace_id: Context()}
         if instrument:
             Baserun.instrument()
+
+    @staticmethod
+    def set_context(new_context: Context):
+        current_span = get_current_span()
+        trace_id = current_span.get_span_context().trace_id
+        Baserun.contexts[trace_id] = new_context
+
+    @staticmethod
+    def get_context() -> Context:
+        current_span = get_current_span()
+        trace_id = current_span.get_span_context().trace_id
+        if trace_id not in Baserun.contexts:
+            Baserun.contexts[trace_id] = Context()
+
+        return Baserun.contexts[trace_id]
+
+    @staticmethod
+    def propagate_context(old_context: Context):
+        current_span = get_current_span()
+        trace_id = current_span.get_span_context().trace_id
+        new_context = Baserun.get_context()
+
+        for k, v in old_context.items():
+            new_context = set_value(k, v, new_context)
+
+        Baserun.contexts[trace_id] = new_context
 
     @staticmethod
     def instrument(processor_class: Type[SpanProcessor] = None):
@@ -113,42 +143,23 @@ class Baserun:
         Baserun._instrumentors = []
 
     @staticmethod
-    def serialize_run(run: Run) -> str:
-        """Serialize a Run into a base64-encoded string"""
-        return b64encode(run.SerializeToString()).decode("utf-8")
-
-    @staticmethod
-    def deserialize_run(run_serialized: str) -> Union[Run, None]:
-        """Deserialize a base64-encoded string into a Run"""
-        if not run_serialized:
-            return None
-
-        decoded = b64decode(run_serialized.encode("utf-8"))
-        run = Run()
-        run.ParseFromString(decoded)
-        return run
-
-    @staticmethod
     def current_run() -> Union[Run, None]:
         """Gets the current run"""
-        current_span: _Span = get_current_span()
-        if not current_span.is_recording():
-            return None
+        current_run = get_value(SpanAttributes.BASERUN_RUN, Baserun.get_context())
+        if current_run:
+            return current_run
 
-        current_run_str = current_span.attributes.get(SpanAttributes.BASERUN_RUN)
-        if not current_run_str:
-            return None
+        root_context = Baserun.contexts.get(0)
+        if root_context:
+            return get_value(SpanAttributes.BASERUN_RUN, root_context)
 
-        return Baserun.deserialize_run(current_run_str)
+        return None
 
     @staticmethod
     def _finish_run(run: Run, span: _Span = None):
         try:
             run.completion_timestamp.FromDatetime(datetime.utcnow())
-            if span:
-                span.set_attribute(
-                    SpanAttributes.BASERUN_RUN, Baserun.serialize_run(run)
-                )
+            Baserun.set_context(set_value(SpanAttributes.BASERUN_RUN, run, Baserun.get_context()))
             get_or_create_submission_service().EndRun.future(EndRunRequest(run=run))
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
@@ -170,11 +181,7 @@ class Baserun:
 
         run_id = str(uuid.uuid4())
         if not trace_type:
-            trace_type = (
-                Run.RunType.RUN_TYPE_TEST
-                if Baserun.current_test_suite
-                else Run.RunType.RUN_TYPE_PRODUCTION
-            )
+            trace_type = Run.RunType.RUN_TYPE_TEST if Baserun.current_test_suite else Run.RunType.RUN_TYPE_PRODUCTION
 
         if not name:
             raise ValueError("Could not initialize run without a name")
@@ -195,14 +202,13 @@ class Baserun:
 
         run = Run(**run_data)
         run.start_timestamp.FromDatetime(start_timestamp or datetime.utcnow())
+        Baserun.set_context(set_value(SpanAttributes.BASERUN_RUN, run, Baserun.get_context()))
 
         if completion_timestamp:
             run.completion_timestamp.FromDatetime(completion_timestamp)
 
         try:
-            get_or_create_submission_service().StartRun.future(
-                StartRunRequest(run=run)
-            ).result()
+            get_or_create_submission_service().StartRun.future(StartRunRequest(run=run)).result()
         except Exception as e:
             logger.warning(f"Failed to submit run start to Baserun: {e}")
 
@@ -249,17 +255,12 @@ class Baserun:
                     suite_id=suite_id,
                     session_id=session_id,
                 )
+                old_context = Baserun.get_context()
                 with tracer.start_as_current_span(
                     f"{PARENT_SPAN_NAME}.{func.__name__}",
                     kind=SpanKind.CLIENT,
-                    attributes={
-                        SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
-                    },
                 ) as span:
-                    if session_id:
-                        span.set_attribute(
-                            SpanAttributes.BASERUN_SESSION_ID, session_id
-                        )
+                    Baserun.propagate_context(old_context)
                     try:
                         result = await func(*args, **kwargs)
                         run.result = str(result) if result is not None else ""
@@ -286,17 +287,12 @@ class Baserun:
                     session_id=session_id,
                 )
 
+                old_context = Baserun.get_context()
                 with tracer.start_as_current_span(
                     f"{PARENT_SPAN_NAME}.{func.__name__}",
                     kind=SpanKind.CLIENT,
-                    attributes={
-                        SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
-                    },
                 ) as span:
-                    if session_id:
-                        span.set_attribute(
-                            SpanAttributes.BASERUN_SESSION_ID, session_id
-                        )
+                    Baserun.propagate_context(old_context)
 
                     try:
                         result = []
@@ -327,17 +323,12 @@ class Baserun:
                 )
 
                 # Create a parent span so we can attach the run to it, all child spans are part of this run.
+                old_context = Baserun.get_context()
                 with tracer.start_as_current_span(
                     f"{PARENT_SPAN_NAME}.{func.__name__}",
                     kind=SpanKind.CLIENT,
-                    attributes={
-                        SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
-                    },
                 ) as span:
-                    if session_id:
-                        span.set_attribute(
-                            SpanAttributes.BASERUN_SESSION_ID, session_id
-                        )
+                    Baserun.propagate_context(old_context)
 
                     try:
                         result = func(*args, **kwargs)
@@ -391,21 +382,16 @@ class Baserun:
         if explicitly_named:
             run.name = name
 
-        serialized_run = Baserun.serialize_run(run)
-
         parent_span: _Span = get_current_span()
         if parent_span and parent_span.is_recording():
             parent_span.update_name(f"{PARENT_SPAN_NAME}.{name}")
-            parent_span.set_attribute(SpanAttributes.BASERUN_RUN, serialized_run)
 
         # Create a parent span so we can attach the run to it, all child spans are part of this run.
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
-        with tracer.start_as_current_span(
-            f"{PARENT_SPAN_NAME}.{name}",
-            kind=SpanKind.CLIENT,
-            attributes={SpanAttributes.BASERUN_RUN: serialized_run},
-        ) as span:
+        old_context = Baserun.get_context()
+        with tracer.start_as_current_span(f"{PARENT_SPAN_NAME}.{name}", kind=SpanKind.CLIENT) as span:
+            Baserun.propagate_context(old_context)
             try:
                 yield run
             finally:
@@ -413,9 +399,7 @@ class Baserun:
 
     @staticmethod
     def test(func: Callable, metadata: Optional[Dict] = None) -> Run:
-        return Baserun._trace(
-            func=func, run_type=Run.RunType.RUN_TYPE_TEST, metadata=metadata
-        )
+        return Baserun._trace(func=func, run_type=Run.RunType.RUN_TYPE_TEST, metadata=metadata)
 
     @staticmethod
     def log(name: str, payload: Union[str, Dict]) -> Log:
@@ -424,9 +408,7 @@ class Baserun:
 
         run = Baserun.current_run()
         if not run:
-            logger.warning(
-                "Cannot send logs to baserun as there is no current trace active."
-            )
+            logger.warning("Cannot send logs to baserun as there is no current trace active.")
             return
 
         log_message = Log(
@@ -446,9 +428,7 @@ class Baserun:
         return log_message
 
     @staticmethod
-    def annotate(
-        completion_id: str = None, run: Run = None, trace: Run = None
-    ) -> "Annotation":
+    def annotate(completion_id: str = None, run: Run = None, trace: Run = None) -> "Annotation":
         """Capture annotations for a particular run and/or completion. the `trace` kwarg here is simply an alias"""
         from baserun.annotation import Annotation
 

@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator, Iterator
 from typing import Callable, TYPE_CHECKING
 
 from opentelemetry import context as context_api, trace
-from opentelemetry.context import _SUPPRESS_INSTRUMENTATION_KEY
+from opentelemetry.context import _SUPPRESS_INSTRUMENTATION_KEY, get_value, set_value
 from opentelemetry.sdk.trace import _Span
 from opentelemetry.trace import (
     SpanKind,
@@ -24,9 +24,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def async_instrumented_wrapper(
-    wrapped_fn: Callable, instrumentor: "BaseInstrumentor", span_name: str
-):
+def async_instrumented_wrapper(wrapped_fn: Callable, instrumentor: "BaseInstrumentor", span_name: str):
     """Generates a function (`instrumented_function`) which instruments the original function (`wrapped_fn`)"""
 
     async def instrumented_function(*args, **kwargs):
@@ -44,13 +42,13 @@ def async_instrumented_wrapper(
                 name=UNTRACED_SPAN_PARENT_NAME,
                 trace_type=Run.RunType.RUN_TYPE_PRODUCTION,
             )
+            Baserun.set_context(set_value(SpanAttributes.BASERUN_RUN, run, Baserun.get_context()))
+            old_context = Baserun.get_context()
             parent_span = tracer.start_span(
                 UNTRACED_SPAN_PARENT_NAME,
                 kind=SpanKind.CLIENT,
-                attributes={
-                    SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
-                },
             )
+            Baserun.propagate_context(old_context)
 
         session_id = get_session_id()
         with trace.use_span(parent_span, end_on_exit=False):
@@ -64,9 +62,7 @@ def async_instrumented_wrapper(
             # Activate the span in the current context, but don't end it automatically
             with trace.use_span(span, end_on_exit=False):
                 # Capture request attributes
-                set_request_attributes(
-                    instrumentor=instrumentor, span=span, kwargs=kwargs
-                )
+                set_request_attributes(instrumentor=instrumentor, span=span, kwargs=kwargs)
 
                 # Actually call the wrapped method
                 try:
@@ -84,9 +80,7 @@ def async_instrumented_wrapper(
 
                 # If this is a streaming response, wrap it, so we can capture each chunk
                 if isinstance(response, AsyncIterator):
-                    wrapped_response = instrumentor.async_generator_wrapper(
-                        response, span
-                    )
+                    wrapped_response = instrumentor.async_generator_wrapper(response, span)
                     # The span will be ended inside the generator once it's finished
                     auto_end_span = False
                     return wrapped_response
@@ -109,9 +103,7 @@ def async_instrumented_wrapper(
     return instrumented_function
 
 
-def instrumented_wrapper(
-    wrapped_fn: Callable, instrumentor: "BaseInstrumentor", span_name: str = None
-):
+def instrumented_wrapper(wrapped_fn: Callable, instrumentor: "BaseInstrumentor", span_name: str = None):
     """Generates a function (`instrumented_function`) which instruments the original function (`wrapped_fn`)"""
 
     def instrumented_function(*args, **kwargs):
@@ -127,24 +119,21 @@ def instrumented_wrapper(
         tracer = tracer_provider.get_tracer("baserun")
 
         parent_span: _Span = get_current_span()
-        # If a call is made outside of a traced function we need to create a parent
-        if not parent_span.is_recording():
+        if not parent_span.is_recording() and not Baserun.current_test_suite:
             run = Baserun.get_or_create_current_run(
-                name=wrapped_fn.__name__,
+                name=UNTRACED_SPAN_PARENT_NAME,
                 trace_type=Run.RunType.RUN_TYPE_PRODUCTION,
             )
-            parent_span = tracer.start_as_current_span(
+            Baserun.set_context(set_value(SpanAttributes.BASERUN_RUN, run, Baserun.get_context()))
+            old_context = Baserun.get_context()
+            parent_span = tracer.start_span(
                 UNTRACED_SPAN_PARENT_NAME,
                 kind=SpanKind.CLIENT,
-                attributes={
-                    SpanAttributes.BASERUN_RUN: Baserun.serialize_run(run),
-                },
             )
+            Baserun.propagate_context(old_context)
 
         session_id = get_session_id()
-        span = tracer.start_span(
-            **setup_span(span_name=span_name, parent_span=parent_span)
-        )
+        span = tracer.start_span(**setup_span(span_name=span_name, parent_span=parent_span))
         if session_id:
             span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, session_id)
 
@@ -153,9 +142,7 @@ def instrumented_wrapper(
             # Activate the span in the current context, but don't end it automatically
             with trace.use_span(span, end_on_exit=False):
                 # Capture request attributes
-                set_request_attributes(
-                    instrumentor=instrumentor, span=span, kwargs=kwargs
-                )
+                set_request_attributes(instrumentor=instrumentor, span=span, kwargs=kwargs)
 
                 # Actually call the wrapped method
                 try:
@@ -197,7 +184,15 @@ def instrumented_wrapper(
 
 
 def setup_span(span_name: str, parent_span: _Span) -> dict:
+    from baserun import Baserun
+
+    current_run = get_value(SpanAttributes.BASERUN_RUN, Baserun.get_context())
     request_type = span_name.split(".")[-1]
+    if request_type not in ["chat", "completion"]:
+        request_type = "chat"
+
+    if not parent_span or not parent_span.is_recording():
+        return
 
     parent_span.set_attribute(SpanAttributes.LLM_REQUEST_TYPE, request_type)
 
@@ -208,9 +203,7 @@ def setup_span(span_name: str, parent_span: _Span) -> dict:
     }
 
 
-def set_request_attributes(
-    instrumentor: "BaseInstrumentor", span: _Span, kwargs: dict
-) -> _Span:
+def set_request_attributes(instrumentor: "BaseInstrumentor", span: _Span, kwargs: dict) -> _Span:
     try:
         instrumentor.set_request_attributes(span, kwargs)
     except Exception as e:
@@ -228,17 +221,13 @@ def handle_response(instrumentor: "BaseInstrumentor", span: _Span, response):
         logger.warning("Baserun data not propagated correctly, cannot send data")
         return response
 
-    span.set_attribute(SpanAttributes.BASERUN_RUN, Baserun.serialize_run(run))
-
     # If it's a full response capture the response attributes
     if response:
         # noinspection PyBroadException
         try:
             instrumentor.set_response_attributes(span, response)
         except Exception as e:
-            logger.warning(
-                f"Failed to set response attributes for Baserun span, error: {e}"
-            )
+            logger.warning(f"Failed to set response attributes for Baserun span, error: {e}")
     else:
         # This will happen if the user doesn't return anything from their traced function
         span.set_status(

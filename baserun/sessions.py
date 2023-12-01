@@ -5,6 +5,7 @@ from typing import Union
 from uuid import uuid4
 
 from opentelemetry import trace
+from opentelemetry.context import set_value
 from opentelemetry.trace import get_current_span
 
 from baserun.grpc import (
@@ -25,15 +26,11 @@ logger = logging.getLogger(__name__)
 
 
 @contextmanager
-def with_session(
-    user_identifier: str, session_identifier: str = None, auto_end: bool = True
-):
+def with_session(user_identifier: str, session_identifier: str = None, auto_end: bool = True):
     # If there's a current span, start the session in that context. Otherwise, create a parent span
     current_span = get_current_span()
     if current_span.is_recording():
-        session = start_session(
-            user_identifier=user_identifier, session_identifier=session_identifier
-        )
+        session = start_session(user_identifier=user_identifier, session_identifier=session_identifier)
         try:
             yield
         finally:
@@ -43,10 +40,10 @@ def with_session(
     else:
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
+        old_context = Baserun.get_context()
         with tracer.start_as_current_span(name=UNTRACED_SPAN_PARENT_NAME):
-            session = start_session(
-                user_identifier=user_identifier, session_identifier=session_identifier
-            )
+            Baserun.propagate_context(old_context)
+            session = start_session(user_identifier=user_identifier, session_identifier=session_identifier)
             try:
                 yield
             finally:
@@ -85,6 +82,7 @@ def start_session(
         current_span = get_current_span()
         current_span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, session.id)
         current_span.set_attribute(SpanAttributes.BASERUN_USER_ID, user_identifier)
+        Baserun.set_context(set_value("session", session, Baserun.get_context()))
         return response.session
     except Exception as e:
         if hasattr(e, "details"):
