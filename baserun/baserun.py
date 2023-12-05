@@ -360,7 +360,7 @@ class Baserun:
 
     @staticmethod
     @contextmanager
-    def start_trace(*args, name: str = None, **kwargs) -> Run:
+    def start_trace(*args, name: str = None, end_on_exit=True, **kwargs) -> Run:
         if not Baserun._initialized:
             yield
 
@@ -394,7 +394,9 @@ class Baserun:
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
         old_context = Baserun.get_context()
-        with tracer.start_as_current_span(f"{PARENT_SPAN_NAME}.{name}", kind=SpanKind.CLIENT) as span:
+        with tracer.start_as_current_span(
+            f"{PARENT_SPAN_NAME}.{name}", kind=SpanKind.CLIENT, end_on_exit=end_on_exit
+        ) as span:
             Baserun.propagate_context(old_context)
             try:
                 yield run

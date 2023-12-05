@@ -48,9 +48,7 @@ def openai_chat_unwrapped(prompt="What is the capital of the US?", **kwargs) -> 
     return completion.choices[0].message.content
 
 
-async def openai_chat_unwrapped_async_streaming(
-    prompt="What is the capital of the US?", **kwargs
-) -> str:
+async def openai_chat_unwrapped_async_streaming(prompt="What is the capital of the US?", **kwargs) -> str:
     client = AsyncOpenAI()
     completion_generator = await client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -106,12 +104,7 @@ def openai_chat_tools(prompt="Say 'hello world'") -> FunctionCall:
     tool_calls = completion.choices[0].message.tool_calls
     baserun.check_includes(
         "openai_chat_functions.function_call",
-        json.dumps(
-            [
-                {"id": call.id, "type": call.type, "function": call.function.__dict__}
-                for call in tool_calls
-            ]
-        ),
+        json.dumps([{"id": call.id, "type": call.type, "function": call.function.__dict__} for call in tool_calls]),
         "say",
     )
     return tool_calls
@@ -140,9 +133,7 @@ def openai_chat_functions(prompt="Say 'hello world'") -> FunctionCall:
         function_call={"name": "say"},
     )
     fn_call = completion.choices[0].message.function_call
-    baserun.check_includes(
-        "openai_chat_functions.function_call", json.dumps(fn_call.__dict__), "say"
-    )
+    baserun.check_includes("openai_chat_functions.function_call", json.dumps(fn_call.__dict__), "say")
     return fn_call
 
 
@@ -180,9 +171,7 @@ def openai_chat_functions_streaming(prompt="Say 'hello world'") -> FunctionCall:
             if function_call.arguments:
                 function_arguments += function_call.arguments
 
-    baserun.check_includes(
-        "openai_chat_functions.function_call_streaming", function_name, "say"
-    )
+    baserun.check_includes("openai_chat_functions.function_call_streaming", function_name, "say")
     return {"name": function_name, "arguments": function_arguments}
 
 
@@ -231,9 +220,7 @@ def openai_chat_error(prompt="What is the capital of the US?"):
             messages=[{"role": "user", "content": prompt}],
         )
     except NotFoundError as e:
-        baserun.check_includes(
-            "openai_chat_async_streaming.content", e.message, "does not exist"
-        )
+        baserun.check_includes("openai_chat_async_streaming.content", e.message, "does not exist")
         raise e
     finally:
         openai.api_type = original_api_type
@@ -264,9 +251,7 @@ async def openai_completion_async(
     prompt="Human: say this is a test\nAssistant: ",
 ) -> str:
     client = AsyncOpenAI()
-    completion = await client.completions.create(
-        model="text-davinci-003", prompt=prompt
-    )
+    completion = await client.completions.create(model="text-davinci-003", prompt=prompt)
     content = completion.choices[0].text
     baserun.check_includes("openai_chat_async_streaming.content", content, "test")
     return content
@@ -275,9 +260,7 @@ async def openai_completion_async(
 @baserun.trace
 def openai_completion_streaming(prompt="Human: say this is a test\nAssistant: ") -> str:
     client = OpenAI()
-    completion_generator = client.completions.create(
-        model="text-davinci-003", prompt=prompt, stream=True
-    )
+    completion_generator = client.completions.create(model="text-davinci-003", prompt=prompt, stream=True)
 
     content = ""
     for chunk in completion_generator:
@@ -293,9 +276,7 @@ async def openai_completion_async_streaming(
     prompt="Human: say this is a test\nAssistant: ",
 ) -> str:
     client = AsyncOpenAI()
-    completion_generator = await client.completions.create(
-        model="text-davinci-003", prompt=prompt, stream=True
-    )
+    completion_generator = await client.completions.create(model="text-davinci-003", prompt=prompt, stream=True)
     content = ""
     async for chunk in completion_generator:
         if new_content := chunk.choices[0].text:
@@ -356,9 +337,7 @@ def openai_chat_seed(prompt="What is the capital of the US?") -> str:
     return content
 
 
-def openai_contextmanager(
-    prompt="What is the capital of the US?", name: str = "This is a run that is named"
-) -> str:
+def openai_contextmanager(prompt="What is the capital of the US?", name: str = "This is a run that is named") -> str:
     client = OpenAI()
     with baserun.start_trace(name=name) as run:
         completion = client.chat.completions.create(
@@ -369,15 +348,11 @@ def openai_contextmanager(
         run.result = content
 
 
-TEMPLATES = {
-    "Question & Answer": "Answer the following question in the form of a limerick: {question}"
-}
+TEMPLATES = {"Question & Answer": "Answer the following question in the form of a limerick: {question}"}
 
 
 @baserun.trace
-async def use_template(
-    question="What is the capital of the US?", template_name: str = "Question & Answer"
-):
+async def use_template(question="What is the capital of the US?", template_name: str = "Question & Answer"):
     prompt = await baserun.aformat_prompt(
         template_string=TEMPLATES.get(template_name),
         template_name=template_name,
@@ -409,9 +384,7 @@ def display_templates():
 
 
 @baserun.trace
-def use_sessions(
-    prompt="What is the capital of the US?", user_identifier="example@test.com"
-) -> str:
+def use_sessions(prompt="What is the capital of the US?", user_identifier="example@test.com") -> str:
     client = OpenAI()
     with baserun.with_session(user_identifier=user_identifier):
         completion = client.chat.completions.create(
@@ -420,9 +393,7 @@ def use_sessions(
         )
         content = completion.choices[0].message.content
         baserun.check_includes("openai_chat.content", content, "Washington")
-        baserun.log(
-            f"OpenAI Chat Results", payload={"result": content, "input": prompt}
-        )
+        baserun.log(f"OpenAI Chat Results", payload={"result": content, "input": prompt})
         return content
 
 
@@ -443,12 +414,79 @@ async def use_annotation(question="What is the capital of the US?") -> str:
         metadata={"comment": "This is correct but not concise enough"},
     )
     annotation.check_includes("openai_chat.content", "Washington", content)
-    annotation.log(
-        f"OpenAI Chat Results", metadata={"result": content, "input": question}
-    )
+    annotation.log(f"OpenAI Chat Results", metadata={"result": content, "input": question})
     await annotation.asubmit()
 
     return content
+
+
+def use_langchain(question="What is the capital of the US?") -> str:
+    from baserun.instrumentation.langchain import BaserunCallbackHandler
+    from langchain.chat_models import ChatOpenAI
+    from langchain_core.messages import HumanMessage
+
+    chat = ChatOpenAI(callbacks=[BaserunCallbackHandler()])
+    messages = [HumanMessage(content=question)]
+    response = chat.invoke(messages)
+    return response.content
+
+
+def use_langchain_tools(question="What is the capital of the US?") -> str:
+    # Note: To run this, you must `pip install wikipedia langchain`
+    from langchain.chat_models import ChatOpenAI
+    from langchain_core.messages import HumanMessage
+    from langchain.tools.render import format_tool_to_openai_tool
+    from langchain.agents import load_tools
+    from baserun.instrumentation.langchain import BaserunCallbackHandler
+
+    chat = ChatOpenAI(callbacks=[BaserunCallbackHandler()])
+    tools = [format_tool_to_openai_tool(t) for t in load_tools(["wikipedia"], llm=chat)]
+    messages = [HumanMessage(content=question)]
+    response = chat.invoke(messages, tools=tools)
+    return json.dumps(response.additional_kwargs.get("tool_calls"))
+
+
+def use_langchain_chain(question="What is the capital of {location}?") -> str:
+    from langchain.chat_models import ChatOpenAI
+    from langchain_core.prompts import PromptTemplate
+    from langchain.chains import LLMChain
+    from baserun.instrumentation.langchain import BaserunCallbackHandler
+
+    chat = ChatOpenAI()
+
+    chain = LLMChain(
+        llm=chat,
+        prompt=PromptTemplate(template=question, input_variables=["location"]),
+        callbacks=[BaserunCallbackHandler()],
+    )
+    chain.run(location="the US")
+    chain.run(location="California")
+    response = chain.run(location="Georgia")
+    return response
+
+
+def use_langchain_agent_tools(question="Using Wikipedia, look up the population of {location} as of 2023.") -> str:
+    # Note: To run this, you must `pip install wikipedia langchain`
+    from langchain.chat_models import ChatOpenAI
+    from langchain_core.prompts import PromptTemplate
+    from langchain.agents import initialize_agent
+    from langchain.agents import AgentType
+    from langchain.agents import load_tools
+    from langchain_core.callbacks import BaseCallbackManager
+    from baserun.instrumentation.langchain import BaserunCallbackHandler
+
+    chat = ChatOpenAI()
+    tools = load_tools(["wikipedia"])
+    prompt_template = PromptTemplate(template=question, input_variables=["location"])
+
+    agent = initialize_agent(
+        tools,
+        chat,
+        agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        callback_manager=BaseCallbackManager(handlers=[BaserunCallbackHandler()]),
+    )
+    response = agent.run(prompt_template.format_prompt(location="California"))
+    return response
 
 
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):
@@ -481,23 +519,15 @@ if __name__ == "__main__":
     Baserun.init()
 
     parser = argparse.ArgumentParser(description="Execute a function with a prompt.")
-    parser.add_argument(
-        "function_to_call", type=str, help="Name of the function to call"
-    )
-    parser.add_argument(
-        "--prompt", type=str, help="Prompt to pass to the function", default=None
-    )
+    parser.add_argument("function_to_call", type=str, help="Name of the function to call")
+    parser.add_argument("--prompt", type=str, help="Prompt to pass to the function", default=None)
 
     parsed_args = parser.parse_args()
 
     # Resolve the string function name to the function object
     function_name = parsed_args.function_to_call
     global_variables = {f: globals().get(f) for f in globals()}
-    traced_functions = {
-        n: f
-        for n, f in global_variables.items()
-        if callable(f) and f.__name__ == "wrapper"
-    }
+    traced_functions = {n: f for n, f in global_variables.items() if callable(f) and f.__name__ == "wrapper"}
     if function_name == "all":
         for name, func in traced_functions.items():
             print(f"===== Calling function {name} =====\n")
