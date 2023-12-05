@@ -44,6 +44,9 @@ class BaserunEvaluationFailedException(Exception):
     pass
 
 
+baserun_contexts: dict[bytes, Context] = None
+
+
 class Baserun:
     _initialized = False
 
@@ -59,10 +62,10 @@ class Baserun:
 
     submission_service: SubmissionServiceStub = None
     async_submission_service: SubmissionServiceStub = None
-    contexts: dict[bytes, Context] = None
 
     @staticmethod
     def init(instrument: bool = True) -> None:
+        global baserun_contexts
         if Baserun._initialized:
             return
 
@@ -71,24 +74,25 @@ class Baserun:
         Baserun.used_template_parameters = {}
 
         current_span = get_current_span()
-        Baserun.contexts = {current_span.get_span_context().trace_id: Context()}
+        baserun_contexts = {current_span.get_span_context().trace_id: Context()}
         if instrument:
             Baserun.instrument()
 
     @staticmethod
     def set_context(new_context: Context):
+        global baserun_contexts
         current_span = get_current_span()
         trace_id = current_span.get_span_context().trace_id
-        Baserun.contexts[trace_id] = new_context
+        baserun_contexts[trace_id] = new_context
 
     @staticmethod
     def get_context() -> Context:
         current_span = get_current_span()
         trace_id = current_span.get_span_context().trace_id
-        if trace_id not in Baserun.contexts:
-            Baserun.contexts[trace_id] = Context()
+        if trace_id not in baserun_contexts:
+            baserun_contexts[trace_id] = Context()
 
-        return Baserun.contexts[trace_id]
+        return baserun_contexts[trace_id]
 
     @staticmethod
     def propagate_context(old_context: Context):
@@ -99,7 +103,7 @@ class Baserun:
         for k, v in old_context.items():
             new_context = set_value(k, v, new_context)
 
-        Baserun.contexts[trace_id] = new_context
+        baserun_contexts[trace_id] = new_context
 
     @staticmethod
     def instrument(processor_class: Type[SpanProcessor] = None):
@@ -149,7 +153,7 @@ class Baserun:
         if current_run:
             return current_run
 
-        root_context = Baserun.contexts.get(0)
+        root_context = baserun_contexts.get(0)
         if root_context:
             return get_value(SpanAttributes.BASERUN_RUN, root_context)
 

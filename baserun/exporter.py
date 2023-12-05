@@ -41,7 +41,7 @@ class BaserunExporter(SpanExporter):
         return [v for k, v in sorted(result.items())]
 
     def export(self, spans: Sequence[ReadableSpan]):
-        from baserun import Baserun
+        from baserun import baserun
 
         for span in spans:
             if span.name.startswith(PARENT_SPAN_NAME) or not span.name.startswith("baserun"):
@@ -94,7 +94,13 @@ class BaserunExporter(SpanExporter):
 
             vendor = span.attributes.get(SpanAttributes.LLM_VENDOR)
 
-            run: Run = get_value(SpanAttributes.BASERUN_RUN, Baserun.contexts.get(span.get_span_context().trace_id))
+            context = baserun.baserun_contexts.get(span.get_span_context().trace_id)
+            # If we can't find it by trace ID just use the root context
+            if not context:
+                context = baserun.baserun_contexts.get(0)
+
+            run: Run = get_value(SpanAttributes.BASERUN_RUN, context)
+
             if not run:
                 logger.warning("Could not submit span because a run could not be found.")
                 return
