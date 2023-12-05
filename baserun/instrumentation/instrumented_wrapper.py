@@ -119,6 +119,8 @@ def instrumented_wrapper(wrapped_fn: Callable, instrumentor: "BaseInstrumentor",
         tracer = tracer_provider.get_tracer("baserun")
 
         parent_span: _Span = get_current_span()
+        # Check to see if this parent trace is _our_ trace
+        # Check that if it's not our trace that the span context is still useful
         if not parent_span.is_recording() and not Baserun.current_test_suite:
             run = Baserun.get_or_create_current_run(
                 name=UNTRACED_SPAN_PARENT_NAME,

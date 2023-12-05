@@ -7,7 +7,7 @@ import pytest
 from dotenv import load_dotenv
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
-from baserun import Baserun
+from baserun import Baserun, baserun
 from baserun.grpc import (
     get_or_create_async_submission_service,
     get_or_create_submission_service,
@@ -19,7 +19,7 @@ load_dotenv()
 
 @pytest.fixture(autouse=True)
 def clear_context():
-    Baserun.contexts = {}
+    baserun.baserun_contexts = {}
 
 
 @pytest.fixture(autouse=True)
