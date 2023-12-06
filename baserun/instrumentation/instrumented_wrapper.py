@@ -194,7 +194,7 @@ def setup_span(span_name: str, parent_span: _Span) -> dict:
         request_type = "chat"
 
     if not parent_span or not parent_span.is_recording():
-        return
+        return {"name": f"baserun.{span_name}", "kind": SpanKind.CLIENT, "attributes": {}}
 
     parent_span.set_attribute(SpanAttributes.LLM_REQUEST_TYPE, request_type)
 
