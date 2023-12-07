@@ -352,12 +352,13 @@ TEMPLATES = {"Question & Answer": "Answer the following question in the form of 
 
 
 @baserun.trace
-async def use_template(question="What is the capital of the US?", template_name: str = "Question & Answer"):
-    prompt = await baserun.aformat_prompt(
+def use_template(question="What is the capital of the US?", template_name: str = "Question & Answer"):
+    prompt = baserun.format_prompt(
         template_string=TEMPLATES.get(template_name),
         template_name=template_name,
         parameters={"question": question},
     )
+
     client = OpenAI()
     completion = client.chat.completions.create(
         model="gpt-4-1106-preview",
@@ -370,12 +371,31 @@ async def use_template(question="What is the capital of the US?", template_name:
 
 
 @baserun.trace
+async def use_template_async(question="What is the capital of the US?", template_name: str = "Question & Answer"):
+    prompt = await baserun.aformat_prompt(
+        template_string=TEMPLATES.get(template_name),
+        template_name=template_name,
+        parameters={"question": question},
+    )
+
+    client = AsyncOpenAI()
+    completion = await client.chat.completions.create(
+        model="gpt-4-1106-preview",
+        messages=[{"role": "system", "content": prompt}],
+        seed=1234,
+    )
+    content = completion.choices[0].message.content
+    baserun.check_includes("openai_chat.content", content, "Washington")
+    return content
+
+
+@baserun.trace
 def display_templates():
     templates = baserun.get_templates()
-    for template_name, template_version in templates.items():
+    for template_name, template in templates.items():
         print(template_name)
-        padded_string = "\n  | ".join(template_version.template_string.split("\n"))
-        print(f"| Tag: {template_version.tag}")
+        padded_string = "\n  | ".join(template.active_version.template_string.split("\n"))
+        print(f"| Tag: {template.active_version.tag}")
         print(f"| Template: ")
         print(padded_string.strip())
         print("")

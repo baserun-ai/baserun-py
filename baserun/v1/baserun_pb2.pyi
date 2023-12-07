@@ -111,6 +111,7 @@ class Run(_message.Message):
         "result",
         "error",
         "session_id",
+        "environment",
     ]
 
     class RunType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
@@ -130,6 +131,7 @@ class Run(_message.Message):
     RESULT_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    ENVIRONMENT_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     suite_id: str
     name: str
@@ -141,6 +143,7 @@ class Run(_message.Message):
     result: str
     error: str
     session_id: str
+    environment: str
     def __init__(
         self,
         run_id: _Optional[str] = ...,
@@ -156,6 +159,7 @@ class Run(_message.Message):
         result: _Optional[str] = ...,
         error: _Optional[str] = ...,
         session_id: _Optional[str] = ...,
+        environment: _Optional[str] = ...,
     ) -> None: ...
 
 class Log(_message.Message):
@@ -781,23 +785,30 @@ class EndSessionResponse(_message.Message):
     ) -> None: ...
 
 class SubmitTemplateVersionRequest(_message.Message):
-    __slots__ = ["template_version"]
+    __slots__ = ["template_version", "environment"]
     TEMPLATE_VERSION_FIELD_NUMBER: _ClassVar[int]
+    ENVIRONMENT_FIELD_NUMBER: _ClassVar[int]
     template_version: TemplateVersion
+    environment: str
     def __init__(
-        self, template_version: _Optional[_Union[TemplateVersion, _Mapping]] = ...
+        self,
+        template_version: _Optional[_Union[TemplateVersion, _Mapping]] = ...,
+        environment: _Optional[str] = ...,
     ) -> None: ...
 
 class SubmitTemplateVersionResponse(_message.Message):
-    __slots__ = ["message", "template_version"]
+    __slots__ = ["message", "template_version", "template"]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_VERSION_FIELD_NUMBER: _ClassVar[int]
+    TEMPLATE_FIELD_NUMBER: _ClassVar[int]
     message: str
     template_version: TemplateVersion
+    template: Template
     def __init__(
         self,
         message: _Optional[str] = ...,
         template_version: _Optional[_Union[TemplateVersion, _Mapping]] = ...,
+        template: _Optional[_Union[Template, _Mapping]] = ...,
     ) -> None: ...
 
 class SubmitModelConfigRequest(_message.Message):
@@ -839,8 +850,10 @@ class SubmitUserResponse(_message.Message):
     ) -> None: ...
 
 class GetTemplatesRequest(_message.Message):
-    __slots__ = []
-    def __init__(self) -> None: ...
+    __slots__ = ["environment"]
+    ENVIRONMENT_FIELD_NUMBER: _ClassVar[int]
+    environment: str
+    def __init__(self, environment: _Optional[str] = ...) -> None: ...
 
 class GetTemplatesResponse(_message.Message):
     __slots__ = ["templates"]
