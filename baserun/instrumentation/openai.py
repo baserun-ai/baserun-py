@@ -257,8 +257,15 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
     @staticmethod
     async def async_generator_wrapper(original_generator: collections.abc.AsyncIterator, span: _Span):
+        logged_failure = False
         async for value in original_generator:
-            OpenAIInstrumentor._handle_generator_value(value, span)
+            try:
+                OpenAIInstrumentor._handle_generator_value(value, span)
+            except Exception as e:
+                # Avoid spamming failures for each token
+                if not logged_failure:
+                    logger.info(f"Baserun couldn't handle generator value {value}: {e}")
+                    logged_failure = True
 
             yield value
 
