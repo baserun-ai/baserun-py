@@ -50,6 +50,7 @@ message Run {
     string result = 9;
     string error = 10;
     string session_id = 11;
+    optional string environment = 12;
 
     enum RunType {
         RUN_TYPE_TEST = 0;
@@ -304,11 +305,13 @@ message EndSessionResponse {
 
 message SubmitTemplateVersionRequest {
     TemplateVersion template_version = 1;
+    string environment = 2;
 }
 
 message SubmitTemplateVersionResponse {
     string message = 1;
     TemplateVersion template_version = 2;
+    Template template = 3;
 }
 
 message SubmitModelConfigRequest {
@@ -330,6 +333,7 @@ message SubmitUserResponse {
 }
 
 message GetTemplatesRequest {
+    string environment = 1;
 }
 
 message GetTemplatesResponse {

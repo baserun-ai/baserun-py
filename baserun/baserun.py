@@ -1,6 +1,7 @@
 import inspect
 import json
 import logging
+import os
 import traceback
 import uuid
 from contextlib import contextmanager
@@ -30,7 +31,7 @@ from .v1.baserun_pb2 import (
     TestSuite,
     StartRunRequest,
     EndUser,
-    TemplateVersion,
+    Template,
 )
 from .v1.baserun_pb2_grpc import SubmissionServiceStub
 
@@ -54,10 +55,11 @@ class Baserun:
 
     current_test_suite: TestSuite = None
     sessions: dict[str, EndUser] = None
+    environment: str = os.environ.get("ENVIRONMENT", "Production")
 
     evals = Evals
 
-    templates: dict[str, TemplateVersion] = None
+    templates: dict[str, Template] = None
     used_template_parameters: dict[str, list[dict[str, Any]]] = None
 
     submission_service: SubmissionServiceStub = None
@@ -199,6 +201,7 @@ class Baserun:
             "name": name,
             "metadata": json.dumps(metadata or {}),
             "session_id": session_id,
+            "environment": Baserun.environment,
         }
 
         if suite_id or Baserun.current_test_suite:

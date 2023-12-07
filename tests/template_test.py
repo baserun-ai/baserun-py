@@ -24,9 +24,7 @@ def test_format_prompt_string(mock_services):
 
     assert formatted_template == f"Hello {name}"
 
-    mock_submit_template_version = mock_services[
-        "submission_service"
-    ].SubmitTemplateVersion
+    mock_submit_template_version = mock_services["submission_service"].SubmitTemplateVersion
     assert mock_submit_template_version.call_count == 1
     args, kwargs = mock_submit_template_version.call_args_list[0]
 
@@ -50,9 +48,7 @@ def test_format_prompt_jinja2(mock_services):
 
     assert formatted_template == f"Hello {name}"
 
-    mock_submit_template_version = mock_services[
-        "submission_service"
-    ].SubmitTemplateVersion
+    mock_submit_template_version = mock_services["submission_service"].SubmitTemplateVersion
     assert mock_submit_template_version.call_count == 1
     args, kwargs = mock_submit_template_version.call_args_list[0]
 
@@ -63,16 +59,13 @@ def test_format_prompt_jinja2(mock_services):
     assert request.template_version.parameter_definition == '{"name": "string"}'
 
 
-@pytest.mark.skip
 def test_get_template(mock_services):
     template_name = "my_template"
     template_string = "Hello {{name}}"
     tag = "latest"
 
     template = Template(id=str(uuid4()), name=template_name)
-    template_version = TemplateVersion(
-        id=str(uuid4()), tag=tag, template_string=template_string
-    )
+    template_version = TemplateVersion(id=str(uuid4()), tag=tag, template_string=template_string)
     template.active_version.CopyFrom(template_version)
     template_version.template.CopyFrom(template)
     template.template_versions.extend([template_version])
@@ -80,11 +73,12 @@ def test_get_template(mock_services):
     mock_get_templates = mock_services["submission_service"].GetTemplates
     mock_get_templates.return_value = GetTemplatesResponse(templates=[template])
 
-    found_template_version = get_template(name=template_name)
-    found_template = found_template_version.template
+    found_template = get_template(name=template_name)
+    found_template_version = found_template.active_version
 
-    assert found_template.template.name == template_name
-    assert found_template.id == template_version.id
+    assert found_template.name == template_name
+    assert found_template.id == template.id
+    assert found_template_version.id == template_version.id
     assert found_template_version.tag == tag
 
 
@@ -101,9 +95,7 @@ async def test_aformat_prompt_string(mock_services):
 
     assert formatted_template == f"Hello {name}"
 
-    mock_submit_template_version = mock_services[
-        "async_submission_service"
-    ].SubmitTemplateVersion
+    mock_submit_template_version = mock_services["async_submission_service"].SubmitTemplateVersion
     assert mock_submit_template_version.call_count == 1
     args, kwargs = mock_submit_template_version.call_args_list[0]
 
@@ -128,9 +120,7 @@ async def test_aformat_prompt_jinja2(mock_services):
 
     assert formatted_template == f"Hello {name}"
 
-    mock_submit_template_version = mock_services[
-        "async_submission_service"
-    ].SubmitTemplateVersion
+    mock_submit_template_version = mock_services["async_submission_service"].SubmitTemplateVersion
     assert mock_submit_template_version.call_count == 1
     args, kwargs = mock_submit_template_version.call_args_list[0]
 

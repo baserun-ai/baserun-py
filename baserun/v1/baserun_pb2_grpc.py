@@ -247,9 +247,7 @@ def add_SubmissionServiceServicer_to_server(servicer, server):
             response_serializer=v1_dot_baserun__pb2.SubmitAnnotationsResponse.SerializeToString,
         ),
     }
-    generic_handler = grpc.method_handlers_generic_handler(
-        "baserun.v1.SubmissionService", rpc_method_handlers
-    )
+    generic_handler = grpc.method_handlers_generic_handler("baserun.v1.SubmissionService", rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
