@@ -37,6 +37,7 @@ def async_instrumented_wrapper(wrapped_fn: Callable, instrumentor: "BaseInstrume
         tracer = tracer_provider.get_tracer("baserun")
 
         parent_span: _Span = get_current_span()
+        # If this is an untraced LLM call, go ahead and create a parent trace that will contain just this one call
         if not parent_span.is_recording() and not Baserun.current_test_suite:
             run = Baserun.get_or_create_current_run(
                 name=UNTRACED_SPAN_PARENT_NAME,
@@ -51,46 +52,45 @@ def async_instrumented_wrapper(wrapped_fn: Callable, instrumentor: "BaseInstrume
             Baserun.propagate_context(old_context)
 
         session_id = get_session_id()
+        is_streaming = False
         with trace.use_span(parent_span, end_on_exit=False):
-            span = tracer.start_span(**setup_span(span_name=span_name, parent_span=parent_span))
+            try:
+                # Activate the span in the current context, but don't end it automatically
+                with tracer.start_as_current_span(
+                    **setup_span(span_name=span_name, parent_span=parent_span), end_on_exit=False
+                ) as span:
+                    if session_id:
+                        span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, session_id)
 
-        if session_id:
-            span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, session_id)
+                    # Capture request attributes
+                    set_request_attributes(instrumentor=instrumentor, span=span, kwargs=kwargs)
 
-        auto_end_span = True
-        try:
-            # Activate the span in the current context, but don't end it automatically
-            with trace.use_span(span, end_on_exit=False):
-                # Capture request attributes
-                set_request_attributes(instrumentor=instrumentor, span=span, kwargs=kwargs)
+                    # Actually call the wrapped method
+                    try:
+                        response = await wrapped_fn(*args, **kwargs)
+                        span.set_status(Status(StatusCode.OK))
+                    except Exception as e:
+                        span.set_status(Status(description=str(e), status_code=StatusCode.ERROR))
+                        raise e
 
-                # Actually call the wrapped method
-                try:
-                    response = await wrapped_fn(*args, **kwargs)
+                    # If this is a streaming response, wrap it, so we can capture each chunk
+                    if isinstance(response, AsyncIterator):
+                        is_streaming = True
+                        wrapped_response = instrumentor.async_generator_wrapper(response, span)
+                        # The span will be ended inside the generator once it's finished
+                        return wrapped_response
 
-                    span.set_status(Status(StatusCode.OK))
-                except Exception as e:
-                    span.set_status(
-                        Status(
-                            description=str(e),
-                            status_code=StatusCode.ERROR,
-                        )
-                    )
-                    raise e
-
-                # If this is a streaming response, wrap it, so we can capture each chunk
-                if isinstance(response, AsyncIterator):
-                    wrapped_response = instrumentor.async_generator_wrapper(response, span)
-                    # The span will be ended inside the generator once it's finished
-                    auto_end_span = False
-                    return wrapped_response
-
-                handle_response(instrumentor, span, response)
-        finally:
-            if auto_end_span:
-                if span.is_recording():
+                    handle_response(instrumentor, span, response)
+            except Exception as e:
+                # If there's an error fall back to the original function. This may cause a duplicate call.
+                logger.warning(f"Baserun failed to handle streaming response {e}")
+                return await wrapped_fn(*args, **kwargs)
+            finally:
+                # If the span wasn't streaming we end it here
+                if not is_streaming and span.is_recording():
                     span.end()
 
+                # If the parent was untraced go ahead and end it
                 if (
                     parent_span.name == UNTRACED_SPAN_PARENT_NAME
                     and parent_span.is_recording()
@@ -98,7 +98,7 @@ def async_instrumented_wrapper(wrapped_fn: Callable, instrumentor: "BaseInstrume
                 ):
                     parent_span.end()
 
-        return response
+            return response
 
     return instrumented_function
 
