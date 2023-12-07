@@ -92,8 +92,8 @@ def async_instrumented_wrapper(wrapped_fn: Callable, instrumentor: "BaseInstrume
 
                 # If the parent was untraced go ahead and end it
                 if (
-                    parent_span.name == UNTRACED_SPAN_PARENT_NAME
-                    and parent_span.is_recording()
+                    parent_span.is_recording()
+                    and parent_span.name == UNTRACED_SPAN_PARENT_NAME
                     and not Baserun.current_test_suite
                 ):
                     parent_span.end()
