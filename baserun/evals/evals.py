@@ -1,8 +1,10 @@
 import json
 import logging
+import os
 import time
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
+import requests
 from openai import OpenAI
 
 from baserun.evals.json import is_valid_json
@@ -45,11 +47,7 @@ def get_choice_and_score(choice_scores: Dict[str, float]):
     def inner(output: str) -> Tuple[str, float]:
         choices = list(choice_scores.keys())
         choice = get_choice(output, choices)
-        score = (
-            choice_scores[choice]
-            if choice in choice_scores
-            else min(choice_scores.values())
-        )
+        score = choice_scores[choice] if choice in choice_scores else min(choice_scores.values())
         return choice, score
 
     return inner
@@ -79,9 +77,7 @@ class Evals:
 
         run = Baserun.current_run()
         try:
-            get_or_create_submission_service().SubmitEval.future(
-                SubmitEvalRequest(eval=eval_message, run=run)
-            )
+            get_or_create_submission_service().SubmitEval.future(SubmitEvalRequest(eval=eval_message, run=run))
         except Exception as e:
             logger.warning(f"Failed to submit eval to Baserun: {e}")
 
@@ -114,9 +110,7 @@ class Evals:
         return result
 
     @staticmethod
-    def fuzzy_match(
-        name: str, submission: str, expected: Union[str, List[str]]
-    ) -> bool:
+    def fuzzy_match(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
         expected_list = [expected] if isinstance(expected, str) else expected
         result = any(submission in item or item in submission for item in expected)
         Evals._store_eval_data(
@@ -144,9 +138,7 @@ class Evals:
         return result
 
     @staticmethod
-    def not_includes(
-        name: str, submission: str, expected: Union[str, List[str]]
-    ) -> bool:
+    def not_includes(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
         expected_list = [expected] if isinstance(expected, str) else expected
         result = not any(item in submission for item in expected)
         Evals._store_eval_data(
@@ -160,9 +152,7 @@ class Evals:
         return result
 
     @staticmethod
-    def not_fuzzy_match(
-        name: str, submission: str, expected: Union[str, List[str]]
-    ) -> bool:
+    def not_fuzzy_match(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
         expected_list = [expected] if isinstance(expected, str) else expected
         result = not any(submission in item or item in submission for item in expected)
         Evals._store_eval_data(
@@ -189,9 +179,7 @@ class Evals:
         return result
 
     @staticmethod
-    def custom(
-        name: str, submission: str, eval_function: Callable[[str], bool]
-    ) -> bool:
+    def custom(name: str, submission: str, eval_function: Callable[[str], bool]) -> bool:
         result = eval_function(submission)
         Evals._store_eval_data(
             name=name,
@@ -204,13 +192,40 @@ class Evals:
         return result
 
     @staticmethod
-    async def custom_async(
-        name: str, submission: str, evaluation_func: Callable[[str], Awaitable[bool]]
-    ) -> bool:
+    async def custom_async(name: str, submission: str, evaluation_func: Callable[[str], Awaitable[bool]]) -> bool:
         result = await evaluation_func(submission)
         Evals._store_eval_data(
             name=name,
             eval_type="custom_async",
+            result=str(result).lower(),
+            score=int(result),
+            submission=submission,
+            payload={},
+        )
+        return result
+
+    def _content_contains_attack(content: str, api_key: str) -> bool:
+        url = "https://api.promptarmor.com/v1/check_content"
+
+        headers = {"accept": "application/json; charset=utf-8", "content-type": "application/json", "Api-Key": api_key}
+
+        response = requests.post(url, data=content, headers=headers).json()
+        contains_attack = response.get("containsInjection")
+
+        return contains_attack
+
+    @staticmethod
+    def check_injection(name: str, submission: str) -> bool:
+        api_key = os.environ.get("PROMPTARMOR_API_KEY")
+        if not api_key:
+            logger.warning("PromptArmor is not configured, PROMPTARMOR_API_KEY must be set")
+
+            return False
+
+        result = Evals._content_contains_attack(submission, api_key)
+        Evals._store_eval_data(
+            name=name,
+            eval_type="check_injection",
             result=str(result).lower(),
             score=int(result),
             submission=submission,
@@ -266,9 +281,7 @@ class Evals:
         return choice
 
     @staticmethod
-    def model_graded_fact(
-        name: str, question: str, expert: str, submission: str
-    ) -> str:
+    def model_graded_fact(name: str, question: str, expert: str, submission: str) -> str:
         choices = ["A", "B", "C", "D", "E"]
         model_config = {
             "model": "gpt-4-0613",
@@ -305,9 +318,7 @@ class Evals:
         )
 
     @staticmethod
-    def model_graded_closedqa(
-        name: str, task: str, submission: str, criterion: str
-    ) -> str:
+    def model_graded_closedqa(name: str, task: str, submission: str, criterion: str) -> str:
         choice_scores = {"Yes": 1.0, "No": 0.0}
         choices = list(choice_scores.keys())
         model_config = {

@@ -509,6 +509,21 @@ def use_langchain_agent_tools(question="Using Wikipedia, look up the population 
     return response
 
 
+def use_promptarmor(question="What is the capital of {location}?") -> str:
+    contains_injection = baserun.evals.check_injection("question_injection", question)
+    if contains_injection:
+        print("Prompt contains an attack / injection! Not running")
+        return "Aborted"
+
+    client = OpenAI()
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": question}],
+    )
+    content = completion.choices[0].message.content
+    return content
+
+
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):
     function_to_call = functions.get(function_name)
     if function_to_call is None:
