@@ -55,7 +55,7 @@ class Baserun:
 
     current_test_suite: TestSuite = None
     sessions: dict[str, EndUser] = None
-    environment: str = os.environ.get("ENVIRONMENT", "Production")
+    environment: str = os.environ.get("ENVIRONMENT", "Development")
 
     evals = Evals
 
