@@ -6,23 +6,23 @@ import traceback
 import uuid
 from contextlib import contextmanager
 from datetime import datetime
-from importlib.util import find_spec
-from typing import Any, Type, TYPE_CHECKING
+from queue import Queue
+from threading import Thread
+from typing import Any, TYPE_CHECKING
 from typing import Callable, Dict, Optional, Union
 
 from opentelemetry import trace
 from opentelemetry.context import Context, set_value, get_value
-from opentelemetry.sdk.trace import TracerProvider, _Span, SpanProcessor
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace import TracerProvider, _Span
 from opentelemetry.trace import SpanKind, get_current_span
 
 from .constants import PARENT_SPAN_NAME
 from .evals.evals import Evals
-from .exporter import BaserunExporter
+from .exporter import worker
 from .grpc import get_or_create_submission_service
 from .helpers import get_session_id
-from .instrumentation.base_instrumentor import BaseInstrumentor
-from .instrumentation.span_attributes import SpanAttributes
+from .instrumentation.base_instrumentor import BaseInstrumentor, instrument
+from .instrumentation.span_attributes import BASERUN_RUN
 from .v1.baserun_pb2 import (
     Log,
     SubmitLogRequest,
@@ -55,7 +55,7 @@ class Baserun:
 
     current_test_suite: TestSuite = None
     sessions: dict[str, EndUser] = None
-    environment: str = os.environ.get("ENVIRONMENT", "Production")
+    environment: str = os.environ.get("ENVIRONMENT", "Development")
 
     evals = Evals
 
@@ -63,6 +63,8 @@ class Baserun:
     used_template_parameters: dict[str, list[dict[str, Any]]] = None
 
     submission_service: SubmissionServiceStub = None
+    exporter_queue: Queue = None
+    exporter_thread: Thread = None
     async_submission_service: SubmissionServiceStub = None
 
     @staticmethod
@@ -70,6 +72,11 @@ class Baserun:
         global baserun_contexts
         if Baserun._initialized:
             return
+
+        Baserun.exporter_queue = Queue()
+        Baserun.exporter_thread = Thread(target=worker, args=(Baserun.exporter_queue,))
+        Baserun.exporter_thread.daemon = True
+        Baserun.exporter_thread.start()
 
         Baserun._initialized = True
         Baserun.templates = {}
@@ -108,7 +115,7 @@ class Baserun:
         baserun_contexts[trace_id] = new_context
 
     @staticmethod
-    def instrument(processor_class: Type[SpanProcessor] = None):
+    def instrument():
         if not Baserun._instrumentors:
             Baserun._instrumentors = []
 
@@ -121,25 +128,7 @@ class Baserun:
             tracer_provider = TracerProvider()
             trace.set_tracer_provider(tracer_provider)
 
-        processor_class = processor_class or BatchSpanProcessor
-        processor = processor_class(BaserunExporter())
-        tracer_provider.add_span_processor(processor)
-
-        if find_spec("openai") is not None:
-            from .instrumentation.openai import OpenAIInstrumentor
-
-            instrumentor = OpenAIInstrumentor()
-            if not instrumentor.is_instrumented_by_opentelemetry:
-                instrumentor.instrument()
-            Baserun._instrumentors.append(instrumentor)
-
-        if find_spec("anthropic") is not None:
-            from .instrumentation.anthropic import AnthropicInstrumentor
-
-            instrumentor = AnthropicInstrumentor()
-            if not instrumentor.is_instrumented_by_opentelemetry:
-                instrumentor.instrument()
-            Baserun._instrumentors.append(instrumentor)
+        instrument()
 
     @staticmethod
     def uninstrument():
@@ -151,13 +140,13 @@ class Baserun:
     @staticmethod
     def current_run() -> Union[Run, None]:
         """Gets the current run"""
-        current_run = get_value(SpanAttributes.BASERUN_RUN, Baserun.get_context())
+        current_run = get_value(BASERUN_RUN, Baserun.get_context())
         if current_run:
             return current_run
 
         root_context = baserun_contexts.get(0)
         if root_context:
-            return get_value(SpanAttributes.BASERUN_RUN, root_context)
+            return get_value(BASERUN_RUN, root_context)
 
         return None
 
@@ -165,7 +154,7 @@ class Baserun:
     def _finish_run(run: Run, span: _Span = None):
         try:
             run.completion_timestamp.FromDatetime(datetime.utcnow())
-            Baserun.set_context(set_value(SpanAttributes.BASERUN_RUN, run, Baserun.get_context()))
+            Baserun.set_context(set_value(BASERUN_RUN, run, Baserun.get_context()))
             get_or_create_submission_service().EndRun.future(EndRunRequest(run=run))
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
@@ -209,7 +198,7 @@ class Baserun:
 
         run = Run(**run_data)
         run.start_timestamp.FromDatetime(start_timestamp or datetime.utcnow())
-        Baserun.set_context(set_value(SpanAttributes.BASERUN_RUN, run, Baserun.get_context()))
+        Baserun.set_context(set_value(BASERUN_RUN, run, Baserun.get_context()))
 
         if completion_timestamp:
             run.completion_timestamp.FromDatetime(completion_timestamp)

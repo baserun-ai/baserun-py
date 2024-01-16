@@ -20,7 +20,7 @@ from baserun.v1.baserun_pb2 import (
 )
 from . import Baserun
 from .constants import UNTRACED_SPAN_PARENT_NAME
-from .instrumentation.span_attributes import SpanAttributes
+from .instrumentation.span_attributes import BASERUN_SESSION_ID, BASERUN_USER_ID
 
 logger = logging.getLogger(__name__)
 
@@ -80,8 +80,8 @@ def start_session(
 
         # Set the session and user info on the span context
         current_span = get_current_span()
-        current_span.set_attribute(SpanAttributes.BASERUN_SESSION_ID, session.id)
-        current_span.set_attribute(SpanAttributes.BASERUN_USER_ID, user_identifier)
+        current_span.set_attribute(BASERUN_SESSION_ID, session.id)
+        current_span.set_attribute(BASERUN_USER_ID, user_identifier)
         Baserun.set_context(set_value("session", session, Baserun.get_context()))
         return response.session
     except Exception as e:

@@ -5,7 +5,7 @@ from typing import Union
 from opentelemetry.sdk.trace import _Span
 from opentelemetry.trace import get_current_span
 
-from baserun.instrumentation.span_attributes import SpanAttributes
+from baserun.instrumentation.span_attributes import BASERUN_SESSION_ID
 
 
 class BaserunProvider(Enum):
@@ -28,7 +28,7 @@ def get_session_id() -> Union[str, None]:
     span: _Span = get_current_span()
     if not span.is_recording():
         return
-    session_id = span.attributes.get(SpanAttributes.BASERUN_SESSION_ID)
+    session_id = span.attributes.get(BASERUN_SESSION_ID)
     return session_id
 
 

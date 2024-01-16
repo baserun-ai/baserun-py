@@ -5,7 +5,6 @@ from unittest.mock import call, Mock, create_autospec, AsyncMock
 import openai
 import pytest
 from dotenv import load_dotenv
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
 from baserun import Baserun, baserun
 from baserun.grpc import (
@@ -100,7 +99,7 @@ def pytest_sessionstart(session):
     Baserun.init(instrument=False)
     # mock_services()
     # Replace the batch processor so that things happen synchronously and not in a separate thread
-    Baserun.instrument(processor_class=SimpleSpanProcessor)
+    Baserun.instrument()
 
 
 def get_mock_objects(mock_services) -> tuple[Run, Span, Run, Run]:

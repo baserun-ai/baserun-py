@@ -132,7 +132,7 @@ message Span {
     optional bool echo = 31;
     optional string suffix = 32;
     optional int32 best_of = 33;
-
+    optional string x_request_id = 47;
 
     // Anthropic-specific attributes
     optional string log_id = 34;

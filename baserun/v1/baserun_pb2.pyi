@@ -3,19 +3,12 @@ from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import (
-    ClassVar as _ClassVar,
-    Iterable as _Iterable,
-    Mapping as _Mapping,
-    Optional as _Optional,
-    Union as _Union,
-)
+from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Status(_message.Message):
     __slots__ = ["message", "code"]
-
     class StatusCode(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = []
         STATUS_CODE_UNSPECIFIED: _ClassVar[Status.StatusCode]
@@ -28,11 +21,7 @@ class Status(_message.Message):
     CODE_FIELD_NUMBER: _ClassVar[int]
     message: str
     code: Status.StatusCode
-    def __init__(
-        self,
-        message: _Optional[str] = ...,
-        code: _Optional[_Union[Status.StatusCode, str]] = ...,
-    ) -> None: ...
+    def __init__(self, message: _Optional[str] = ..., code: _Optional[_Union[Status.StatusCode, str]] = ...) -> None: ...
 
 class ToolFunction(_message.Message):
     __slots__ = ["name", "arguments"]
@@ -40,9 +29,7 @@ class ToolFunction(_message.Message):
     ARGUMENTS_FIELD_NUMBER: _ClassVar[int]
     name: str
     arguments: str
-    def __init__(
-        self, name: _Optional[str] = ..., arguments: _Optional[str] = ...
-    ) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., arguments: _Optional[str] = ...) -> None: ...
 
 class ToolCall(_message.Message):
     __slots__ = ["id", "type", "function"]
@@ -52,24 +39,10 @@ class ToolCall(_message.Message):
     id: str
     type: str
     function: ToolFunction
-    def __init__(
-        self,
-        id: _Optional[str] = ...,
-        type: _Optional[str] = ...,
-        function: _Optional[_Union[ToolFunction, _Mapping]] = ...,
-    ) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., type: _Optional[str] = ..., function: _Optional[_Union[ToolFunction, _Mapping]] = ...) -> None: ...
 
 class Message(_message.Message):
-    __slots__ = [
-        "role",
-        "content",
-        "finish_reason",
-        "function_call",
-        "tool_calls",
-        "tool_call_id",
-        "name",
-        "system_fingerprint",
-    ]
+    __slots__ = ["role", "content", "finish_reason", "function_call", "tool_calls", "tool_call_id", "name", "system_fingerprint"]
     ROLE_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     FINISH_REASON_FIELD_NUMBER: _ClassVar[int]
@@ -86,34 +59,10 @@ class Message(_message.Message):
     tool_call_id: str
     name: str
     system_fingerprint: str
-    def __init__(
-        self,
-        role: _Optional[str] = ...,
-        content: _Optional[str] = ...,
-        finish_reason: _Optional[str] = ...,
-        function_call: _Optional[str] = ...,
-        tool_calls: _Optional[_Iterable[_Union[ToolCall, _Mapping]]] = ...,
-        tool_call_id: _Optional[str] = ...,
-        name: _Optional[str] = ...,
-        system_fingerprint: _Optional[str] = ...,
-    ) -> None: ...
+    def __init__(self, role: _Optional[str] = ..., content: _Optional[str] = ..., finish_reason: _Optional[str] = ..., function_call: _Optional[str] = ..., tool_calls: _Optional[_Iterable[_Union[ToolCall, _Mapping]]] = ..., tool_call_id: _Optional[str] = ..., name: _Optional[str] = ..., system_fingerprint: _Optional[str] = ...) -> None: ...
 
 class Run(_message.Message):
-    __slots__ = [
-        "run_id",
-        "suite_id",
-        "name",
-        "inputs",
-        "run_type",
-        "metadata",
-        "start_timestamp",
-        "completion_timestamp",
-        "result",
-        "error",
-        "session_id",
-        "environment",
-    ]
-
+    __slots__ = ["run_id", "suite_id", "name", "inputs", "run_type", "metadata", "start_timestamp", "completion_timestamp", "result", "error", "session_id", "environment"]
     class RunType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = []
         RUN_TYPE_TEST: _ClassVar[Run.RunType]
@@ -144,23 +93,7 @@ class Run(_message.Message):
     error: str
     session_id: str
     environment: str
-    def __init__(
-        self,
-        run_id: _Optional[str] = ...,
-        suite_id: _Optional[str] = ...,
-        name: _Optional[str] = ...,
-        inputs: _Optional[_Iterable[str]] = ...,
-        run_type: _Optional[_Union[Run.RunType, str]] = ...,
-        metadata: _Optional[str] = ...,
-        start_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
-        completion_timestamp: _Optional[
-            _Union[_timestamp_pb2.Timestamp, _Mapping]
-        ] = ...,
-        result: _Optional[str] = ...,
-        error: _Optional[str] = ...,
-        session_id: _Optional[str] = ...,
-        environment: _Optional[str] = ...,
-    ) -> None: ...
+    def __init__(self, run_id: _Optional[str] = ..., suite_id: _Optional[str] = ..., name: _Optional[str] = ..., inputs: _Optional[_Iterable[str]] = ..., run_type: _Optional[_Union[Run.RunType, str]] = ..., metadata: _Optional[str] = ..., start_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., completion_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., result: _Optional[str] = ..., error: _Optional[str] = ..., session_id: _Optional[str] = ..., environment: _Optional[str] = ...) -> None: ...
 
 class Log(_message.Message):
     __slots__ = ["run_id", "name", "payload", "timestamp"]
@@ -172,13 +105,7 @@ class Log(_message.Message):
     name: str
     payload: str
     timestamp: _timestamp_pb2.Timestamp
-    def __init__(
-        self,
-        run_id: _Optional[str] = ...,
-        name: _Optional[str] = ...,
-        payload: _Optional[str] = ...,
-        timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
-    ) -> None: ...
+    def __init__(self, run_id: _Optional[str] = ..., name: _Optional[str] = ..., payload: _Optional[str] = ..., timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class EndUser(_message.Message):
     __slots__ = ["id", "identifier"]
@@ -186,9 +113,7 @@ class EndUser(_message.Message):
     IDENTIFIER_FIELD_NUMBER: _ClassVar[int]
     id: str
     identifier: str
-    def __init__(
-        self, id: _Optional[str] = ..., identifier: _Optional[str] = ...
-    ) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., identifier: _Optional[str] = ...) -> None: ...
 
 class Model(_message.Message):
     __slots__ = ["id", "model_name", "provider", "name"]
@@ -200,28 +125,10 @@ class Model(_message.Message):
     model_name: str
     provider: str
     name: str
-    def __init__(
-        self,
-        id: _Optional[int] = ...,
-        model_name: _Optional[str] = ...,
-        provider: _Optional[str] = ...,
-        name: _Optional[str] = ...,
-    ) -> None: ...
+    def __init__(self, id: _Optional[int] = ..., model_name: _Optional[str] = ..., provider: _Optional[str] = ..., name: _Optional[str] = ...) -> None: ...
 
 class ModelConfig(_message.Message):
-    __slots__ = [
-        "id",
-        "model_id",
-        "model",
-        "logit_bias",
-        "presence_penalty",
-        "frequency_penalty",
-        "temperature",
-        "top_p",
-        "top_k",
-        "functions",
-        "function_call",
-    ]
+    __slots__ = ["id", "model_id", "model", "logit_bias", "presence_penalty", "frequency_penalty", "temperature", "top_p", "top_k", "functions", "function_call"]
     ID_FIELD_NUMBER: _ClassVar[int]
     MODEL_ID_FIELD_NUMBER: _ClassVar[int]
     MODEL_FIELD_NUMBER: _ClassVar[int]
@@ -244,70 +151,10 @@ class ModelConfig(_message.Message):
     top_k: float
     functions: str
     function_call: str
-    def __init__(
-        self,
-        id: _Optional[int] = ...,
-        model_id: _Optional[int] = ...,
-        model: _Optional[_Union[Model, _Mapping]] = ...,
-        logit_bias: _Optional[str] = ...,
-        presence_penalty: _Optional[float] = ...,
-        frequency_penalty: _Optional[float] = ...,
-        temperature: _Optional[float] = ...,
-        top_p: _Optional[float] = ...,
-        top_k: _Optional[float] = ...,
-        functions: _Optional[str] = ...,
-        function_call: _Optional[str] = ...,
-    ) -> None: ...
+    def __init__(self, id: _Optional[int] = ..., model_id: _Optional[int] = ..., model: _Optional[_Union[Model, _Mapping]] = ..., logit_bias: _Optional[str] = ..., presence_penalty: _Optional[float] = ..., frequency_penalty: _Optional[float] = ..., temperature: _Optional[float] = ..., top_p: _Optional[float] = ..., top_k: _Optional[float] = ..., functions: _Optional[str] = ..., function_call: _Optional[str] = ...) -> None: ...
 
 class Span(_message.Message):
-    __slots__ = [
-        "run_id",
-        "trace_id",
-        "span_id",
-        "name",
-        "start_time",
-        "end_time",
-        "status",
-        "vendor",
-        "request_type",
-        "model",
-        "total_tokens",
-        "completion_tokens",
-        "prompt_tokens",
-        "prompt_messages",
-        "completions",
-        "api_base",
-        "api_type",
-        "functions",
-        "function_call",
-        "temperature",
-        "top_p",
-        "n",
-        "stream",
-        "stop",
-        "max_tokens",
-        "presence_penalty",
-        "frequency_penalty",
-        "logit_bias",
-        "user",
-        "logprobs",
-        "echo",
-        "suffix",
-        "best_of",
-        "log_id",
-        "top_k",
-        "end_user",
-        "template_id",
-        "template_parameters",
-        "template_string",
-        "template_version_id",
-        "tools",
-        "tool_choice",
-        "seed",
-        "response_format",
-        "error_stacktrace",
-        "completion_id",
-    ]
+    __slots__ = ["run_id", "trace_id", "span_id", "name", "start_time", "end_time", "status", "vendor", "request_type", "model", "total_tokens", "completion_tokens", "prompt_tokens", "prompt_messages", "completions", "api_base", "api_type", "functions", "function_call", "temperature", "top_p", "n", "stream", "stop", "max_tokens", "presence_penalty", "frequency_penalty", "logit_bias", "user", "logprobs", "echo", "suffix", "best_of", "x_request_id", "log_id", "top_k", "end_user", "template_id", "template_parameters", "template_string", "template_version_id", "tools", "tool_choice", "seed", "response_format", "error_stacktrace", "completion_id"]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     TRACE_ID_FIELD_NUMBER: _ClassVar[int]
     SPAN_ID_FIELD_NUMBER: _ClassVar[int]
@@ -341,6 +188,7 @@ class Span(_message.Message):
     ECHO_FIELD_NUMBER: _ClassVar[int]
     SUFFIX_FIELD_NUMBER: _ClassVar[int]
     BEST_OF_FIELD_NUMBER: _ClassVar[int]
+    X_REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
     LOG_ID_FIELD_NUMBER: _ClassVar[int]
     TOP_K_FIELD_NUMBER: _ClassVar[int]
     END_USER_FIELD_NUMBER: _ClassVar[int]
@@ -387,6 +235,7 @@ class Span(_message.Message):
     echo: bool
     suffix: str
     best_of: int
+    x_request_id: str
     log_id: str
     top_k: float
     end_user: EndUser
@@ -400,55 +249,7 @@ class Span(_message.Message):
     response_format: str
     error_stacktrace: str
     completion_id: str
-    def __init__(
-        self,
-        run_id: _Optional[str] = ...,
-        trace_id: _Optional[bytes] = ...,
-        span_id: _Optional[int] = ...,
-        name: _Optional[str] = ...,
-        start_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
-        end_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
-        status: _Optional[_Union[Status, _Mapping]] = ...,
-        vendor: _Optional[str] = ...,
-        request_type: _Optional[str] = ...,
-        model: _Optional[str] = ...,
-        total_tokens: _Optional[int] = ...,
-        completion_tokens: _Optional[int] = ...,
-        prompt_tokens: _Optional[int] = ...,
-        prompt_messages: _Optional[_Iterable[_Union[Message, _Mapping]]] = ...,
-        completions: _Optional[_Iterable[_Union[Message, _Mapping]]] = ...,
-        api_base: _Optional[str] = ...,
-        api_type: _Optional[str] = ...,
-        functions: _Optional[str] = ...,
-        function_call: _Optional[str] = ...,
-        temperature: _Optional[float] = ...,
-        top_p: _Optional[float] = ...,
-        n: _Optional[int] = ...,
-        stream: bool = ...,
-        stop: _Optional[_Iterable[str]] = ...,
-        max_tokens: _Optional[int] = ...,
-        presence_penalty: _Optional[float] = ...,
-        frequency_penalty: _Optional[float] = ...,
-        logit_bias: _Optional[str] = ...,
-        user: _Optional[str] = ...,
-        logprobs: _Optional[int] = ...,
-        echo: bool = ...,
-        suffix: _Optional[str] = ...,
-        best_of: _Optional[int] = ...,
-        log_id: _Optional[str] = ...,
-        top_k: _Optional[float] = ...,
-        end_user: _Optional[_Union[EndUser, _Mapping]] = ...,
-        template_id: _Optional[str] = ...,
-        template_parameters: _Optional[str] = ...,
-        template_string: _Optional[str] = ...,
-        template_version_id: _Optional[str] = ...,
-        tools: _Optional[str] = ...,
-        tool_choice: _Optional[str] = ...,
-        seed: _Optional[int] = ...,
-        response_format: _Optional[str] = ...,
-        error_stacktrace: _Optional[str] = ...,
-        completion_id: _Optional[str] = ...,
-    ) -> None: ...
+    def __init__(self, run_id: _Optional[str] = ..., trace_id: _Optional[bytes] = ..., span_id: _Optional[int] = ..., name: _Optional[str] = ..., start_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., end_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., status: _Optional[_Union[Status, _Mapping]] = ..., vendor: _Optional[str] = ..., request_type: _Optional[str] = ..., model: _Optional[str] = ..., total_tokens: _Optional[int] = ..., completion_tokens: _Optional[int] = ..., prompt_tokens: _Optional[int] = ..., prompt_messages: _Optional[_Iterable[_Union[Message, _Mapping]]] = ..., completions: _Optional[_Iterable[_Union[Message, _Mapping]]] = ..., api_base: _Optional[str] = ..., api_type: _Optional[str] = ..., functions: _Optional[str] = ..., function_call: _Optional[str] = ..., temperature: _Optional[float] = ..., top_p: _Optional[float] = ..., n: _Optional[int] = ..., stream: bool = ..., stop: _Optional[_Iterable[str]] = ..., max_tokens: _Optional[int] = ..., presence_penalty: _Optional[float] = ..., frequency_penalty: _Optional[float] = ..., logit_bias: _Optional[str] = ..., user: _Optional[str] = ..., logprobs: _Optional[int] = ..., echo: bool = ..., suffix: _Optional[str] = ..., best_of: _Optional[int] = ..., x_request_id: _Optional[str] = ..., log_id: _Optional[str] = ..., top_k: _Optional[float] = ..., end_user: _Optional[_Union[EndUser, _Mapping]] = ..., template_id: _Optional[str] = ..., template_parameters: _Optional[str] = ..., template_string: _Optional[str] = ..., template_version_id: _Optional[str] = ..., tools: _Optional[str] = ..., tool_choice: _Optional[str] = ..., seed: _Optional[int] = ..., response_format: _Optional[str] = ..., error_stacktrace: _Optional[str] = ..., completion_id: _Optional[str] = ...) -> None: ...
 
 class Eval(_message.Message):
     __slots__ = ["name", "type", "result", "score", "submission", "payload"]
@@ -464,15 +265,7 @@ class Eval(_message.Message):
     score: float
     submission: str
     payload: str
-    def __init__(
-        self,
-        name: _Optional[str] = ...,
-        type: _Optional[str] = ...,
-        result: _Optional[str] = ...,
-        score: _Optional[float] = ...,
-        submission: _Optional[str] = ...,
-        payload: _Optional[str] = ...,
-    ) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., type: _Optional[str] = ..., result: _Optional[str] = ..., score: _Optional[float] = ..., submission: _Optional[str] = ..., payload: _Optional[str] = ...) -> None: ...
 
 class Check(_message.Message):
     __slots__ = ["name", "methodology", "expected", "actual", "score", "metadata"]
@@ -488,15 +281,7 @@ class Check(_message.Message):
     actual: str
     score: float
     metadata: str
-    def __init__(
-        self,
-        name: _Optional[str] = ...,
-        methodology: _Optional[str] = ...,
-        expected: _Optional[str] = ...,
-        actual: _Optional[str] = ...,
-        score: _Optional[float] = ...,
-        metadata: _Optional[str] = ...,
-    ) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., methodology: _Optional[str] = ..., expected: _Optional[str] = ..., actual: _Optional[str] = ..., score: _Optional[float] = ..., metadata: _Optional[str] = ...) -> None: ...
 
 class Feedback(_message.Message):
     __slots__ = ["name", "score", "metadata", "end_user"]
@@ -508,13 +293,7 @@ class Feedback(_message.Message):
     score: float
     metadata: str
     end_user: EndUser
-    def __init__(
-        self,
-        name: _Optional[str] = ...,
-        score: _Optional[float] = ...,
-        metadata: _Optional[str] = ...,
-        end_user: _Optional[_Union[EndUser, _Mapping]] = ...,
-    ) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., score: _Optional[float] = ..., metadata: _Optional[str] = ..., end_user: _Optional[_Union[EndUser, _Mapping]] = ...) -> None: ...
 
 class CompletionAnnotations(_message.Message):
     __slots__ = ["completion_id", "checks", "logs", "feedback"]
@@ -526,13 +305,7 @@ class CompletionAnnotations(_message.Message):
     checks: _containers.RepeatedCompositeFieldContainer[Check]
     logs: _containers.RepeatedCompositeFieldContainer[Log]
     feedback: _containers.RepeatedCompositeFieldContainer[Feedback]
-    def __init__(
-        self,
-        completion_id: _Optional[str] = ...,
-        checks: _Optional[_Iterable[_Union[Check, _Mapping]]] = ...,
-        logs: _Optional[_Iterable[_Union[Log, _Mapping]]] = ...,
-        feedback: _Optional[_Iterable[_Union[Feedback, _Mapping]]] = ...,
-    ) -> None: ...
+    def __init__(self, completion_id: _Optional[str] = ..., checks: _Optional[_Iterable[_Union[Check, _Mapping]]] = ..., logs: _Optional[_Iterable[_Union[Log, _Mapping]]] = ..., feedback: _Optional[_Iterable[_Union[Feedback, _Mapping]]] = ...) -> None: ...
 
 class TestSuite(_message.Message):
     __slots__ = ["id", "name", "start_timestamp", "completion_timestamp"]
@@ -544,19 +317,10 @@ class TestSuite(_message.Message):
     name: str
     start_timestamp: _timestamp_pb2.Timestamp
     completion_timestamp: _timestamp_pb2.Timestamp
-    def __init__(
-        self,
-        id: _Optional[str] = ...,
-        name: _Optional[str] = ...,
-        start_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
-        completion_timestamp: _Optional[
-            _Union[_timestamp_pb2.Timestamp, _Mapping]
-        ] = ...,
-    ) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., start_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., completion_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class Template(_message.Message):
     __slots__ = ["id", "name", "template_type", "template_versions", "active_version"]
-
     class TemplateType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = []
         TEMPLATE_TYPE_UNSPECIFIED: _ClassVar[Template.TemplateType]
@@ -575,16 +339,7 @@ class Template(_message.Message):
     template_type: Template.TemplateType
     template_versions: _containers.RepeatedCompositeFieldContainer[TemplateVersion]
     active_version: TemplateVersion
-    def __init__(
-        self,
-        id: _Optional[str] = ...,
-        name: _Optional[str] = ...,
-        template_type: _Optional[_Union[Template.TemplateType, str]] = ...,
-        template_versions: _Optional[
-            _Iterable[_Union[TemplateVersion, _Mapping]]
-        ] = ...,
-        active_version: _Optional[_Union[TemplateVersion, _Mapping]] = ...,
-    ) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., template_type: _Optional[_Union[Template.TemplateType, str]] = ..., template_versions: _Optional[_Iterable[_Union[TemplateVersion, _Mapping]]] = ..., active_version: _Optional[_Union[TemplateVersion, _Mapping]] = ...) -> None: ...
 
 class TemplateVersion(_message.Message):
     __slots__ = ["id", "template", "tag", "parameter_definition", "template_string"]
@@ -598,23 +353,10 @@ class TemplateVersion(_message.Message):
     tag: str
     parameter_definition: str
     template_string: str
-    def __init__(
-        self,
-        id: _Optional[str] = ...,
-        template: _Optional[_Union[Template, _Mapping]] = ...,
-        tag: _Optional[str] = ...,
-        parameter_definition: _Optional[str] = ...,
-        template_string: _Optional[str] = ...,
-    ) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., template: _Optional[_Union[Template, _Mapping]] = ..., tag: _Optional[str] = ..., parameter_definition: _Optional[str] = ..., template_string: _Optional[str] = ...) -> None: ...
 
 class Session(_message.Message):
-    __slots__ = [
-        "id",
-        "identifier",
-        "start_timestamp",
-        "completion_timestamp",
-        "end_user",
-    ]
+    __slots__ = ["id", "identifier", "start_timestamp", "completion_timestamp", "end_user"]
     ID_FIELD_NUMBER: _ClassVar[int]
     IDENTIFIER_FIELD_NUMBER: _ClassVar[int]
     START_TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
@@ -625,16 +367,7 @@ class Session(_message.Message):
     start_timestamp: _timestamp_pb2.Timestamp
     completion_timestamp: _timestamp_pb2.Timestamp
     end_user: EndUser
-    def __init__(
-        self,
-        id: _Optional[str] = ...,
-        identifier: _Optional[str] = ...,
-        start_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
-        completion_timestamp: _Optional[
-            _Union[_timestamp_pb2.Timestamp, _Mapping]
-        ] = ...,
-        end_user: _Optional[_Union[EndUser, _Mapping]] = ...,
-    ) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., identifier: _Optional[str] = ..., start_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., completion_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., end_user: _Optional[_Union[EndUser, _Mapping]] = ...) -> None: ...
 
 class StartRunRequest(_message.Message):
     __slots__ = ["run"]
@@ -654,11 +387,7 @@ class SubmitLogRequest(_message.Message):
     RUN_FIELD_NUMBER: _ClassVar[int]
     log: Log
     run: Run
-    def __init__(
-        self,
-        log: _Optional[_Union[Log, _Mapping]] = ...,
-        run: _Optional[_Union[Run, _Mapping]] = ...,
-    ) -> None: ...
+    def __init__(self, log: _Optional[_Union[Log, _Mapping]] = ..., run: _Optional[_Union[Run, _Mapping]] = ...) -> None: ...
 
 class SubmitLogResponse(_message.Message):
     __slots__ = ["message"]
@@ -672,11 +401,7 @@ class SubmitSpanRequest(_message.Message):
     RUN_FIELD_NUMBER: _ClassVar[int]
     span: Span
     run: Run
-    def __init__(
-        self,
-        span: _Optional[_Union[Span, _Mapping]] = ...,
-        run: _Optional[_Union[Run, _Mapping]] = ...,
-    ) -> None: ...
+    def __init__(self, span: _Optional[_Union[Span, _Mapping]] = ..., run: _Optional[_Union[Run, _Mapping]] = ...) -> None: ...
 
 class SubmitSpanResponse(_message.Message):
     __slots__ = ["message"]
@@ -702,11 +427,7 @@ class SubmitEvalRequest(_message.Message):
     RUN_FIELD_NUMBER: _ClassVar[int]
     eval: Eval
     run: Run
-    def __init__(
-        self,
-        eval: _Optional[_Union[Eval, _Mapping]] = ...,
-        run: _Optional[_Union[Run, _Mapping]] = ...,
-    ) -> None: ...
+    def __init__(self, eval: _Optional[_Union[Eval, _Mapping]] = ..., run: _Optional[_Union[Run, _Mapping]] = ...) -> None: ...
 
 class SubmitEvalResponse(_message.Message):
     __slots__ = ["message"]
@@ -718,9 +439,7 @@ class StartTestSuiteRequest(_message.Message):
     __slots__ = ["test_suite"]
     TEST_SUITE_FIELD_NUMBER: _ClassVar[int]
     test_suite: TestSuite
-    def __init__(
-        self, test_suite: _Optional[_Union[TestSuite, _Mapping]] = ...
-    ) -> None: ...
+    def __init__(self, test_suite: _Optional[_Union[TestSuite, _Mapping]] = ...) -> None: ...
 
 class StartTestSuiteResponse(_message.Message):
     __slots__ = ["message"]
@@ -732,9 +451,7 @@ class EndTestSuiteRequest(_message.Message):
     __slots__ = ["test_suite"]
     TEST_SUITE_FIELD_NUMBER: _ClassVar[int]
     test_suite: TestSuite
-    def __init__(
-        self, test_suite: _Optional[_Union[TestSuite, _Mapping]] = ...
-    ) -> None: ...
+    def __init__(self, test_suite: _Optional[_Union[TestSuite, _Mapping]] = ...) -> None: ...
 
 class EndTestSuiteResponse(_message.Message):
     __slots__ = ["message"]
@@ -748,11 +465,7 @@ class StartSessionRequest(_message.Message):
     RUN_FIELD_NUMBER: _ClassVar[int]
     session: Session
     run: Run
-    def __init__(
-        self,
-        session: _Optional[_Union[Session, _Mapping]] = ...,
-        run: _Optional[_Union[Run, _Mapping]] = ...,
-    ) -> None: ...
+    def __init__(self, session: _Optional[_Union[Session, _Mapping]] = ..., run: _Optional[_Union[Run, _Mapping]] = ...) -> None: ...
 
 class StartSessionResponse(_message.Message):
     __slots__ = ["message", "session"]
@@ -760,11 +473,7 @@ class StartSessionResponse(_message.Message):
     SESSION_FIELD_NUMBER: _ClassVar[int]
     message: str
     session: Session
-    def __init__(
-        self,
-        message: _Optional[str] = ...,
-        session: _Optional[_Union[Session, _Mapping]] = ...,
-    ) -> None: ...
+    def __init__(self, message: _Optional[str] = ..., session: _Optional[_Union[Session, _Mapping]] = ...) -> None: ...
 
 class EndSessionRequest(_message.Message):
     __slots__ = ["session"]
@@ -778,11 +487,7 @@ class EndSessionResponse(_message.Message):
     SESSION_FIELD_NUMBER: _ClassVar[int]
     message: str
     session: Session
-    def __init__(
-        self,
-        message: _Optional[str] = ...,
-        session: _Optional[_Union[Session, _Mapping]] = ...,
-    ) -> None: ...
+    def __init__(self, message: _Optional[str] = ..., session: _Optional[_Union[Session, _Mapping]] = ...) -> None: ...
 
 class SubmitTemplateVersionRequest(_message.Message):
     __slots__ = ["template_version", "environment"]
@@ -790,11 +495,7 @@ class SubmitTemplateVersionRequest(_message.Message):
     ENVIRONMENT_FIELD_NUMBER: _ClassVar[int]
     template_version: TemplateVersion
     environment: str
-    def __init__(
-        self,
-        template_version: _Optional[_Union[TemplateVersion, _Mapping]] = ...,
-        environment: _Optional[str] = ...,
-    ) -> None: ...
+    def __init__(self, template_version: _Optional[_Union[TemplateVersion, _Mapping]] = ..., environment: _Optional[str] = ...) -> None: ...
 
 class SubmitTemplateVersionResponse(_message.Message):
     __slots__ = ["message", "template_version", "template"]
@@ -804,20 +505,13 @@ class SubmitTemplateVersionResponse(_message.Message):
     message: str
     template_version: TemplateVersion
     template: Template
-    def __init__(
-        self,
-        message: _Optional[str] = ...,
-        template_version: _Optional[_Union[TemplateVersion, _Mapping]] = ...,
-        template: _Optional[_Union[Template, _Mapping]] = ...,
-    ) -> None: ...
+    def __init__(self, message: _Optional[str] = ..., template_version: _Optional[_Union[TemplateVersion, _Mapping]] = ..., template: _Optional[_Union[Template, _Mapping]] = ...) -> None: ...
 
 class SubmitModelConfigRequest(_message.Message):
     __slots__ = ["model_config"]
     MODEL_CONFIG_FIELD_NUMBER: _ClassVar[int]
     model_config: ModelConfig
-    def __init__(
-        self, model_config: _Optional[_Union[ModelConfig, _Mapping]] = ...
-    ) -> None: ...
+    def __init__(self, model_config: _Optional[_Union[ModelConfig, _Mapping]] = ...) -> None: ...
 
 class SubmitModelConfigResponse(_message.Message):
     __slots__ = ["message", "model_config"]
@@ -825,11 +519,7 @@ class SubmitModelConfigResponse(_message.Message):
     MODEL_CONFIG_FIELD_NUMBER: _ClassVar[int]
     message: str
     model_config: ModelConfig
-    def __init__(
-        self,
-        message: _Optional[str] = ...,
-        model_config: _Optional[_Union[ModelConfig, _Mapping]] = ...,
-    ) -> None: ...
+    def __init__(self, message: _Optional[str] = ..., model_config: _Optional[_Union[ModelConfig, _Mapping]] = ...) -> None: ...
 
 class SubmitUserRequest(_message.Message):
     __slots__ = ["user"]
@@ -843,11 +533,7 @@ class SubmitUserResponse(_message.Message):
     USER_FIELD_NUMBER: _ClassVar[int]
     message: str
     user: EndUser
-    def __init__(
-        self,
-        message: _Optional[str] = ...,
-        user: _Optional[_Union[EndUser, _Mapping]] = ...,
-    ) -> None: ...
+    def __init__(self, message: _Optional[str] = ..., user: _Optional[_Union[EndUser, _Mapping]] = ...) -> None: ...
 
 class GetTemplatesRequest(_message.Message):
     __slots__ = ["environment"]
@@ -859,9 +545,7 @@ class GetTemplatesResponse(_message.Message):
     __slots__ = ["templates"]
     TEMPLATES_FIELD_NUMBER: _ClassVar[int]
     templates: _containers.RepeatedCompositeFieldContainer[Template]
-    def __init__(
-        self, templates: _Optional[_Iterable[_Union[Template, _Mapping]]] = ...
-    ) -> None: ...
+    def __init__(self, templates: _Optional[_Iterable[_Union[Template, _Mapping]]] = ...) -> None: ...
 
 class SubmitAnnotationsRequest(_message.Message):
     __slots__ = ["annotations", "run"]
@@ -869,11 +553,7 @@ class SubmitAnnotationsRequest(_message.Message):
     RUN_FIELD_NUMBER: _ClassVar[int]
     annotations: CompletionAnnotations
     run: Run
-    def __init__(
-        self,
-        annotations: _Optional[_Union[CompletionAnnotations, _Mapping]] = ...,
-        run: _Optional[_Union[Run, _Mapping]] = ...,
-    ) -> None: ...
+    def __init__(self, annotations: _Optional[_Union[CompletionAnnotations, _Mapping]] = ..., run: _Optional[_Union[Run, _Mapping]] = ...) -> None: ...
 
 class SubmitAnnotationsResponse(_message.Message):
     __slots__ = ["message"]
