@@ -6,6 +6,7 @@ import os
 import sys
 import traceback
 from threading import Thread
+from time import sleep
 
 import openai
 from openai import OpenAI, AsyncOpenAI, NotFoundError
@@ -108,6 +109,37 @@ def openai_chat_tools(prompt="Say 'hello world'") -> FunctionCall:
         "say",
     )
     return tool_calls
+
+
+@baserun.trace
+def openai_chat_tools_streaming(prompt="Say 'hello world'") -> FunctionCall:
+    client = OpenAI()
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "say",
+                "description": "Convert some text to speech",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string", "description": "The text to speak"},
+                    },
+                    "required": ["text"],
+                },
+            },
+        }
+    ]
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+        stream=True,
+        tools=tools,
+        tool_choice={"type": "function", "function": {"name": "say"}},
+    )
+    for item in completion:
+        print(item)
+    return completion
 
 
 @baserun.trace
@@ -583,3 +615,6 @@ if __name__ == "__main__":
                 traceback.print_exception(e)
     else:
         call_function(traced_functions, function_name, parsed_args)
+
+    # Give time for the worker to clear the queue
+    sleep(0.5)
