@@ -139,10 +139,10 @@ message Span {
     optional double top_k = 35;
 
     EndUser end_user = 36;
-    optional string template_id = 37; // Deprecated, use template_version_id
+    optional string template_id = 37;
     optional string template_parameters = 38; // JSONified map<str, any>
     optional string template_string = 45; // Deprecated, register_template is required to be done first
-    optional string template_version_id = 46;
+    optional string template_version_id = 46; // Deprecated
 
     optional string tools = 39; // JSONified array<map<str, any>>
     optional string tool_choice = 40; // JSONified map<str, any>
@@ -211,8 +211,17 @@ message TemplateVersion {
     string id = 1;
     Template template = 2;
     string tag = 3;
-    string parameter_definition = 4;
-    string template_string = 5;
+    optional string parameter_definition = 4; // Deprecated
+    optional string template_string = 5; // Deprecated
+    repeated TemplateMessage template_messages = 6;
+}
+
+message TemplateMessage {
+    string id = 1;
+    TemplateVersion template_version = 2;
+    string message = 3;
+    string role = 4;
+    int32 order_index = 5;
 }
 
 message Session {

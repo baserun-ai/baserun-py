@@ -1,14 +1,9 @@
 import hashlib
 import inspect
-import json
 import logging
 import os
-import re
 import traceback
-from collections import defaultdict
-from typing import Any, TYPE_CHECKING, Union
-
-from Levenshtein import ratio
+from typing import Any, TYPE_CHECKING, Union, Set
 
 from baserun import Baserun
 from baserun.grpc import (
@@ -23,6 +18,7 @@ from baserun.v1.baserun_pb2 import (
     SubmitTemplateVersionResponse,
     GetTemplatesRequest,
     GetTemplatesResponse,
+    TemplateMessage,
 )
 
 if TYPE_CHECKING:
@@ -63,61 +59,6 @@ def get_template(name: str) -> Template:
     return template
 
 
-def most_similar_templates(formatted_str: str):
-    """Given a `templates` list, will return the templates sorted by similarity to the `formatted_str` arg"""
-    if not Baserun.templates:
-        Baserun.templates = {}
-        return []
-
-    similarity_scores = []
-
-    for template in Baserun.templates.values():
-        similarity_scores.append(
-            (template.active_version, ratio(formatted_str, template.active_version.template_string))
-        )
-
-    # Sort the templates by similarity ratio, in descending order
-    sorted_results = sorted(similarity_scores, key=lambda x: x[1], reverse=True)
-
-    # Extract only the TemplateVersion objects from the sorted list
-    sorted_templates = [template for template, score in sorted_results if score > 0.5]
-
-    return sorted_templates
-
-
-def best_guess_template_parameters(prompt: str, template_version: TemplateVersion) -> dict[str, Any]:
-    """Given a prompt and a TemplateVersion will attempt to find the parameters that were used to generate the prompt
-    Major caveats apply: this only works if the template was registered and formatted using `format_prompt` and/or
-    the parameters were registered with `capture_parameters`. It's also pretty fragile because it's based on simple
-    string comparison.
-
-    The correct version of this is probably some span context propagation that I can't figure out right now.
-    """
-    used_parameter_list = Baserun.used_template_parameters.get(template_version.id, [])
-    for used_parameters in used_parameter_list:
-        # TODO: This only works for string parameters
-        match = all(parameter in prompt for parameter in used_parameters.values() if isinstance(parameter, str))
-        if match:
-            return used_parameters
-
-    return {}
-
-
-def is_from_jinja2_template(template_str: str, formatted_str: str):
-    # Use regular expressions to extract non-variable content
-    template_content = re.sub(r"{{.*?}}", "", template_str)
-
-    # Check if all characters in template_content are present in the formatted string
-    return all(char in formatted_str for char in template_content)
-
-
-def extract_strings_in_braces(input_string):
-    # Matches both single and double braces around the variable name
-    pattern = r"\{{1,2}([^}]*)\}{1,2}"
-    matches = re.findall(pattern, input_string)
-    return matches
-
-
 def get_template_type_enum(template_type: str = None):
     template_type = template_type or "unknown"
     if template_type == Template.TEMPLATE_TYPE_JINJA2 or template_type.lower().startswith("jinja"):
@@ -128,27 +69,45 @@ def get_template_type_enum(template_type: str = None):
     return template_type_enum
 
 
-def apply_template(template_string: str, parameters: dict[str, Any], template_type_enum) -> str:
-    if template_type_enum == Template.TEMPLATE_TYPE_JINJA2:
-        try:
-            # noinspection PyUnresolvedReferences
-            from jinja2 import Template as JinjaTemplate
+def apply_template(
+    template_name: str,
+    template_messages: list[dict[str, Union[str, dict[str, Any]]]],
+    parameters: dict[str, Any],
+    template_type_enum,
+) -> str:
+    formatted_messages = []
+    for message in template_messages:
+        template_string = message.get("content")
+        if template_string:
+            if template_type_enum == Template.TEMPLATE_TYPE_JINJA2:
+                try:
+                    # noinspection PyUnresolvedReferences
+                    from jinja2 import Template as JinjaTemplate
 
-            template = JinjaTemplate(template_string)
-            return template.render(parameters)
-        except ImportError:
-            logger.warning("Cannot render Jinja2 template as jinja2 package is not installed")
-            # TODO: Is this OK? should we raise? or return blank string?
-            return template_string
+                    template = JinjaTemplate(template_string)
+                    return template.render(parameters)
+                except ImportError:
+                    logger.warning("Cannot render Jinja2 template as jinja2 package is not installed")
+                    # TODO: Is this OK? should we raise? or return blank string?
+                    return template_string
 
-    return template_string.format(**parameters)
+            formatted_content = template_string.format(**parameters)
+            formatted_messages.append({**message, "content": formatted_content})
+        else:
+            formatted_messages.append(message)
 
+    formatted_template_list: Set[tuple] = Baserun.formatted_templates.get(
+        template_name,
+    )
+    set_value = tuple([message.get("content") for message in formatted_messages])
 
-def capture_parameters(template_version_id: str, parameters: dict[str, Any]):
-    if not Baserun.used_template_parameters:
-        Baserun.used_template_parameters = defaultdict(list)
+    if not formatted_template_list:
+        formatted_template_list = {set_value}
+    else:
+        formatted_template_list.add(set_value)
 
-    Baserun.used_template_parameters[template_version_id].append(parameters)
+    Baserun.formatted_templates[template_name] = formatted_template_list
+    return formatted_messages
 
 
 def create_langchain_template(
@@ -182,94 +141,54 @@ def create_langchain_template(
         langchain_template = PromptTemplate(template=template_string, input_variables=input_variables, tools=tools)
 
     template_type_enum = get_template_type_enum(template_type)
-    # Support only strings for now
-    parameter_definition = {var: "string" for var in input_variables}
     template_version = register_template(
         template_string=template_string,
         template_name=template_name,
         template_type=template_type_enum,
         template_tag=template_tag,
-        parameter_definition=parameter_definition,
     )
-
-    capture_parameters(template_version.id, parameters)
 
     return langchain_template
 
 
 def format_prompt(
-    template_string: str,
+    template_name: str,
     parameters: dict[str, Any],
-    template_name: str = None,
-    template_tag: str = None,
+    template_messages: list[dict[str, Union[str, dict[str, Any]]]] = None,
     template_type: str = None,
-    parameter_definition: dict[str, Any] = None,
 ):
     template_type_enum = get_template_type_enum(template_type)
-    try:
-        template_version = register_template(
-            template_string=template_string,
-            template_name=template_name,
-            template_type=template_type_enum,
-            template_tag=template_tag,
-            parameter_definition=parameter_definition,
-        )
-    except BaseException as e:
-        logger.warning(f"Could not register template: {e}")
-        return
+    if not template_messages:
+        template = get_template(template_name)
+        template_messages = [
+            {"role": message.role, "content": message.message} for message in template.active_version.template_messages
+        ]
 
-    capture_parameters(template_version.id, parameters)
-    return apply_template(template_string, parameters, template_type_enum)
-
-
-async def aformat_prompt(
-    template_string: str,
-    parameters: dict[str, Any],
-    template_name: str = None,
-    template_tag: str = None,
-    template_type: str = None,
-    parameter_definition: dict[str, Any] = None,
-):
-    template_type_enum = get_template_type_enum(template_type)
-    try:
-        version = await aregister_template(
-            template_string=template_string,
-            template_name=template_name,
-            template_type=template_type_enum,
-            template_tag=template_tag,
-            parameter_definition=parameter_definition,
-        )
-    except BaseException as e:
-        logger.warning(f"Could not register template: {e}")
-        return
-
-    capture_parameters(version.id, parameters)
-    return apply_template(template_string, parameters, template_type_enum)
+    return apply_template(template_name, template_messages, parameters, template_type_enum)
 
 
 def construct_template_version(
-    template_string: str,
+    template_messages: list[dict[str, Union[str, dict[str, Any]]]],
     template_name: str = None,
     template_tag: str = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
-    parameter_definition: dict[str, Any] = None,
 ) -> TemplateVersion:
-    if not parameter_definition:
-        parameters = extract_strings_in_braces(template_string)
-        parameter_definition = {p: "string" for p in parameters}
-
     # Automatically generate a name based on the template's contents
     if not template_name:
-        template_name = hashlib.sha256(f"{template_string}{parameter_definition}".encode()).hexdigest()[:5]
-
-    if not template_tag:
-        template_tag = hashlib.sha256(template_string.encode()).hexdigest()[:5]
+        template_name = hashlib.sha256(
+            "".join([message.get("content") for message in template_messages]).encode()
+        ).hexdigest()[:5]
 
     template = Template(name=template_name, template_type=template_type)
+    constructed_template_messages = [
+        TemplateMessage(
+            role=message.get("role", "assistant"), message=message.get("message", message.get("content")), order_index=i
+        )
+        for i, message in enumerate(template_messages)
+    ]
     version = TemplateVersion(
         template=template,
-        parameter_definition=json.dumps(parameter_definition),
-        template_string=template_string,
+        template_messages=constructed_template_messages,
         tag=template_tag,
     )
 
@@ -277,11 +196,10 @@ def construct_template_version(
 
 
 def register_template(
-    template_string: str,
+    template_messages: list[dict[str, Union[str, dict[str, Any]]]],
     template_name: str = None,
     template_tag: str = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
-    parameter_definition: dict[str, Any] = None,
 ) -> Template:
     from baserun import Baserun
 
@@ -292,11 +210,10 @@ def register_template(
         return template
 
     version = construct_template_version(
-        template_string=template_string,
+        template_messages=template_messages,
         template_name=template_name,
         template_tag=template_tag,
         template_type=template_type,
-        parameter_definition=parameter_definition,
     )
 
     request = SubmitTemplateVersionRequest(template_version=version, environment=Baserun.environment)
@@ -310,11 +227,10 @@ def register_template(
 
 
 async def aregister_template(
-    template_string: str,
+    template_messages: list[dict[str, Union[str, dict[str, Any]]]],
     template_name: str = None,
     template_tag: str = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
-    parameter_definition: dict[str, Any] = None,
 ) -> Template:
     from baserun import Baserun
 
@@ -325,11 +241,10 @@ async def aregister_template(
         return template
 
     version = construct_template_version(
-        template_string=template_string,
+        template_messages=template_messages,
         template_name=template_name,
         template_tag=template_tag,
         template_type=template_type,
-        parameter_definition=parameter_definition,
     )
 
     request = SubmitTemplateVersionRequest(template_version=version, environment=Baserun.environment)

@@ -16,7 +16,6 @@ from .sessions import (
 from .templates import (
     format_prompt as format_prompt,
     register_template as register_template,
-    aformat_prompt as aformat_prompt,
     aregister_template as aregister_template,
     get_templates as get_templates,
     get_template as get_template,
@@ -54,7 +53,6 @@ __all__ = [
     "register_template",
     "get_templates",
     "get_template",
-    "aformat_prompt",
     "aregister_template",
     "submit_user",
     "asubmit_user",

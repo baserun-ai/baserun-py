@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from queue import Queue
 from threading import Thread
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Set
 from typing import Callable, Dict, Optional, Union
 
 from opentelemetry import trace
@@ -60,7 +60,7 @@ class Baserun:
     evals = Evals
 
     templates: dict[str, Template] = None
-    used_template_parameters: dict[str, list[dict[str, Any]]] = None
+    formatted_templates: dict[str, Set[tuple[str]]] = None
 
     submission_service: SubmissionServiceStub = None
     exporter_queue: Queue = None
@@ -80,7 +80,7 @@ class Baserun:
 
         Baserun._initialized = True
         Baserun.templates = {}
-        Baserun.used_template_parameters = {}
+        Baserun.formatted_templates = {}
 
         current_span = get_current_span()
         baserun_contexts = {current_span.get_span_context().trace_id: Context()}
