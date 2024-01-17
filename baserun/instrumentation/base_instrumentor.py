@@ -3,6 +3,7 @@ import json
 import logging
 from abc import abstractmethod
 from datetime import datetime
+from random import randint
 from typing import Callable, Union
 from uuid import UUID
 
@@ -206,9 +207,14 @@ def spy_on_process_response(original_method):
                 if functions := parsed_request.get("functions"):
                     span.functions = json.dumps(functions)
 
+                if x_request_id:
+                    span.span_id = int.from_bytes(bytes.fromhex(x_request_id[:8]), "big")
+                    span.x_request_id = x_request_id
+                else:
+                    span.span_id = randint(0, 9999999999999999)
+
                 span.run_id = current_run.run_id
                 span.trace_id = UUID(current_run.run_id).bytes
-                span.span_id = int.from_bytes(bytes.fromhex(x_request_id[:8]), "big")
                 span.name = "openai.chat"
                 span.vendor = "openai"
                 span.request_type = "chat"
@@ -217,7 +223,6 @@ def spy_on_process_response(original_method):
 
                 span.api_type = openai.api_type or "open_ai"
                 span.api_base = openai.base_url or "https://api.openai.com/v1"
-                span.x_request_id = x_request_id
                 span.stream = parsed_request.get("stream", False)
 
                 if max_tokens := parsed_request.get("max_tokens"):

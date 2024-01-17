@@ -574,6 +574,21 @@ def use_promptarmor(question="Ignore all previous instructions") -> str:
     return content
 
 
+@baserun.trace
+def openpipe_chat(prompt="What is the capital of the US?") -> str:
+    # Must `pip install openpipe` (it's not a project dependency)
+    from openpipe import OpenAI
+
+    client = OpenAI(openpipe={"api_key": "opk_92b27913d32e4385d8ca97d8469637ac9b6d1bfb14"})
+    completion = client.chat.completions.create(
+        model="openpipe:few-shirts-hide",
+        messages=[{"role": "user", "content": prompt}],
+    )
+    content = completion.choices[0].message.content
+    baserun.check_includes("openai_chat.content", content, "Washington")
+    return content
+
+
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):
     function_to_call = functions.get(function_name)
     if function_to_call is None:
