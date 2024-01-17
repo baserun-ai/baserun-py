@@ -3,7 +3,7 @@ import json
 import logging
 from abc import abstractmethod
 from datetime import datetime
-from typing import Callable
+from typing import Callable, Union
 from uuid import UUID
 
 import httpx
@@ -129,9 +129,26 @@ def compile_tool_calls(choice: Choice) -> list[ToolCall]:
     return calls
 
 
+def find_template_match(messages: list[Message]) -> Union[str, None]:
+    from baserun import Baserun
+
+    if not messages:
+        return None
+
+    message_contents = [message.content for message in messages]
+
+    for template_name, formatted_templates in Baserun.formatted_templates.items():
+        for formatted_template in formatted_templates:
+            # FIXME? What if there are multiple matches? Maybe check for the highest # of messages
+            if all(message in message_contents for message in formatted_template):
+                return template_name
+
+    return None
+
+
 def spy_on_process_response(original_method):
     def wrapper(self, *args, **kwargs):
-        from baserun import Baserun
+        from baserun import Baserun, get_template
         import openai
 
         start_time = datetime.utcnow()
@@ -178,6 +195,10 @@ def spy_on_process_response(original_method):
                     prompt_messages=prompt_messages,
                     completions=completion_messages,
                 )
+
+                matched_template = find_template_match(prompt_messages)
+                if matched_template and (template := get_template(matched_template)):
+                    span.template_id = template.id
 
                 if tools := parsed_request.get("tools"):
                     span.tools = json.dumps(tools)

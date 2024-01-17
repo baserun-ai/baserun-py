@@ -380,21 +380,27 @@ def openai_contextmanager(prompt="What is the capital of the US?", name: str = "
         run.result = content
 
 
-TEMPLATES = {"Question & Answer": "Answer the following question in the form of a limerick: {question}"}
+TEMPLATES = {
+    "Question & Answer": [
+        {"role": "system", "content": "Respond to all messages in the form of a limerick"},
+        {"role": "user", "content": "{question}"},
+    ]
+}
 
 
 @baserun.trace
 def use_template(question="What is the capital of the US?", template_name: str = "Question & Answer"):
+    baserun.register_template(TEMPLATES.get(template_name), template_name)
     prompt = baserun.format_prompt(
-        template_string=TEMPLATES.get(template_name),
         template_name=template_name,
+        template_messages=TEMPLATES.get(template_name),
         parameters={"question": question},
     )
 
     client = OpenAI()
     completion = client.chat.completions.create(
         model="gpt-4-1106-preview",
-        messages=[{"role": "system", "content": prompt}],
+        messages=prompt,
         seed=1234,
     )
     content = completion.choices[0].message.content
@@ -404,16 +410,17 @@ def use_template(question="What is the capital of the US?", template_name: str =
 
 @baserun.trace
 async def use_template_async(question="What is the capital of the US?", template_name: str = "Question & Answer"):
-    prompt = await baserun.aformat_prompt(
-        template_string=TEMPLATES.get(template_name),
+    await baserun.aregister_template(TEMPLATES.get(template_name), template_name)
+    prompt = await baserun.format_prompt(
         template_name=template_name,
+        template_messages=TEMPLATES.get(template_name),
         parameters={"question": question},
     )
 
     client = AsyncOpenAI()
     completion = await client.chat.completions.create(
         model="gpt-4-1106-preview",
-        messages=[{"role": "system", "content": prompt}],
+        messages=prompt,
         seed=1234,
     )
     content = completion.choices[0].message.content
@@ -426,10 +433,11 @@ def display_templates():
     templates = baserun.get_templates()
     for template_name, template in templates.items():
         print(template_name)
-        padded_string = "\n  | ".join(template.active_version.template_string.split("\n"))
-        print(f"| Tag: {template.active_version.tag}")
-        print(f"| Template: ")
-        print(padded_string.strip())
+        for version in template.template_versions:
+            print(f"| Tag: {version.tag}")
+            for message in version.template_messages:
+                print(f"  |  Role: {message.role}, Message: {message.message}")
+
         print("")
 
     return "Done"

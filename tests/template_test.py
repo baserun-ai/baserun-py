@@ -2,7 +2,7 @@ from uuid import uuid4
 
 import pytest
 
-from baserun import format_prompt, aformat_prompt, Baserun
+from baserun import format_prompt, Baserun
 from baserun.templates import get_template
 from baserun.v1.baserun_pb2 import Template, TemplateVersion, GetTemplatesResponse
 
@@ -80,52 +80,3 @@ def test_get_template(mock_services):
     assert found_template.id == template.id
     assert found_template_version.id == template_version.id
     assert found_template_version.tag == tag
-
-
-@pytest.mark.asyncio
-async def test_aformat_prompt_string(mock_services):
-    template = "Hello {name}"
-    name = "Jimothy"
-    template_name = "my_template"
-    formatted_template = await aformat_prompt(
-        template_string=template,
-        parameters={"name": name},
-        template_name=template_name,
-    )
-
-    assert formatted_template == f"Hello {name}"
-
-    mock_submit_template_version = mock_services["async_submission_service"].SubmitTemplateVersion
-    assert mock_submit_template_version.call_count == 1
-    args, kwargs = mock_submit_template_version.call_args_list[0]
-
-    request = args[0]
-    assert request.template_version.template.name == template_name
-    assert request.template_version.template.template_type == 1
-    assert request.template_version.tag == "83358"
-    assert request.template_version.parameter_definition == '{"name": "string"}'
-
-
-@pytest.mark.asyncio
-async def test_aformat_prompt_jinja2(mock_services):
-    template = "Hello {{name}}"
-    name = "Jimothy"
-    template_name = "my_template"
-    formatted_template = await aformat_prompt(
-        template_string=template,
-        template_name=template_name,
-        template_type="Jinja2",
-        parameters={"name": name},
-    )
-
-    assert formatted_template == f"Hello {name}"
-
-    mock_submit_template_version = mock_services["async_submission_service"].SubmitTemplateVersion
-    assert mock_submit_template_version.call_count == 1
-    args, kwargs = mock_submit_template_version.call_args_list[0]
-
-    request = args[0]
-    assert request.template_version.template.name == template_name
-    assert request.template_version.template.template_type == 2
-    assert request.template_version.tag == "652b7"
-    assert request.template_version.parameter_definition == '{"name": "string"}'
