@@ -160,6 +160,10 @@ class Baserun:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
 
     @staticmethod
+    def create_run(*args, **kwargs):
+        return Baserun.get_or_create_current_run(*args, **kwargs, force_new=True)
+
+    @staticmethod
     def get_or_create_current_run(
         name: str = None,
         suite_id: str = None,
@@ -168,10 +172,11 @@ class Baserun:
         trace_type: Run.RunType = None,
         metadata: dict[str, Any] = None,
         session_id: str = None,
+        force_new: bool = False,
     ) -> Run:
         """Gets the current run or creates one"""
         existing_run = Baserun.current_run()
-        if existing_run:
+        if existing_run and not force_new:
             return existing_run
 
         run_id = str(uuid.uuid4())
@@ -244,7 +249,7 @@ class Baserun:
                     return await func(*args, **kwargs)
 
                 session_id = get_session_id()
-                run = Baserun.get_or_create_current_run(
+                run = Baserun.create_run(
                     name=run_name,
                     trace_type=run_type,
                     metadata=metadata,
@@ -275,7 +280,7 @@ class Baserun:
                         yield item
 
                 session_id = get_session_id()
-                run = Baserun.get_or_create_current_run(
+                run = Baserun.create_run(
                     name=run_name,
                     trace_type=run_type,
                     metadata=metadata,
@@ -310,7 +315,7 @@ class Baserun:
                     return func(*args, **kwargs)
 
                 session_id = get_session_id()
-                run = Baserun.get_or_create_current_run(
+                run = Baserun.create_run(
                     name=run_name,
                     trace_type=run_type,
                     metadata=metadata,
