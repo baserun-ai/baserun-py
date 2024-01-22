@@ -55,7 +55,7 @@ def check_includes(
     metadata: dict[str, Any] = None,
 ):
     expected_list = [expected] if isinstance(expected, str) else expected
-    result = any(actual in item for item in expected_list)
+    result = any(item in actual for item in expected_list)
 
     return check(
         name=name,
