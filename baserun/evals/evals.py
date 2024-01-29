@@ -226,8 +226,8 @@ class Evals:
         Evals._store_eval_data(
             name=name,
             eval_type="check_injection",
-            result=str(result).lower(),
-            score=int(result),
+            result=str(not result).lower(),
+            score=int(not result),
             submission=submission,
             payload={},
         )
