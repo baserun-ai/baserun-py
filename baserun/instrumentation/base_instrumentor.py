@@ -199,6 +199,10 @@ def spy_on_process_response(original_method):
 def parse_response(response, result, start_time: datetime, end_time: datetime):
     from baserun import Baserun, get_template
     import openai
+    from openai.types import ModerationCreateResponse
+
+    if isinstance(result, ModerationCreateResponse):
+        return result
 
     if response:
         try:
