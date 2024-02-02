@@ -589,6 +589,12 @@ def openpipe_chat(prompt="What is the capital of the US?") -> str:
     return content
 
 
+@baserun.trace
+def openai_moderation():
+    client = OpenAI()
+    response = client.moderations.create(input="Sample text goes here.")
+
+
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):
     function_to_call = functions.get(function_name)
     if function_to_call is None:
