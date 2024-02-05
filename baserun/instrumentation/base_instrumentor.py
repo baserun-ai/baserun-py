@@ -307,9 +307,14 @@ def parse_response(response, result, start_time: datetime, end_time: datetime):
             # Non-streaming
             if hasattr(result, "model"):
                 span.model = result.model
-                span.total_tokens = result.usage.total_tokens
-                span.completion_tokens = result.usage.completion_tokens
-                span.prompt_tokens = result.usage.prompt_tokens
+                try:
+                    span.total_tokens = result.usage.total_tokens
+                    span.completion_tokens = result.usage.completion_tokens
+                    span.prompt_tokens = result.usage.prompt_tokens
+                except BaseException:
+                    # Ignore completions that don't have full usage data
+                    pass
+
                 span.completion_id = result.id
 
                 span_request = SubmitSpanRequest(span=span, run=current_run)
