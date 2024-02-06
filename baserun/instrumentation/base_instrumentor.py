@@ -58,6 +58,14 @@ def spy_on_process_response_data(original_method):
 def parse_response_data(response: Response, result: "ChatCompletionChunk"):
     from baserun import Baserun
 
+    from openai.types import ModerationCreateResponse, CreateEmbeddingResponse
+
+    if isinstance(result, ModerationCreateResponse):
+        return result
+
+    if isinstance(result, CreateEmbeddingResponse):
+        return result
+
     try:
         if not hasattr(response, "deltas"):
             setattr(response, "deltas", [])
@@ -132,6 +140,9 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk"):
 
             Baserun.exporter_queue.put(span_request)
     except BaseException as e:
+        import pdb
+
+        pdb.set_trace()
         logger.warning(f"Failed to collect span for Baserun: {e}")
         pass
 
@@ -199,9 +210,12 @@ def spy_on_process_response(original_method):
 def parse_response(response, result, start_time: datetime, end_time: datetime):
     from baserun import Baserun, get_template
     import openai
-    from openai.types import ModerationCreateResponse
+    from openai.types import ModerationCreateResponse, CreateEmbeddingResponse
 
     if isinstance(result, ModerationCreateResponse):
+        return result
+
+    if isinstance(result, CreateEmbeddingResponse):
         return result
 
     if response:
@@ -322,6 +336,9 @@ def parse_response(response, result, start_time: datetime, end_time: datetime):
                 setattr(response, "_span_request", span_request)
 
         except BaseException as e:
+            import pdb
+
+            pdb.set_trace()
             logger.warning(f"Failed to collect span for Baserun: {e}")
             pass
 
