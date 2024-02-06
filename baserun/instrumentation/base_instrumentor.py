@@ -66,6 +66,8 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk"):
     if isinstance(result, CreateEmbeddingResponse):
         return result
 
+    logger.debug(f"Baserun processing response {response} for result {result}")
+
     try:
         if not hasattr(response, "deltas"):
             setattr(response, "deltas", [])
@@ -138,11 +140,9 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk"):
 
             # TODO: Templates
 
+            logger.debug(f"Baserun assembled span request {span_request}, submitting")
             Baserun.exporter_queue.put(span_request)
     except BaseException as e:
-        import pdb
-
-        pdb.set_trace()
         logger.warning(f"Failed to collect span for Baserun: {e}")
         pass
 
@@ -217,6 +217,8 @@ def parse_response(response, result, start_time: datetime, end_time: datetime):
 
     if isinstance(result, CreateEmbeddingResponse):
         return result
+
+    logger.debug(f"Baserun processing response {response} for result {result}")
 
     if response:
         try:
@@ -327,18 +329,17 @@ def parse_response(response, result, start_time: datetime, end_time: datetime):
                 span.completion_id = result.id
 
                 span_request = SubmitSpanRequest(span=span, run=current_run)
+                logger.debug(f"Baserun assembled span request {span_request}, submitting")
                 # TODO: Templates
                 Baserun.exporter_queue.put(span_request)
                 return result
             # Streaming- will get submitted in `spy_on_process_response_data` after streaming finishes
             else:
                 span_request = SubmitSpanRequest(span=span, run=current_run)
+                logger.debug(f"Baserun assembled span request {span_request}, submitting")
                 setattr(response, "_span_request", span_request)
 
         except BaseException as e:
-            import pdb
-
-            pdb.set_trace()
             logger.warning(f"Failed to collect span for Baserun: {e}")
             pass
 
@@ -355,6 +356,7 @@ def instrument():
 
     original_methods = {"_process_response_data": BaseClient._process_response_data}
     BaseClient._process_response_data = spy_on_process_response_data(BaseClient._process_response_data)
+    logger.debug("Baserun attempting to instrument OpenAI")
 
     try:
         from openai._base_client import SyncAPIClient, AsyncAPIClient
@@ -365,6 +367,7 @@ def instrument():
         AsyncAPIClient._process_response = spy_on_process_response(AsyncAPIClient._process_response)
     except (ModuleNotFoundError, ImportError):
         try:
+            logger.debug("Baserun failed to instrument as new OpenAI Version, falling back")
             BaseClient._process_response = spy_on_process_response(BaseClient._process_response)
         except BaseException as e:
             logger.info(f"Baserun couldn't patch OpenAI, requests may not be logged")
