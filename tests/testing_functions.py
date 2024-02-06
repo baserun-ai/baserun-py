@@ -592,7 +592,13 @@ def openpipe_chat(prompt="What is the capital of the US?") -> str:
 @baserun.trace
 def openai_moderation():
     client = OpenAI()
-    response = client.moderations.create(input="Sample text goes here.")
+    client.moderations.create(input="Sample text goes here.")
+
+
+@baserun.trace
+def openai_embedding():
+    client = OpenAI()
+    client.embeddings.create(input="Example text", model="text-embedding-ada-002")
 
 
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):
