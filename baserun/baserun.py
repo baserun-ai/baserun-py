@@ -84,8 +84,29 @@ class Baserun:
 
         current_span = get_current_span()
         baserun_contexts = {current_span.get_span_context().trace_id: Context()}
+        Baserun.configure_logging()
         if instrument:
             Baserun.instrument()
+
+    @staticmethod
+    def configure_logging():
+        default_log_level = logging.INFO
+        log_level_str = os.getenv("LOG_LEVEL", "").upper()
+
+        # Map string log level to logging module constants
+        log_levels = {
+            "DEBUG": logging.DEBUG,
+            "INFO": logging.INFO,
+            "WARNING": logging.WARNING,
+            "ERROR": logging.ERROR,
+            "CRITICAL": logging.CRITICAL,
+        }
+
+        # Set log level from environment variable, default to INFO if not set or invalid
+        log_level = log_levels.get(log_level_str, default_log_level)
+
+        # Configure logging
+        logging.basicConfig(level=log_level)
 
     @staticmethod
     def set_context(new_context: Context):
