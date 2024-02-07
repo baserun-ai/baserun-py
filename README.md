@@ -56,7 +56,7 @@ def answer_question(question: str) -> str:
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": question}],
     )
-    return response["choices"][0]["message"]["content"]
+    return response.choices[0].message.content
 
 
 if __name__ == "__main__":
