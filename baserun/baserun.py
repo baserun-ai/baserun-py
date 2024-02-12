@@ -21,7 +21,7 @@ from .evals.evals import Evals
 from .exporter import worker
 from .grpc import get_or_create_submission_service
 from .helpers import get_session_id
-from .instrumentation.base_instrumentor import BaseInstrumentor, instrument
+from .instrumentation.base_instrumentor import instrument
 from .instrumentation.span_attributes import BASERUN_RUN
 from .v1.baserun_pb2 import (
     Log,
@@ -51,7 +51,7 @@ baserun_contexts: dict[bytes, Context] = None
 class Baserun:
     _initialized = False
 
-    _instrumentors: list[BaseInstrumentor] = None
+    _instrumentors: list = None
 
     current_test_suite: TestSuite = None
     sessions: dict[str, EndUser] = None
@@ -301,7 +301,7 @@ class Baserun:
                         yield item
 
                 session_id = get_session_id()
-                run = Baserun.create_run(
+                run = Baserun.get_or_create_current_run(
                     name=run_name,
                     trace_type=run_type,
                     metadata=metadata,
@@ -336,7 +336,7 @@ class Baserun:
                     return func(*args, **kwargs)
 
                 session_id = get_session_id()
-                run = Baserun.create_run(
+                run = Baserun.get_or_create_current_run(
                     name=run_name,
                     trace_type=run_type,
                     metadata=metadata,

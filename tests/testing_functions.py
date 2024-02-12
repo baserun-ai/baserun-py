@@ -652,4 +652,4 @@ if __name__ == "__main__":
         call_function(traced_functions, function_name, parsed_args)
 
     # Give time for the worker to clear the queue
-    sleep(0.5)
+    sleep(1.5)

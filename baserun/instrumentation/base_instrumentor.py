@@ -1,19 +1,14 @@
-import collections.abc
 import json
 import logging
-from abc import abstractmethod
 from datetime import datetime
 from inspect import iscoroutinefunction
 from random import randint
-from typing import Callable, Union, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING
 from uuid import UUID
 
 import httpx
 from httpx import Response
-from opentelemetry.instrumentation.instrumentor import (
-    BaseInstrumentor as OTelInstrumentor,
-)
-from opentelemetry.sdk.trace import _Span
+from openai.types.chat.chat_completion_message import FunctionCall
 
 from baserun.v1.baserun_pb2 import Span, Message, Status, SubmitSpanRequest, ToolCall, ToolFunction
 
@@ -127,7 +122,11 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk"):
                 for tool_call in tool_calls:
                     completion_message.tool_calls.append(tool_call)
 
-            span_request = response._span_request
+            span_request = getattr(response, "_span_request")
+            if not span_request:
+                logger.warning("Baserun response not instrumented correctly, missing span info")
+                return
+
             span = span_request.span
             span.completions.append(completion_message)
             span.completion_id = result.id
@@ -186,9 +185,9 @@ def spy_on_process_response(original_method):
 
         async def awrapper(self, *args, **kwargs):
             start_time = datetime.utcnow()
-            end_time = datetime.utcnow()
             response = kwargs.get("response")
             result: ChatCompletion = await original_method(self, *args, **kwargs)
+            end_time = datetime.utcnow()
             parse_response(response, result, start_time, end_time)
 
             return result
@@ -197,8 +196,8 @@ def spy_on_process_response(original_method):
 
     def wrapper(self, *args, **kwargs):
         start_time = datetime.utcnow()
-        end_time = datetime.utcnow()
         result: ChatCompletion = original_method(self, *args, **kwargs)
+        end_time = datetime.utcnow()
         response = kwargs.get("response")
         parse_response(response, result, start_time, end_time)
 
@@ -238,17 +237,25 @@ def parse_response(response, result, start_time: datetime, end_time: datetime):
             ]
 
             if hasattr(result, "choices"):
-                completion_messages = [
-                    Message(
+                completion_messages = []
+                for choice in result.choices:
+                    raw_function_call = choice.message.function_call
+                    if isinstance(raw_function_call, FunctionCall):
+                        function_call = raw_function_call.model_dump_json()
+                    elif isinstance(raw_function_call, str):
+                        function_call = raw_function_call
+                    else:
+                        function_call = json.dumps(raw_function_call)
+
+                    message = Message(
                         role=choice.message.role,
                         content=choice.message.content,
                         finish_reason=choice.finish_reason,
-                        function_call=choice.message.function_call,
+                        function_call=function_call,
                         tool_calls=compile_tool_calls(choice),
                         system_fingerprint=result.system_fingerprint,
                     )
-                    for choice in result.choices
-                ]
+                    completion_messages.append(message)
             else:
                 # Streaming response, will set the completion data later
                 completion_messages = []
@@ -272,7 +279,7 @@ def parse_response(response, result, start_time: datetime, end_time: datetime):
                 span.functions = json.dumps(functions)
 
             if x_request_id:
-                span.span_id = int.from_bytes(bytes.fromhex(x_request_id[:8]), "big")
+                span.span_id = int.from_bytes(bytes.fromhex(x_request_id[-8:]), "big")
                 span.x_request_id = x_request_id
             else:
                 span.span_id = randint(0, 9999999999999999)
@@ -329,6 +336,7 @@ def parse_response(response, result, start_time: datetime, end_time: datetime):
                 span.completion_id = result.id
 
                 span_request = SubmitSpanRequest(span=span, run=current_run)
+                setattr(response, "_span_request", span_request)
                 logger.debug(f"Baserun assembled span request {span_request}, submitting")
                 # TODO: Templates
                 Baserun.exporter_queue.put(span_request)
@@ -371,25 +379,3 @@ def instrument():
             BaseClient._process_response = spy_on_process_response(BaseClient._process_response)
         except BaseException as e:
             logger.info(f"Baserun couldn't patch OpenAI, requests may not be logged")
-
-
-class BaseInstrumentor(OTelInstrumentor):
-    """Deprecated"""
-
-    original_methods: dict[str, Callable] = None
-
-    @staticmethod
-    @abstractmethod
-    def generator_wrapper(original_generator: collections.abc.Iterator, span: _Span):
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def async_generator_wrapper(original_generator: collections.abc.AsyncIterator, span: _Span):
-        pass
-
-    def _instrument(self, **kwargs):
-        instrument()
-
-    def _uninstrument(self, **kwargs):
-        pass
