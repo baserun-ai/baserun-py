@@ -18,6 +18,15 @@ if TYPE_CHECKING:
     from openai.types.chat.chat_completion import Choice, ChatCompletion
 
 
+def spy_on_build_request(original_method):
+    def wrapper(self, *args, **kwargs):
+        result = original_method(self, *args, **kwargs)
+        setattr(result, "_timestamp", datetime.utcnow())
+        return result
+
+    return wrapper
+
+
 def spy_on_process_response_data(original_method):
     if iscoroutinefunction(original_method):
 
@@ -184,29 +193,25 @@ def spy_on_process_response(original_method):
     if iscoroutinefunction(original_method):
 
         async def awrapper(self, *args, **kwargs):
-            start_time = datetime.utcnow()
             response = kwargs.get("response")
             result: ChatCompletion = await original_method(self, *args, **kwargs)
-            end_time = datetime.utcnow()
-            parse_response(response, result, start_time, end_time)
+            parse_response(response, result)
 
             return result
 
         return awrapper
 
     def wrapper(self, *args, **kwargs):
-        start_time = datetime.utcnow()
         result: ChatCompletion = original_method(self, *args, **kwargs)
-        end_time = datetime.utcnow()
         response = kwargs.get("response")
-        parse_response(response, result, start_time, end_time)
+        parse_response(response, result)
 
         return result
 
     return wrapper
 
 
-def parse_response(response, result, start_time: datetime, end_time: datetime):
+def parse_response(response, result):
     from baserun import Baserun, get_template
     import openai
     from openai.types import ModerationCreateResponse, CreateEmbeddingResponse
@@ -289,8 +294,14 @@ def parse_response(response, result, start_time: datetime, end_time: datetime):
             span.name = "openai.chat"
             span.vendor = "openai"
             span.request_type = "chat"
-            span.start_time.FromDatetime(start_time)
-            span.end_time.FromDatetime(end_time)
+
+            if hasattr(request, "_timestamp"):
+                span.start_time.FromDatetime(request._timestamp)
+            else:
+                logger.debug("Baserun couldn't infer start_time from request")
+                span.start_time.FromDatetime(datetime.utcnow())
+
+            span.end_time.FromDatetime(datetime.utcnow())
 
             span.api_type = openai.api_type or "open_ai"
             span.api_base = openai.base_url or "https://api.openai.com/v1"
@@ -364,6 +375,8 @@ def instrument():
 
     original_methods = {"_process_response_data": BaseClient._process_response_data}
     BaseClient._process_response_data = spy_on_process_response_data(BaseClient._process_response_data)
+    original_methods["_build_request"] = BaseClient._build_request
+    BaseClient._build_request = spy_on_build_request(BaseClient._build_request)
     logger.debug("Baserun attempting to instrument OpenAI")
 
     try:
@@ -371,6 +384,7 @@ def instrument():
 
         original_methods["sync__process_response"] = SyncAPIClient._process_response
         SyncAPIClient._process_response = spy_on_process_response(SyncAPIClient._process_response)
+
         original_methods["async__process_response"] = AsyncAPIClient._process_response
         AsyncAPIClient._process_response = spy_on_process_response(AsyncAPIClient._process_response)
     except (ModuleNotFoundError, ImportError):
