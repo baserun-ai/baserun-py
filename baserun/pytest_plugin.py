@@ -60,6 +60,6 @@ def pytest_terminal_summary(terminalreporter):
         return
 
     # TODO: Support other base URLs?
-    run_url = f"https://baserun.ai/runs/{Baserun.current_test_suite.id}"
+    run_url = f"https://app.baserun.ai/runs/{Baserun.current_test_suite.id}"
     terminalreporter.write_sep("=", "Baserun summary", blue=True)
     terminalreporter.write_line(f"Test results available at: {run_url}")
