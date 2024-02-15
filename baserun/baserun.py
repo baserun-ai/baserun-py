@@ -169,7 +169,7 @@ class Baserun:
         if root_context:
             return get_value(BASERUN_RUN, root_context)
 
-        return None
+        return Baserun.get_or_create_current_run(name="Untraced", force_new=True)
 
     @staticmethod
     def _finish_run(run: Run, span: _Span = None):
@@ -196,9 +196,10 @@ class Baserun:
         force_new: bool = False,
     ) -> Run:
         """Gets the current run or creates one"""
-        existing_run = Baserun.current_run()
-        if existing_run and not force_new:
-            return existing_run
+        if not force_new:
+            existing_run = Baserun.current_run()
+            if existing_run:
+                return existing_run
 
         run_id = str(uuid.uuid4())
         if not trace_type:
