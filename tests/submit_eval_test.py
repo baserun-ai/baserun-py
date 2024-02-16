@@ -203,6 +203,40 @@ async def test_eval_custom_async(mock_services):
     assert submit_eval_request.run.name == "test_eval_custom_async"
 
 
+def test_eval_model_graded_custom(mock_services):
+    eval_name = "TestEval"
+    statement = "ChatGPT will take over the world"
+    result = Baserun.evals.model_graded_custom(
+        name=eval_name,
+        prompt="How true is this statement? {statement}.",
+        choices={"Very True": 1, "Kinda true": 0.5, "Not true": 0},
+        statement=statement,
+    )
+
+    assert result == "Not true"  # lel
+    mock_submit_eval = mock_services["submission_service"].SubmitEval.future
+    assert mock_submit_eval.call_count == 1
+    args, kwargs = mock_submit_eval.call_args_list[0]
+    submit_eval_request = args[0]
+
+    assert submit_eval_request.run.name == "test_eval_model_graded_custom"
+    assert submit_eval_request.eval.name == eval_name
+    assert submit_eval_request.eval.type == "model_graded_custom"
+    assert statement in submit_eval_request.eval.submission
+    assert submit_eval_request.eval.result == "Not true"
+    assert submit_eval_request.eval.score == 0
+
+    payload = json.loads(submit_eval_request.eval.payload)
+    assert payload.get("statement") == statement
+
+    step = payload.get("step")
+    messages = step.get("messages")
+    assert len(messages) == 1
+    message = messages[0]
+    assert message.get("role") == "user"
+    assert "Not true" in message.get("content")
+
+
 def test_eval_model_graded_fact(mock_services):
     eval_name = "TestEval"
     question = "What is the capitol of the United States?"
