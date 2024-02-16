@@ -281,10 +281,34 @@ class Evals:
         return choice
 
     @staticmethod
+    def model_graded_custom(
+        name: str, prompt: str, choices: dict[str, float], model: str = "gpt-4-0125-preview", **kwargs
+    ) -> str:
+        formatted_prompt = prompt.format(**kwargs)
+        model_config = {
+            "model": model,
+            "temperature": 0,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": (formatted_prompt + f"\n\n{get_answer_prompt(choices.keys())}"),
+                }
+            ],
+        }
+        return Evals._model_graded(
+            name=name,
+            eval_type="model_graded_custom",
+            model_config=model_config,
+            get_choice_and_score_func=get_choice_and_score(choices),
+            submission=formatted_prompt,
+            payload=kwargs,
+        )
+
+    @staticmethod
     def model_graded_fact(name: str, question: str, expert: str, submission: str) -> str:
         choices = ["A", "B", "C", "D", "E"]
         model_config = {
-            "model": "gpt-4-0613",
+            "model": "gpt-4-0125-preview",
             "temperature": 0,
             "messages": [
                 {
@@ -322,7 +346,7 @@ class Evals:
         choice_scores = {"Yes": 1.0, "No": 0.0}
         choices = list(choice_scores.keys())
         model_config = {
-            "model": "gpt-4-0613",
+            "model": "gpt-4-0125-preview",
             "temperature": 0,
             "messages": [
                 {
@@ -350,7 +374,7 @@ class Evals:
         choice_scores = {"Yes": 1.0, "Unsure": 0.5, "No": 0.0}
         choices = list(choice_scores.keys())
         model_config = {
-            "model": "gpt-4-0613",
+            "model": "gpt-4-0125-preview",
             "temperature": 0,
             "messages": [
                 {
