@@ -33,6 +33,7 @@ log = Baserun.log
 evals = Baserun.evals
 api_key = os.environ.get("BASERUN_API_KEY")
 annotate = Baserun.annotate
+submit_input_variable = Baserun.submit_input_variable
 
 __all__ = [
     "Baserun",
@@ -59,4 +60,5 @@ __all__ = [
     "check",
     "check_equals",
     "check_includes",
+    "submit_input_variable",
 ]

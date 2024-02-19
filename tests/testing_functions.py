@@ -601,6 +601,12 @@ def openai_embedding():
     client.embeddings.create(input="Example text", model="text-embedding-ada-002")
 
 
+def use_input_variables():
+    template_name = "Question & Answer"
+    template = baserun.register_template(TEMPLATES.get(template_name), template_name)
+    baserun.submit_input_variable(key="a", value="b", label="A", template=template)
+
+
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):
     function_to_call = functions.get(function_name)
     if function_to_call is None:

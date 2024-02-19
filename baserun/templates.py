@@ -107,6 +107,7 @@ def apply_template(
         formatted_template_list.add(set_value)
 
     Baserun.formatted_templates[template_name] = formatted_template_list
+
     return formatted_messages
 
 
@@ -156,10 +157,18 @@ def format_prompt(
     parameters: dict[str, Any],
     template_messages: list[dict[str, Union[str, dict[str, Any]]]] = None,
     template_type: str = None,
+    submit_variables: bool = True,
 ):
+    import baserun
+
     template_type_enum = get_template_type_enum(template_type)
+    template = get_template(template_name)
+
+    if template and submit_variables:
+        for key, value in parameters.items():
+            baserun.submit_input_variable(key=key, value=value, template=template)
+
     if not template_messages:
-        template = get_template(template_name)
         template_messages = [
             {"role": message.role, "content": message.message} for message in template.active_version.template_messages
         ]
@@ -219,11 +228,11 @@ def register_template(
     request = SubmitTemplateVersionRequest(template_version=version, environment=Baserun.environment)
     response: SubmitTemplateVersionResponse = get_or_create_submission_service().SubmitTemplateVersion(request)
 
-    template = response.template
+    template = response.template_version.template
     if template.name not in Baserun.templates:
-        Baserun.templates[template.name] = response.template
+        Baserun.templates[template.name] = template
 
-    return response.template
+    return template
 
 
 async def aregister_template(
