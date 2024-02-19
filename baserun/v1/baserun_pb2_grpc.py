@@ -84,6 +84,11 @@ class SubmissionServiceStub(object):
             request_serializer=v1_dot_baserun__pb2.SubmitAnnotationsRequest.SerializeToString,
             response_deserializer=v1_dot_baserun__pb2.SubmitAnnotationsResponse.FromString,
         )
+        self.SubmitInputVariable = channel.unary_unary(
+            "/baserun.v1.SubmissionService/SubmitInputVariable",
+            request_serializer=v1_dot_baserun__pb2.SubmitInputVariableRequest.SerializeToString,
+            response_deserializer=v1_dot_baserun__pb2.SubmitInputVariableResponse.FromString,
+        )
 
 
 class SubmissionServiceServicer(object):
@@ -173,6 +178,12 @@ class SubmissionServiceServicer(object):
         context.set_details("Method not implemented!")
         raise NotImplementedError("Method not implemented!")
 
+    def SubmitInputVariable(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
+
 
 def add_SubmissionServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -245,6 +256,11 @@ def add_SubmissionServiceServicer_to_server(servicer, server):
             servicer.SubmitAnnotations,
             request_deserializer=v1_dot_baserun__pb2.SubmitAnnotationsRequest.FromString,
             response_serializer=v1_dot_baserun__pb2.SubmitAnnotationsResponse.SerializeToString,
+        ),
+        "SubmitInputVariable": grpc.unary_unary_rpc_method_handler(
+            servicer.SubmitInputVariable,
+            request_deserializer=v1_dot_baserun__pb2.SubmitInputVariableRequest.FromString,
+            response_serializer=v1_dot_baserun__pb2.SubmitInputVariableResponse.SerializeToString,
         ),
     }
     generic_handler = grpc.method_handlers_generic_handler("baserun.v1.SubmissionService", rpc_method_handlers)
@@ -651,6 +667,35 @@ class SubmissionService(object):
             "/baserun.v1.SubmissionService/SubmitAnnotations",
             v1_dot_baserun__pb2.SubmitAnnotationsRequest.SerializeToString,
             v1_dot_baserun__pb2.SubmitAnnotationsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
+
+    @staticmethod
+    def SubmitInputVariable(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            "/baserun.v1.SubmissionService/SubmitInputVariable",
+            v1_dot_baserun__pb2.SubmitInputVariableRequest.SerializeToString,
+            v1_dot_baserun__pb2.SubmitInputVariableResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -302,6 +302,7 @@ class Span(_message.Message):
         "template_parameters",
         "template_string",
         "template_version_id",
+        "template_name",
         "tools",
         "tool_choice",
         "seed",
@@ -350,6 +351,7 @@ class Span(_message.Message):
     TEMPLATE_PARAMETERS_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_STRING_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_VERSION_ID_FIELD_NUMBER: _ClassVar[int]
+    TEMPLATE_NAME_FIELD_NUMBER: _ClassVar[int]
     TOOLS_FIELD_NUMBER: _ClassVar[int]
     TOOL_CHOICE_FIELD_NUMBER: _ClassVar[int]
     SEED_FIELD_NUMBER: _ClassVar[int]
@@ -397,6 +399,7 @@ class Span(_message.Message):
     template_parameters: str
     template_string: str
     template_version_id: str
+    template_name: str
     tools: str
     tool_choice: str
     seed: int
@@ -446,6 +449,7 @@ class Span(_message.Message):
         template_parameters: _Optional[str] = ...,
         template_string: _Optional[str] = ...,
         template_version_id: _Optional[str] = ...,
+        template_name: _Optional[str] = ...,
         tools: _Optional[str] = ...,
         tool_choice: _Optional[str] = ...,
         seed: _Optional[int] = ...,
@@ -671,6 +675,30 @@ class Session(_message.Message):
             _Union[_timestamp_pb2.Timestamp, _Mapping]
         ] = ...,
         end_user: _Optional[_Union[EndUser, _Mapping]] = ...,
+    ) -> None: ...
+
+class InputVariable(_message.Message):
+    __slots__ = ["id", "template_id", "test_case_id", "key", "value", "label"]
+    ID_FIELD_NUMBER: _ClassVar[int]
+    TEMPLATE_ID_FIELD_NUMBER: _ClassVar[int]
+    TEST_CASE_ID_FIELD_NUMBER: _ClassVar[int]
+    KEY_FIELD_NUMBER: _ClassVar[int]
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    template_id: str
+    test_case_id: str
+    key: str
+    value: str
+    label: str
+    def __init__(
+        self,
+        id: _Optional[str] = ...,
+        template_id: _Optional[str] = ...,
+        test_case_id: _Optional[str] = ...,
+        key: _Optional[str] = ...,
+        value: _Optional[str] = ...,
+        label: _Optional[str] = ...,
     ) -> None: ...
 
 class StartRunRequest(_message.Message):
@@ -913,6 +941,20 @@ class SubmitAnnotationsRequest(_message.Message):
     ) -> None: ...
 
 class SubmitAnnotationsResponse(_message.Message):
+    __slots__ = ["message"]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    message: str
+    def __init__(self, message: _Optional[str] = ...) -> None: ...
+
+class SubmitInputVariableRequest(_message.Message):
+    __slots__ = ["input_variable"]
+    INPUT_VARIABLE_FIELD_NUMBER: _ClassVar[int]
+    input_variable: InputVariable
+    def __init__(
+        self, input_variable: _Optional[_Union[InputVariable, _Mapping]] = ...
+    ) -> None: ...
+
+class SubmitInputVariableResponse(_message.Message):
     __slots__ = ["message"]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     message: str

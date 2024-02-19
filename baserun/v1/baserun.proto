@@ -139,10 +139,11 @@ message Span {
     optional double top_k = 35;
 
     EndUser end_user = 36;
-    optional string template_id = 37;
+    optional string template_id = 37; // Deprecated
     optional string template_parameters = 38; // JSONified map<str, any>
-    optional string template_string = 45; // Deprecated, register_template is required to be done first
+    optional string template_string = 45; // Deprecated
     optional string template_version_id = 46; // Deprecated
+    optional string template_name = 48;
 
     optional string tools = 39; // JSONified array<map<str, any>>
     optional string tool_choice = 40; // JSONified map<str, any>
@@ -232,6 +233,17 @@ message Session {
     google.protobuf.Timestamp completion_timestamp = 4;
 
     EndUser end_user = 5;
+}
+
+message InputVariable {
+    string id = 1;
+
+    optional string template_id = 2;
+    optional string test_case_id = 3;
+
+    string key = 4;
+    string value = 5;
+    optional string label = 6;
 }
 
 message StartRunRequest {
@@ -358,6 +370,14 @@ message SubmitAnnotationsResponse {
     string message = 1;
 }
 
+message SubmitInputVariableRequest {
+    InputVariable input_variable = 1;
+}
+
+message SubmitInputVariableResponse {
+    string message = 1;
+}
+
 service SubmissionService {
     rpc StartRun (StartRunRequest) returns (StartRunResponse);
     rpc SubmitLog (SubmitLogRequest) returns (SubmitLogResponse);
@@ -373,4 +393,5 @@ service SubmissionService {
     rpc SubmitUser (SubmitUserRequest) returns (SubmitUserResponse);
     rpc GetTemplates (GetTemplatesRequest) returns (GetTemplatesResponse);
     rpc SubmitAnnotations (SubmitAnnotationsRequest) returns (SubmitAnnotationsResponse);
+    rpc SubmitInputVariable (SubmitInputVariableRequest) returns (SubmitInputVariableResponse);
 }

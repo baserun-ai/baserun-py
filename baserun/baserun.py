@@ -32,6 +32,8 @@ from .v1.baserun_pb2 import (
     StartRunRequest,
     EndUser,
     Template,
+    InputVariable,
+    SubmitInputVariableRequest,
 )
 from .v1.baserun_pb2_grpc import SubmissionServiceStub
 
@@ -460,3 +462,26 @@ class Baserun:
         from baserun.annotation import Annotation
 
         return Annotation(completion_id=completion_id, run=run or trace)
+
+    @staticmethod
+    def submit_input_variable(
+        key: str,
+        value: str,
+        label: str = None,
+        test_case_id: str = None,
+        template: Template = None,
+        template_id: str = None,
+    ) -> InputVariable:
+        if template and not template_id:
+            template_id = template.id
+
+        submit_request = SubmitInputVariableRequest(
+            input_variable=InputVariable(
+                key=key,
+                value=value,
+                label=label,
+                test_case_id=test_case_id,
+                template_id=template_id,
+            )
+        )
+        get_or_create_submission_service().SubmitInputVariable(submit_request)
