@@ -241,15 +241,11 @@ def parse_response(response, result):
                 if "function_call" in message:
                     function_call = message.get("function_call")
                     if function_call and function_call != "null":
-                        tools_or_function["function_call"] = function_call
+                        tools_or_function["function_call"] = json.dumps(function_call)
 
                 prompt_messages.append(
                     Message(role=message.get("role"), content=message.get("content"), **tools_or_function)
                 )
-
-            import pdb
-
-            pdb.set_trace()
 
             if hasattr(result, "choices"):
                 completion_messages = []
