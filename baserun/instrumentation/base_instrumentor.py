@@ -233,13 +233,23 @@ def parse_response(response, result):
                 # TODO handle this case
                 return result
 
-            prompt_messages = [
-                Message(
-                    role=message.get("role"),
-                    content=message.get("content"),
+            prompt_messages = []
+            for message in parsed_request.get("messages", []):
+                tools_or_function = {}
+                if "tool_calls" in message:
+                    tools_or_function["tool_calls"] = message.get("tool_calls")
+                if "function_call" in message:
+                    function_call = message.get("function_call")
+                    if function_call and function_call != "null":
+                        tools_or_function["function_call"] = function_call
+
+                prompt_messages.append(
+                    Message(role=message.get("role"), content=message.get("content"), **tools_or_function)
                 )
-                for message in parsed_request.get("messages", [])
-            ]
+
+            import pdb
+
+            pdb.set_trace()
 
             if hasattr(result, "choices"):
                 completion_messages = []
