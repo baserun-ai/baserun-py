@@ -71,8 +71,8 @@ def get_template_type_enum(template_type: str = None):
 
 def apply_template(
     template_name: str,
-    template_messages: list[dict[str, Union[str, dict[str, Any]]]],
     parameters: dict[str, Any],
+    template_messages: list[dict[str, Union[str, dict[str, Any]]]],
     template_type_enum,
 ) -> str:
     formatted_messages = []
@@ -91,7 +91,11 @@ def apply_template(
                     # TODO: Is this OK? should we raise? or return blank string?
                     return template_string
 
-            formatted_content = template_string.format(**parameters)
+            try:
+                formatted_content = template_string.format(**parameters)
+            except KeyError:
+                formatted_content = template_string
+
             formatted_messages.append({**message, "content": formatted_content})
         else:
             formatted_messages.append(message)
@@ -173,7 +177,12 @@ def format_prompt(
             {"role": message.role, "content": message.message} for message in template.active_version.template_messages
         ]
 
-    return apply_template(template_name, template_messages, parameters, template_type_enum)
+    return apply_template(
+        template_name=template_name,
+        parameters=parameters,
+        template_messages=template_messages,
+        template_type_enum=template_type_enum,
+    )
 
 
 def construct_template_version(
