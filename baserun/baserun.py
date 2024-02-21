@@ -11,6 +11,7 @@ from threading import Thread
 from typing import Any, TYPE_CHECKING, Set
 from typing import Callable, Dict, Optional, Union
 
+import grpc
 from opentelemetry import trace
 from opentelemetry.context import Context, set_value, get_value
 from opentelemetry.sdk.trace import TracerProvider, _Span
@@ -68,6 +69,7 @@ class Baserun:
     exporter_queue: Queue = None
     exporter_thread: Thread = None
     async_submission_service: SubmissionServiceStub = None
+    futures: list[grpc.Future] = None
 
     @staticmethod
     def init(instrument: bool = True) -> None:
@@ -83,6 +85,7 @@ class Baserun:
         Baserun._initialized = True
         Baserun.templates = {}
         Baserun.formatted_templates = {}
+        Baserun.futures = []
 
         current_span = get_current_span()
         baserun_contexts = {current_span.get_span_context().trace_id: Context()}
@@ -180,7 +183,7 @@ class Baserun:
         try:
             run.completion_timestamp.FromDatetime(datetime.utcnow())
             Baserun.set_context(set_value(BASERUN_RUN, run, Baserun.get_context()))
-            get_or_create_submission_service().EndRun.future(EndRunRequest(run=run))
+            Baserun.futures.append(get_or_create_submission_service().EndRun.future(EndRunRequest(run=run)))
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
 
@@ -450,7 +453,7 @@ class Baserun:
 
         # noinspection PyBroadException
         try:
-            get_or_create_submission_service().SubmitLog.future(log_request)
+            Baserun.futures.append(get_or_create_submission_service().SubmitLog.future(log_request))
         except Exception as e:
             logger.warning(f"Failed to submit log to Baserun: {e}")
 
@@ -485,3 +488,12 @@ class Baserun:
             )
         )
         get_or_create_submission_service().SubmitInputVariable(submit_request)
+
+    @staticmethod
+    def finish(timeout=1):
+        if Baserun.futures:
+            logger.debug(f"Baserun finishing {len(Baserun.futures)} futures")
+            for future in Baserun.futures:
+                future.result(timeout=timeout)
+
+            logger.debug(f"Baserun futures finished")
