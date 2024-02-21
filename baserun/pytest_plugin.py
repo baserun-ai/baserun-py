@@ -12,9 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def pytest_addoption(parser):
-    parser.addoption(
-        "--baserun", action="store_true", help="Enable baserun functionality"
-    )
+    parser.addoption("--baserun", action="store_true", help="Enable baserun functionality")
 
 
 def pytest_sessionstart(session):
@@ -28,22 +26,20 @@ def pytest_sessionstart(session):
         session.suite = suite
         Baserun.current_test_suite = suite
         try:
-            get_or_create_submission_service().StartTestSuite(
-                StartTestSuiteRequest(test_suite=suite)
-            )
+            get_or_create_submission_service().StartTestSuite(StartTestSuiteRequest(test_suite=suite))
         except Exception as e:
             logger.warning(f"Failed to start test suite for Baserun, error: {e}")
 
 
 def pytest_sessionfinish(session):
     if session.config.getoption("--baserun"):
+        Baserun.finish()
+
         if hasattr(session, "suite"):
             session.suite.completion_timestamp.FromDatetime(datetime.utcnow())
 
             try:
-                get_or_create_submission_service().EndTestSuite(
-                    EndTestSuiteRequest(test_suite=session.suite)
-                )
+                get_or_create_submission_service().EndTestSuite(EndTestSuiteRequest(test_suite=session.suite))
             except Exception as e:
                 logger.warning(f"Failed to end test suite for Baserun, error: {e}")
 

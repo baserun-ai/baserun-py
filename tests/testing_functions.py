@@ -6,7 +6,6 @@ import os
 import sys
 import traceback
 from threading import Thread
-from time import sleep
 
 import openai
 from openai import OpenAI, AsyncOpenAI, NotFoundError
@@ -657,5 +656,4 @@ if __name__ == "__main__":
     else:
         call_function(traced_functions, function_name, parsed_args)
 
-    # Give time for the worker to clear the queue
-    sleep(1.5)
+    Baserun.finish()

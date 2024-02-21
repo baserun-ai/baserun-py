@@ -77,7 +77,9 @@ class Evals:
 
         run = Baserun.current_run()
         try:
-            get_or_create_submission_service().SubmitEval.future(SubmitEvalRequest(eval=eval_message, run=run))
+            Baserun.futures.append(
+                get_or_create_submission_service().SubmitEval.future(SubmitEvalRequest(eval=eval_message, run=run))
+            )
         except Exception as e:
             logger.warning(f"Failed to submit eval to Baserun: {e}")
 

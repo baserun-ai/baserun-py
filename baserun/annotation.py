@@ -43,17 +43,13 @@ class Annotation:
         self.feedback_list = []
 
     @classmethod
-    def annotate(
-        cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None
-    ):
+    def annotate(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
         completion_id = completion.id if completion else None
         return cls(completion_id=completion_id)
 
     @classmethod
     @asynccontextmanager
-    async def aanotate(
-        cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None
-    ):
+    async def aanotate(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
         if not Baserun._initialized:
             yield
 
@@ -68,9 +64,7 @@ class Annotation:
 
     @classmethod
     @contextmanager
-    def annotate(
-        cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None
-    ):
+    def annotate(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
         if not Baserun._initialized:
             yield
 
@@ -97,9 +91,7 @@ class Annotation:
             elif stars is not None:
                 score = stars / 5
             else:
-                logger.info(
-                    "Could not calculate feedback score, please pass a score, thumbsup, or stars"
-                )
+                logger.info("Could not calculate feedback score, please pass a score, thumbsup, or stars")
                 score = 0
 
         run = Baserun.get_or_create_current_run()
@@ -175,8 +167,10 @@ class Annotation:
             logs=self.logs,
             feedback=self.feedback_list,
         )
-        get_or_create_submission_service().SubmitAnnotations.future(
-            SubmitAnnotationsRequest(annotations=annotation_message, run=self.run)
+        Baserun.futures.append(
+            get_or_create_submission_service().SubmitAnnotations.future(
+                SubmitAnnotationsRequest(annotations=annotation_message, run=self.run)
+            )
         )
 
     async def asubmit(self):
