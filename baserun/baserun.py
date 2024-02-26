@@ -503,7 +503,7 @@ class Baserun:
             logger.debug(f"Baserun futures finished")
 
         try_count = 0
-        while Baserun.exporter_queue.not_empty and try_count < 5:
+        while not Baserun.exporter_queue.empty() and try_count < 5:
             logger.debug(f"Baserun finishing export of spans")
             sleep(0.5)
             try_count += 1
