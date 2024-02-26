@@ -167,15 +167,18 @@ class Baserun:
     @staticmethod
     def current_run(create: bool = True) -> Union[Run, None]:
         """Gets the current run"""
-        current_run = get_value(BASERUN_RUN, Baserun.get_context())
+        current_run: Run = get_value(BASERUN_RUN, Baserun.get_context())
         if current_run:
             return current_run
 
         root_context = baserun_contexts.get(0)
         if root_context:
-            return get_value(BASERUN_RUN, root_context)
+            run = get_value(BASERUN_RUN, root_context)
+            if run:
+                return run
 
         if create:
+            logger.debug("Couldn't find existing run, creating an Untraced run")
             return Baserun.get_or_create_current_run(name="Untraced", force_new=True)
         return
 

@@ -4,6 +4,8 @@ import sys
 import uuid
 from datetime import datetime
 
+from opentelemetry.context import Context
+
 from baserun import Baserun
 from baserun.v1.baserun_pb2 import TestSuite, StartTestSuiteRequest, EndTestSuiteRequest
 from .grpc import get_or_create_submission_service
@@ -32,16 +34,23 @@ def pytest_sessionstart(session):
 
 
 def pytest_sessionfinish(session):
-    if session.config.getoption("--baserun"):
+    if Baserun._initialized:
         Baserun.finish()
 
-        if hasattr(session, "suite"):
+        suite = Baserun.current_test_suite or getattr(session, "suite", None)
+        if suite:
             session.suite.completion_timestamp.FromDatetime(datetime.utcnow())
 
             try:
                 get_or_create_submission_service().EndTestSuite(EndTestSuiteRequest(test_suite=session.suite))
             except Exception as e:
                 logger.warning(f"Failed to end test suite for Baserun, error: {e}")
+
+
+def pytest_runtest_teardown(item, nextitem):
+    if Baserun._initialized:
+        Baserun.finish()
+        Baserun.set_context(Context())
 
 
 def pytest_collection_modifyitems(config, items):
