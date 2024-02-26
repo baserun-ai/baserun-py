@@ -136,7 +136,7 @@ def create_langchain_template(
 
     if template_type == Template.TEMPLATE_TYPE_JINJA2 or template_type.lower().startswith("jinja"):
         langchain_template = PromptTemplate(
-            template=template_string,
+            template_messages=[{"role": "SYSTEM", "content": template_string}],
             input_variables=input_variables,
             template_format="jinja2",
             tools=tools,
@@ -146,8 +146,8 @@ def create_langchain_template(
         langchain_template = PromptTemplate(template=template_string, input_variables=input_variables, tools=tools)
 
     template_type_enum = get_template_type_enum(template_type)
-    template_version = register_template(
-        template_string=template_string,
+    register_template(
+        template_messages=[{"role": "SYSTEM", "content": template_string}],
         template_name=template_name,
         template_type=template_type_enum,
         template_tag=template_tag,
