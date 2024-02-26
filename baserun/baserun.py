@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from queue import Queue
 from threading import Thread
+from time import sleep
 from typing import Any, TYPE_CHECKING, Set
 from typing import Callable, Dict, Optional, Union
 
@@ -497,3 +498,9 @@ class Baserun:
                 future.result(timeout=timeout)
 
             logger.debug(f"Baserun futures finished")
+
+        try_count = 0
+        while Baserun.exporter_queue.not_empty and try_count < 5:
+            logger.debug(f"Baserun finishing export of spans")
+            sleep(0.5)
+            try_count += 1
