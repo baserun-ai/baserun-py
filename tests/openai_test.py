@@ -45,7 +45,7 @@ def basic_span_asserts(
     assert isinstance(span.run_id, str)
     assert isinstance(span.trace_id, bytes)
     assert isinstance(span.span_id, int)
-    assert span.name == f"baserun.openai.{request_type}"
+    assert span.name == f"openai.{request_type}"
     assert isinstance(span.start_time, protobuf.timestamp_pb2.Timestamp)
     assert isinstance(span.end_time, protobuf.timestamp_pb2.Timestamp)
     assert span.status.code == status_code

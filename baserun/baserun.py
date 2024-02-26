@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from queue import Queue
 from threading import Thread
+from time import sleep
 from typing import Any, TYPE_CHECKING, Set
 from typing import Callable, Dict, Optional, Union
 
@@ -166,15 +167,18 @@ class Baserun:
     @staticmethod
     def current_run(create: bool = True) -> Union[Run, None]:
         """Gets the current run"""
-        current_run = get_value(BASERUN_RUN, Baserun.get_context())
+        current_run: Run = get_value(BASERUN_RUN, Baserun.get_context())
         if current_run:
             return current_run
 
         root_context = baserun_contexts.get(0)
         if root_context:
-            return get_value(BASERUN_RUN, root_context)
+            run = get_value(BASERUN_RUN, root_context)
+            if run:
+                return run
 
         if create:
+            logger.debug("Couldn't find existing run, creating an Untraced run")
             return Baserun.get_or_create_current_run(name="Untraced", force_new=True)
         return
 
@@ -497,3 +501,9 @@ class Baserun:
                 future.result(timeout=timeout)
 
             logger.debug(f"Baserun futures finished")
+
+        try_count = 0
+        while Baserun.exporter_queue.not_empty and try_count < 5:
+            logger.debug(f"Baserun finishing export of spans")
+            sleep(0.5)
+            try_count += 1

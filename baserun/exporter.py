@@ -25,7 +25,7 @@ def worker(queue: Queue):
             if hasattr(e, "details"):
                 # Race condition where the span is submitted before the run start call finishes
                 if "not found" in e.details():
-                    sleep(5)
+                    sleep(0.5)
                     submission_service = get_or_create_submission_service()
                     submission_service.SubmitSpan(item)
                 else:
