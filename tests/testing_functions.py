@@ -606,6 +606,19 @@ def use_input_variables():
     baserun.submit_input_variable(key="a", value="b", label="A", template=template)
 
 
+@baserun.trace
+def use_annotated_input_variables():
+    client = OpenAI()
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": "What is the capital of the US?"}],
+    )
+    annotation = baserun.annotate(completion.id)
+    annotation.input("country", "the US")
+    # there's a race condition because submit happens before the span is processed (and the completion is created)
+    annotation.submit()
+
+
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):
     function_to_call = functions.get(function_name)
     if function_to_call is None:

@@ -184,6 +184,7 @@ message CompletionAnnotations {
     repeated Check checks = 2;
     repeated Log logs = 3;
     repeated Feedback feedback = 4;
+    repeated InputVariable input_variables = 5;
 }
 
 message TestSuite {

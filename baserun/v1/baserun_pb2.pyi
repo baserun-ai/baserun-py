@@ -525,21 +525,24 @@ class Feedback(_message.Message):
     ) -> None: ...
 
 class CompletionAnnotations(_message.Message):
-    __slots__ = ["completion_id", "checks", "logs", "feedback"]
+    __slots__ = ["completion_id", "checks", "logs", "feedback", "input_variables"]
     COMPLETION_ID_FIELD_NUMBER: _ClassVar[int]
     CHECKS_FIELD_NUMBER: _ClassVar[int]
     LOGS_FIELD_NUMBER: _ClassVar[int]
     FEEDBACK_FIELD_NUMBER: _ClassVar[int]
+    INPUT_VARIABLES_FIELD_NUMBER: _ClassVar[int]
     completion_id: str
     checks: _containers.RepeatedCompositeFieldContainer[Check]
     logs: _containers.RepeatedCompositeFieldContainer[Log]
     feedback: _containers.RepeatedCompositeFieldContainer[Feedback]
+    input_variables: _containers.RepeatedCompositeFieldContainer[InputVariable]
     def __init__(
         self,
         completion_id: _Optional[str] = ...,
         checks: _Optional[_Iterable[_Union[Check, _Mapping]]] = ...,
         logs: _Optional[_Iterable[_Union[Log, _Mapping]]] = ...,
         feedback: _Optional[_Iterable[_Union[Feedback, _Mapping]]] = ...,
+        input_variables: _Optional[_Iterable[_Union[InputVariable, _Mapping]]] = ...,
     ) -> None: ...
 
 class TestSuite(_message.Message):

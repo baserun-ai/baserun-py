@@ -22,6 +22,7 @@ from baserun.v1.baserun_pb2 import (
     Run,
     SubmitAnnotationsRequest,
     CompletionAnnotations,
+    InputVariable,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ logger = logging.getLogger(__name__)
 class Annotation:
     completion_id: str
     span: Span
+    input_variables: list[InputVariable]
     logs: list[Log]
     checks: list[Check]
     feedback_list: list[Feedback]
@@ -38,6 +40,7 @@ class Annotation:
         self.run = run or Baserun.get_or_create_current_run()
         self.span = self.try_get_span()
         self.completion_id = completion_id
+        self.input_variables = []
         self.logs = []
         self.checks = []
         self.feedback_list = []
@@ -152,9 +155,13 @@ class Annotation:
         )
         self.logs.append(log)
 
+    def input(self, key: str, value: str):
+        input_variable = InputVariable(key=key, value=value)
+        self.input_variables.append(input_variable)
+
     def try_get_span(self) -> Span:
         current_span: ReadableSpan = get_current_span()
-        if current_span and current_span.name.startswith(f"{PARENT_SPAN_NAME}."):
+        if current_span and current_span.is_recording() and current_span.name.startswith(f"{PARENT_SPAN_NAME}."):
             return current_span
 
         # TODO? Maybe we should create a span or trace
@@ -166,6 +173,7 @@ class Annotation:
             checks=self.checks,
             logs=self.logs,
             feedback=self.feedback_list,
+            input_variables=self.input_variables,
         )
         Baserun.futures.append(
             get_or_create_submission_service().SubmitAnnotations.future(
