@@ -3,7 +3,7 @@ import inspect
 import logging
 import os
 import traceback
-from typing import Any, TYPE_CHECKING, Union, Set
+from typing import Optional, Any, TYPE_CHECKING, Union, Set
 
 from baserun import Baserun
 from baserun.grpc import (
@@ -59,7 +59,7 @@ def get_template(name: str) -> Template:
     return template
 
 
-def get_template_type_enum(template_type: str = None):
+def get_template_type_enum(template_type: Optional[str] = None):
     template_type = template_type or "unknown"
     if template_type == Template.TEMPLATE_TYPE_JINJA2 or template_type.lower().startswith("jinja"):
         template_type_enum = Template.TEMPLATE_TYPE_JINJA2
@@ -117,11 +117,11 @@ def apply_template(
 
 def create_langchain_template(
     template_string: str,
-    parameters: dict[str, Any] = None,
-    template_name: str = None,
-    template_tag: str = None,
-    template_type: str = None,
-    tools: list[Union["Tool", Any]] = None,
+    parameters: Optional[dict[str, Any]] = None,
+    template_name: Optional[str] = None,
+    template_tag: Optional[str] = None,
+    template_type: Optional[str] = None,
+    tools: Optional[list[Union["Tool", Any]]] = None,
 ):
     from langchain.prompts import PromptTemplate
 
@@ -159,8 +159,8 @@ def create_langchain_template(
 def format_prompt(
     template_name: str,
     parameters: dict[str, Any],
-    template_messages: list[dict[str, Union[str, dict[str, Any]]]] = None,
-    template_type: str = None,
+    template_messages: Optional[list[dict[str, Union[str, dict[str, Any]]]]] = None,
+    template_type: Optional[str] = None,
     submit_variables: bool = True,
 ):
     import baserun
@@ -187,8 +187,8 @@ def format_prompt(
 
 def construct_template_version(
     template_messages: list[dict[str, Union[str, dict[str, Any]]]],
-    template_name: str = None,
-    template_tag: str = None,
+    template_name: Optional[str] = None,
+    template_tag: Optional[str] = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
 ) -> TemplateVersion:
     # Automatically generate a name based on the template's contents
@@ -215,8 +215,8 @@ def construct_template_version(
 
 def register_template(
     template_messages: list[dict[str, Union[str, dict[str, Any]]]],
-    template_name: str = None,
-    template_tag: str = None,
+    template_name: Optional[str] = None,
+    template_tag: Optional[str] = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
 ) -> Template:
     from baserun import Baserun
@@ -246,8 +246,8 @@ def register_template(
 
 async def aregister_template(
     template_messages: list[dict[str, Union[str, dict[str, Any]]]],
-    template_name: str = None,
-    template_tag: str = None,
+    template_name: Optional[str] = None,
+    template_tag: Optional[str] = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
 ) -> Template:
     from baserun import Baserun

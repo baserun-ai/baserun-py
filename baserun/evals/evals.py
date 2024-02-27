@@ -243,7 +243,7 @@ class Evals:
         get_choice_and_score_func: Callable[[str], Tuple[str, Optional[float]]],
         submission: str,
         payload: Dict,
-        client: OpenAI = None,
+        client: Optional[OpenAI] = None,
     ) -> str:
         if not client:
             client = OpenAI()

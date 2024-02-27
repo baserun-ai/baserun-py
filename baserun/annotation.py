@@ -2,7 +2,7 @@ import json
 import logging
 from contextlib import contextmanager, asynccontextmanager
 from numbers import Number
-from typing import Any, Union
+from typing import Optional, Any, Union
 
 from openai import Stream
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
@@ -36,7 +36,7 @@ class Annotation:
     checks: list[Check]
     feedback_list: list[Feedback]
 
-    def __init__(self, completion_id: str = None, run: Run = None):
+    def __init__(self, completion_id: Optional[str] = None, run: Optional[Run] = None):
         self.run = run or Baserun.get_or_create_current_run()
         self.span = self.try_get_span()
         self.completion_id = completion_id
@@ -82,11 +82,11 @@ class Annotation:
 
     def feedback(
         self,
-        name: str = None,
-        thumbsup: bool = None,
-        stars: Number = None,
-        score: Number = None,
-        metadata: dict[str, Any] = None,
+        name: Optional[str] = None,
+        thumbsup: Optional[bool] = None,
+        stars: Optional[Number] = None,
+        score: Optional[Number] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ):
         if score is None:
             if thumbsup is not None:
@@ -116,8 +116,8 @@ class Annotation:
         methodology: str,
         expected: dict[str, Any],
         actual: dict[str, Any],
-        score: Number = None,
-        metadata: dict[str, Any] = None,
+        score: Optional[Number] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ):
         check = Check(
             name=name,
@@ -134,7 +134,7 @@ class Annotation:
         name: str,
         expected: Union[str, list[str]],
         actual: str,
-        metadata: dict[str, Any] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ):
         expected_list = [expected] if isinstance(expected, str) else expected
         result = any(expected in actual for expected in expected_list)

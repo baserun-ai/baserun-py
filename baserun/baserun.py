@@ -193,7 +193,7 @@ class Baserun:
         return
 
     @staticmethod
-    def _finish_run(run: Run, span: _Span = None):
+    def _finish_run(run: Run, span: Optional[_Span] = None):
         try:
             run.completion_timestamp.FromDatetime(datetime.utcnow())
             Baserun.set_context(set_value(BASERUN_RUN, run, Baserun.get_context()))
@@ -207,13 +207,13 @@ class Baserun:
 
     @staticmethod
     def get_or_create_current_run(
-        name: str = None,
-        suite_id: str = None,
-        start_timestamp: datetime = None,
-        completion_timestamp: datetime = None,
-        trace_type: Run.RunType = None,
-        metadata: dict[str, Any] = None,
-        session_id: str = None,
+        name: Optional[str] = None,
+        suite_id: Optional[str] = None,
+        start_timestamp: Optional[datetime] = None,
+        completion_timestamp: Optional[datetime] = None,
+        trace_type: Optional[Run.RunType] = None,
+        metadata: Optional[dict[str, Any]] = None,
+        session_id: Optional[str] = None,
         force_new: bool = False,
     ) -> Run:
         """Gets the current run or creates one"""
@@ -274,7 +274,7 @@ class Baserun:
     def _trace(
         func: Callable,
         run_type: Run.RunType,
-        name: str = None,
+        name: Optional[str] = None,
         metadata: Optional[Dict] = None,
     ) -> Run:
         tracer_provider = trace.get_tracer_provider()
@@ -387,7 +387,7 @@ class Baserun:
         return wrapper
 
     @staticmethod
-    def trace(func: Callable, name: str = None, metadata: Optional[Dict] = None):
+    def trace(func: Callable, name: Optional[str] = None, metadata: Optional[Dict] = None):
         if Baserun.current_test_suite:
             return Baserun.test(func=func, metadata=metadata)
 
@@ -400,7 +400,7 @@ class Baserun:
 
     @staticmethod
     @contextmanager
-    def start_trace(*args, name: str = None, end_on_exit=True, **kwargs) -> Run:
+    def start_trace(*args, name: Optional[str] = None, end_on_exit=True, **kwargs) -> Run:
         if not Baserun._initialized:
             yield
 
@@ -474,7 +474,7 @@ class Baserun:
         return log_message
 
     @staticmethod
-    def annotate(completion_id: str = None, run: Run = None, trace: Run = None) -> "Annotation":
+    def annotate(completion_id: Optional[str] = None, run: Optional[Run] = None, trace: Optional[Run] = None) -> "Annotation":
         """Capture annotations for a particular run and/or completion. the `trace` kwarg here is simply an alias"""
         from baserun.annotation import Annotation
 
@@ -484,10 +484,10 @@ class Baserun:
     def submit_input_variable(
         key: str,
         value: str,
-        label: str = None,
-        test_case_id: str = None,
-        template: Template = None,
-        template_id: str = None,
+        label: Optional[str] = None,
+        test_case_id: Optional[str] = None,
+        template: Optional[Template] = None,
+        template_id: Optional[str] = None,
     ) -> InputVariable:
         if template and not template_id:
             template_id = template.id
