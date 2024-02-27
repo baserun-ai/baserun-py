@@ -67,7 +67,7 @@ class Annotation:
 
     @classmethod
     @contextmanager
-    def annotate(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
+    def with_annotation(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
         if not Baserun._initialized:
             yield
 

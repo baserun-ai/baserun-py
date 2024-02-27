@@ -26,13 +26,13 @@ if TYPE_CHECKING:
     try:
         from langchain.tools import Tool
     except ImportError:
-        Tool = Any
+        Tool = None
 
 logger = logging.getLogger(__name__)
 
 
 @memoize_for_time(os.environ.get("BASERUN_CACHE_INTERVAL", 600))
-def get_templates(environment: str = None) -> dict[str, Template]:
+def get_templates(environment: Union[str, None] = None) -> dict[str, Template]:
     if not Baserun.templates:
         Baserun.templates = {}
 

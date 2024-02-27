@@ -3,11 +3,12 @@ import logging
 from datetime import datetime
 from inspect import iscoroutinefunction
 from random import randint
-from typing import Union, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING, Callable
 from uuid import UUID
 
 import httpx
 from httpx import Response
+from openai import BaseModel
 from openai.types.chat.chat_completion_message import FunctionCall
 
 from baserun.v1.baserun_pb2 import Span, Message, Status, SubmitSpanRequest, ToolCall, ToolFunction
@@ -15,7 +16,7 @@ from baserun.v1.baserun_pb2 import Span, Message, Status, SubmitSpanRequest, Too
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from openai.types.chat.chat_completion import Choice, ChatCompletion
+    from openai.types.chat.chat_completion import Choice, ChatCompletion, ChatCompletionChunk
 
 
 def spy_on_build_request(original_method):
@@ -27,10 +28,10 @@ def spy_on_build_request(original_method):
     return wrapper
 
 
-def spy_on_process_response_data(original_method):
+def spy_on_process_response_data(original_method) -> Callable:
     if iscoroutinefunction(original_method):
 
-        async def awrapper(self, *args, **kwargs):
+        async def awrapper(self, *args, **kwargs) -> "ChatCompletionChunk":
             from openai.types.chat import ChatCompletionChunk
 
             result: ChatCompletionChunk = await original_method(self, *args, **kwargs)
@@ -44,7 +45,7 @@ def spy_on_process_response_data(original_method):
 
         return awrapper
 
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs) -> "ChatCompletionChunk":
         from openai.types.chat import ChatCompletionChunk
 
         result: ChatCompletionChunk = original_method(self, *args, **kwargs)
@@ -59,7 +60,7 @@ def spy_on_process_response_data(original_method):
     return wrapper
 
 
-def parse_response_data(response: Response, result: "ChatCompletionChunk"):
+def parse_response_data(response: Response, result: "ChatCompletionChunk") -> BaseModel:
     from baserun import Baserun
 
     from openai.types import ModerationCreateResponse, CreateEmbeddingResponse
@@ -84,7 +85,7 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk"):
             content = ""
             function_name = ""
             function_args = ""
-            tool_calls = []
+            tool_calls: list[ToolCall] = []
             for delta in response.deltas:
                 if new_content := delta.choices[0].delta.content:
                     content += new_content

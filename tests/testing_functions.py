@@ -668,5 +668,3 @@ if __name__ == "__main__":
                 traceback.print_exception(e)
     else:
         call_function(traced_functions, function_name, parsed_args)
-
-    Baserun.finish()
