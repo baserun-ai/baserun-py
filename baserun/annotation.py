@@ -1,12 +1,11 @@
 import json
 import logging
 from contextlib import contextmanager, asynccontextmanager
-from numbers import Number
 from typing import Optional, Any, Union
 
 from openai import Stream
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
-from opentelemetry.sdk.trace import ReadableSpan
+from opentelemetry.sdk.trace import _Span
 from opentelemetry.trace import get_current_span, Span
 
 from baserun import Baserun
@@ -23,6 +22,7 @@ from baserun.v1.baserun_pb2 import (
     SubmitAnnotationsRequest,
     CompletionAnnotations,
     InputVariable,
+    EndUser,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,17 +38,24 @@ class Annotation:
 
     def __init__(self, completion_id: Optional[str] = None, run: Optional[Run] = None):
         self.run = run or Baserun.get_or_create_current_run()
-        self.span = self.try_get_span()
-        self.completion_id = completion_id
         self.input_variables = []
         self.logs = []
         self.checks = []
         self.feedback_list = []
 
+        if span := self.try_get_span():
+            self.span = span
+
+        if completion_id:
+            self.completion_id = completion_id
+
     @classmethod
     def annotate(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
-        completion_id = completion.id if completion else None
-        return cls(completion_id=completion_id)
+        if isinstance(completion, ChatCompletion):
+            completion_id = completion.id
+            return cls(completion_id=completion_id)
+        else:
+            return cls()
 
     @classmethod
     @asynccontextmanager
@@ -84,8 +91,8 @@ class Annotation:
         self,
         name: Optional[str] = None,
         thumbsup: Optional[bool] = None,
-        stars: Optional[Number] = None,
-        score: Optional[Number] = None,
+        stars: Optional[int] = None,
+        score: Optional[float] = None,
         metadata: Optional[dict[str, Any]] = None,
     ):
         if score is None:
@@ -95,19 +102,22 @@ class Annotation:
                 score = stars / 5
             else:
                 logger.info("Could not calculate feedback score, please pass a score, thumbsup, or stars")
-                score = 0
+                score = 0.0
 
         run = Baserun.get_or_create_current_run()
-        feedback_kwargs = {"name": name or "General Feedback", "score": score}
+        feedback_kwargs: dict[str, Union[str, int, float, EndUser]] = {
+            "name": name or "General Feedback",
+            "score": score,
+        }
         if metadata:
             feedback_kwargs["metadata"] = json.dumps(metadata)
 
-        if run.session_id:
+        if run.session_id and Baserun.sessions:
             end_user = Baserun.sessions.get(run.session_id)
             if end_user:
                 feedback_kwargs["end_user"] = end_user
 
-        feedback = Feedback(**feedback_kwargs)
+        feedback = Feedback(**feedback_kwargs)  # type: ignore
         self.feedback_list.append(feedback)
 
     def check(
@@ -116,7 +126,7 @@ class Annotation:
         methodology: str,
         expected: dict[str, Any],
         actual: dict[str, Any],
-        score: Optional[Number] = None,
+        score: Optional[float] = None,
         metadata: Optional[dict[str, Any]] = None,
     ):
         check = Check(
@@ -124,7 +134,7 @@ class Annotation:
             methodology=methodology,
             actual=json.dumps(actual),
             expected=json.dumps(expected),
-            score=score or 0,
+            score=score or 0.0,
             metadata=json.dumps(metadata or {}),
         )
         self.checks.append(check)
@@ -159,9 +169,13 @@ class Annotation:
         input_variable = InputVariable(key=key, value=value)
         self.input_variables.append(input_variable)
 
-    def try_get_span(self) -> Span:
-        current_span: ReadableSpan = get_current_span()
-        if current_span and current_span.is_recording() and current_span.name.startswith(f"{PARENT_SPAN_NAME}."):
+    def try_get_span(self) -> Union[Span, None]:
+        current_span: Union[Span, _Span] = get_current_span()
+        if (
+            isinstance(current_span, _Span)
+            and current_span.is_recording()
+            and current_span.name.startswith(f"{PARENT_SPAN_NAME}.")
+        ):
             return current_span
 
         # TODO? Maybe we should create a span or trace
@@ -175,7 +189,7 @@ class Annotation:
             feedback=self.feedback_list,
             input_variables=self.input_variables,
         )
-        Baserun.futures.append(
+        Baserun.add_future(
             get_or_create_submission_service().SubmitAnnotations.future(
                 SubmitAnnotationsRequest(annotations=annotation_message, run=self.run)
             )

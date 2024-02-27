@@ -5,6 +5,8 @@ import os
 import traceback
 from typing import Optional, Any, TYPE_CHECKING, Union, Set
 
+from langchain_core.messages import BaseMessage
+
 from baserun import Baserun
 from baserun.grpc import (
     get_or_create_submission_service,
@@ -26,7 +28,7 @@ if TYPE_CHECKING:
     try:
         from langchain.tools import Tool
     except ImportError:
-        Tool = None
+        pass
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +51,7 @@ def get_templates(environment: Union[str, None] = None) -> dict[str, Template]:
     return Baserun.templates
 
 
-def get_template(name: str) -> Template:
+def get_template(name: str) -> Union[Template, None]:
     templates = get_templates()
     template = templates.get(name)
     if not template:
@@ -74,22 +76,23 @@ def apply_template(
     parameters: dict[str, Any],
     template_messages: list[dict[str, Union[str, dict[str, Any]]]],
     template_type_enum,
-) -> str:
+) -> list[dict[str, str | dict[str, Any]]]:
     formatted_messages = []
     for message in template_messages:
         template_string = message.get("content")
-        if template_string:
+        if isinstance(template_string, str):
             if template_type_enum == Template.TEMPLATE_TYPE_JINJA2:
                 try:
                     # noinspection PyUnresolvedReferences
                     from jinja2 import Template as JinjaTemplate
 
                     template = JinjaTemplate(template_string)
-                    return template.render(parameters)
+                    formatted_content = template.render(parameters)
+                    formatted_messages.append({**message, "content": formatted_content})
                 except ImportError:
                     logger.warning("Cannot render Jinja2 template as jinja2 package is not installed")
                     # TODO: Is this OK? should we raise? or return blank string?
-                    return template_string
+                    formatted_messages.append({**message, "content": template_string})
 
             try:
                 formatted_content = template_string.format(**parameters)
@@ -100,15 +103,18 @@ def apply_template(
         else:
             formatted_messages.append(message)
 
-    formatted_template_list: Set[tuple] = Baserun.formatted_templates.get(
+    if not Baserun.formatted_templates:
+        Baserun.formatted_templates = {}
+
+    formatted_template_list: Set[tuple] | None = Baserun.formatted_templates.get(
         template_name,
     )
     set_value = tuple([message.get("content") for message in formatted_messages])
 
-    if not formatted_template_list:
-        formatted_template_list = {set_value}
-    else:
+    if formatted_template_list:
         formatted_template_list.add(set_value)
+    else:
+        formatted_template_list = {set_value}
 
     Baserun.formatted_templates[template_name] = formatted_template_list
 
@@ -123,7 +129,7 @@ def create_langchain_template(
     template_type: Optional[str] = None,
     tools: Optional[list[Union["Tool", Any]]] = None,
 ):
-    from langchain.prompts import PromptTemplate
+    from langchain.prompts import ChatPromptTemplate
 
     parameters = parameters or {}
     input_variables = list(parameters.keys())
@@ -134,16 +140,9 @@ def create_langchain_template(
         caller = inspect.stack()[1].function
         template_name = f"{caller}_template"
 
-    if template_type == Template.TEMPLATE_TYPE_JINJA2 or template_type.lower().startswith("jinja"):
-        langchain_template = PromptTemplate(
-            template_messages=[{"role": "SYSTEM", "content": template_string}],
-            input_variables=input_variables,
-            template_format="jinja2",
-            tools=tools,
-        )
-
-    else:
-        langchain_template = PromptTemplate(template=template_string, input_variables=input_variables, tools=tools)
+    langchain_template = ChatPromptTemplate(
+        messages=[BaseMessage(role="SYSTEM", content=template_string)], input_variables=input_variables
+    )
 
     template_type_enum = get_template_type_enum(template_type)
     register_template(
@@ -168,14 +167,19 @@ def format_prompt(
     template_type_enum = get_template_type_enum(template_type)
     template = get_template(template_name)
 
-    if template and submit_variables:
-        for key, value in parameters.items():
-            baserun.submit_input_variable(key=key, value=value, template=template)
+    if template:
+        if submit_variables:
+            for key, value in parameters.items():
+                baserun.submit_input_variable(key=key, value=value, template=template)
+
+        if not template_messages:
+            template_messages = [
+                {"role": message.role, "content": message.message}
+                for message in template.active_version.template_messages
+            ]
 
     if not template_messages:
-        template_messages = [
-            {"role": message.role, "content": message.message} for message in template.active_version.template_messages
-        ]
+        template_messages = []
 
     return apply_template(
         template_name=template_name,
@@ -194,13 +198,15 @@ def construct_template_version(
     # Automatically generate a name based on the template's contents
     if not template_name:
         template_name = hashlib.sha256(
-            "".join([message.get("content") for message in template_messages]).encode()
+            "".join([str(message.get("content")) for message in template_messages]).encode()
         ).hexdigest()[:5]
 
     template = Template(name=template_name, template_type=template_type)
     constructed_template_messages = [
         TemplateMessage(
-            role=message.get("role", "assistant"), message=message.get("message", message.get("content")), order_index=i
+            role=str(message.get("role", "assistant")),
+            message=str(message.get("message", message.get("content"))),
+            order_index=i,
         )
         for i, message in enumerate(template_messages)
     ]
@@ -215,7 +221,7 @@ def construct_template_version(
 
 def register_template(
     template_messages: list[dict[str, Union[str, dict[str, Any]]]],
-    template_name: Optional[str] = None,
+    template_name: str,
     template_tag: Optional[str] = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
 ) -> Template:
@@ -246,7 +252,7 @@ def register_template(
 
 async def aregister_template(
     template_messages: list[dict[str, Union[str, dict[str, Any]]]],
-    template_name: Optional[str] = None,
+    template_name: str,
     template_tag: Optional[str] = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
 ) -> Template:

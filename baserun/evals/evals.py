@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 def get_answer_prompt(choices: List[str]) -> str:
-    choices = " or ".join(f'"{choice}"' for choice in choices)
+    stringified_choices = " or ".join(f'"{choice}"' for choice in choices)
     return (
-        f"First, write out in a step by step manner your reasoning to be sure that your conclusion is correct. "
-        f"Avoid simply stating the correct answer at the outset. Then print only a single choice from {choices} ("
-        f"without quotes or punctuation) on its own line corresponding to the correct answer. At the end, "
-        f"repeat just the answer by itself on a new line.\n\nReasoning:"
+        "First, write out in a step by step manner your reasoning to be sure that your conclusion is correct. "
+        "Avoid simply stating the correct answer at the outset. Then print only a single choice from "
+        f"{stringified_choices} (without quotes or punctuation) on its own line corresponding to the correct answer. "
+        f"At the end, repeat just the answer by itself on a new line.\n\nReasoning:"
     )
 
 
@@ -77,7 +77,7 @@ class Evals:
 
         run = Baserun.current_run()
         try:
-            Baserun.futures.append(
+            Baserun.add_future(
                 get_or_create_submission_service().SubmitEval.future(SubmitEvalRequest(eval=eval_message, run=run))
             )
         except Exception as e:
@@ -206,6 +206,7 @@ class Evals:
         )
         return result
 
+    @staticmethod
     def _content_contains_attack(content: str, api_key: str) -> bool:
         url = "https://api.promptarmor.com/v1/check_content"
 
@@ -293,7 +294,7 @@ class Evals:
             "messages": [
                 {
                     "role": "user",
-                    "content": (formatted_prompt + f"\n\n{get_answer_prompt(choices.keys())}"),
+                    "content": (formatted_prompt + f"\n\n{get_answer_prompt(list(choices.keys()))}"),
                 }
             ],
         }

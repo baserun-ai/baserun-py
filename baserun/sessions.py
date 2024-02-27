@@ -106,7 +106,7 @@ def end_session(
     session.completion_timestamp.FromDatetime(completion_timestamp or datetime.utcnow())
     session_request = EndSessionRequest(session=session)
     try:
-        Baserun.futures.append(get_or_create_submission_service().EndSession.future(session_request))
+        Baserun.add_future(get_or_create_submission_service().EndSession.future(session_request))
     except Exception as e:
         if hasattr(e, "details"):
             logger.warning(f"Failed to submit session to Baserun: {e.details()}")

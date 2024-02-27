@@ -11,14 +11,14 @@ from datetime import datetime
 from queue import Queue
 from threading import Thread
 from time import sleep
-from typing import Any, TYPE_CHECKING, Set
+from typing import Any, TYPE_CHECKING, Set, Awaitable, Generator
 from typing import Callable, Dict, Optional, Union
 
 import grpc
 from opentelemetry import trace
 from opentelemetry.context import Context, set_value, get_value
 from opentelemetry.sdk.trace import TracerProvider, _Span
-from opentelemetry.trace import SpanKind, get_current_span
+from opentelemetry.trace import SpanKind, get_current_span, Span
 
 from .constants import PARENT_SPAN_NAME
 from .evals.evals import Evals
@@ -51,28 +51,26 @@ class BaserunEvaluationFailedException(Exception):
     pass
 
 
-baserun_contexts: dict[bytes, Context] = None
+baserun_contexts: Optional[dict[int, Context]] = None
 
 
 class Baserun:
     _initialized = False
 
-    _instrumentors: list = None
-
-    current_test_suite: TestSuite = None
-    sessions: dict[str, EndUser] = None
+    current_test_suite: Optional[TestSuite] = None
+    sessions: Optional[dict[str, EndUser]] = None
     environment: str = os.environ.get("ENVIRONMENT", "Development")
 
     evals = Evals
 
-    templates: dict[str, Template] = None
-    formatted_templates: dict[str, Set[tuple[str]]] = None
+    templates: Optional[dict[str, Template]] = None
+    formatted_templates: Optional[dict[str, Set[tuple[str]]]] = None
 
-    submission_service: SubmissionServiceStub = None
-    exporter_queue: Queue = None
-    exporter_thread: Thread = None
-    async_submission_service: SubmissionServiceStub = None
-    futures: list[grpc.Future] = None
+    submission_service: Optional[SubmissionServiceStub] = None
+    exporter_queue: Optional[Queue] = None
+    exporter_thread: Optional[Thread] = None
+    async_submission_service: Optional[SubmissionServiceStub] = None
+    futures: Optional[list[grpc.Future]] = None
 
     @staticmethod
     def init(instrument: bool = True) -> None:
@@ -98,6 +96,14 @@ class Baserun:
         Baserun.configure_logging()
         if instrument:
             Baserun.instrument()
+
+    @staticmethod
+    def add_future(future: grpc.Future):
+        if Baserun.futures is None:
+            logger.warning("Baserun attempted to submit data, but baserun.init() was not called")
+            return
+
+        Baserun.futures.append(future)
 
     @staticmethod
     def exit_handler(*args, **kwargs):
@@ -127,12 +133,19 @@ class Baserun:
     @staticmethod
     def set_context(new_context: Context):
         global baserun_contexts
+        if not baserun_contexts:
+            baserun_contexts = {}
+
         current_span = get_current_span()
         trace_id = current_span.get_span_context().trace_id
         baserun_contexts[trace_id] = new_context
 
     @staticmethod
     def get_context() -> Context:
+        global baserun_contexts
+        if not baserun_contexts:
+            baserun_contexts = {}
+
         current_span = get_current_span()
         trace_id = current_span.get_span_context().trace_id
         if trace_id not in baserun_contexts:
@@ -142,6 +155,10 @@ class Baserun:
 
     @staticmethod
     def propagate_context(old_context: Context):
+        global baserun_contexts
+        if not baserun_contexts:
+            baserun_contexts = {}
+
         current_span = get_current_span()
         trace_id = current_span.get_span_context().trace_id
         new_context = Baserun.get_context()
@@ -153,9 +170,6 @@ class Baserun:
 
     @staticmethod
     def instrument():
-        if not Baserun._instrumentors:
-            Baserun._instrumentors = []
-
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
         if not hasattr(tracer, "active_span_processor"):
@@ -168,36 +182,34 @@ class Baserun:
         instrument()
 
     @staticmethod
-    def uninstrument():
-        for instrumentor in Baserun._instrumentors:
-            instrumentor.uninstrument()
-
-        Baserun._instrumentors = []
-
-    @staticmethod
     def current_run(create: bool = True) -> Union[Run, None]:
         """Gets the current run"""
-        current_run: Run = get_value(BASERUN_RUN, Baserun.get_context())
-        if current_run:
+        global baserun_contexts
+        if not baserun_contexts:
+            baserun_contexts = {}
+
+        current_run = get_value(BASERUN_RUN, Baserun.get_context())
+        if isinstance(current_run, Run):
             return current_run
 
         root_context = baserun_contexts.get(0)
         if root_context:
             run = get_value(BASERUN_RUN, root_context)
-            if run:
+            if isinstance(run, Run):
                 return run
 
         if create:
             logger.debug("Couldn't find existing run, creating an Untraced run")
             return Baserun.get_or_create_current_run(name="Untraced", force_new=True)
-        return
+
+        return None
 
     @staticmethod
-    def _finish_run(run: Run, span: Optional[_Span] = None):
+    def _finish_run(run: Run):
         try:
             run.completion_timestamp.FromDatetime(datetime.utcnow())
             Baserun.set_context(set_value(BASERUN_RUN, run, Baserun.get_context()))
-            Baserun.futures.append(get_or_create_submission_service().EndRun.future(EndRunRequest(run=run)))
+            Baserun.add_future(get_or_create_submission_service().EndRun.future(EndRunRequest(run=run)))
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
 
@@ -211,7 +223,7 @@ class Baserun:
         suite_id: Optional[str] = None,
         start_timestamp: Optional[datetime] = None,
         completion_timestamp: Optional[datetime] = None,
-        trace_type: Optional[Run.RunType] = None,
+        trace_type: Optional["Run.RunType"] = None,
         metadata: Optional[dict[str, Any]] = None,
         session_id: Optional[str] = None,
         force_new: bool = False,
@@ -241,10 +253,13 @@ class Baserun:
             "environment": Baserun.environment,
         }
 
-        if suite_id or Baserun.current_test_suite:
-            run_data["suite_id"] = suite_id or Baserun.current_test_suite.id
+        if Baserun.current_test_suite:
+            run_data["suite_id"] = Baserun.current_test_suite.id
 
-        run = Run(**run_data)
+        if suite_id:
+            run_data["suite_id"] = suite_id
+
+        run = Run(**run_data)  # type: ignore
         run.start_timestamp.FromDatetime(start_timestamp or datetime.utcnow())
         Baserun.set_context(set_value(BASERUN_RUN, run, Baserun.get_context()))
 
@@ -276,7 +291,7 @@ class Baserun:
         run_type: Run.RunType,
         name: Optional[str] = None,
         metadata: Optional[Dict] = None,
-    ) -> Run:
+    ) -> Union[Callable, Awaitable, Generator]:
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
         run_name = name or func.__name__
@@ -287,7 +302,7 @@ class Baserun:
 
         if inspect.iscoroutinefunction(func):
 
-            async def wrapper(*args, **kwargs):
+            async def wrapper(*args, **kwargs) -> Any:  # type: ignore
                 if not Baserun._initialized:
                     return await func(*args, **kwargs)
 
@@ -313,11 +328,11 @@ class Baserun:
                         run.error = "".join(traceback.format_exception(e))
                         raise e
                     finally:
-                        Baserun._finish_run(run, span)
+                        Baserun._finish_run(run)
 
         elif inspect.isasyncgenfunction(func):
 
-            async def wrapper(*args, **kwargs):
+            async def wrapper(*args, **kwargs) -> Any:  # type: ignore
                 if not Baserun._initialized:
                     async for item in func(*args, **kwargs):
                         yield item
@@ -349,11 +364,11 @@ class Baserun:
                         run.error = "".join(traceback.format_exception(e))
                         raise e
                     finally:
-                        Baserun._finish_run(run, span)
+                        Baserun._finish_run(run)
 
         else:
 
-            def wrapper(*args, **kwargs):
+            def wrapper(*args, **kwargs) -> Any:  # type: ignore
                 if not Baserun._initialized:
                     return func(*args, **kwargs)
 
@@ -371,7 +386,7 @@ class Baserun:
                 with tracer.start_as_current_span(
                     f"{PARENT_SPAN_NAME}.{func.__name__}",
                     kind=SpanKind.CLIENT,
-                ) as span:
+                ):
                     Baserun.propagate_context(old_context)
 
                     try:
@@ -382,12 +397,14 @@ class Baserun:
                         run.error = "".join(traceback.format_exception(e))
                         raise e
                     finally:
-                        Baserun._finish_run(run, span)
+                        Baserun._finish_run(run)
 
         return wrapper
 
     @staticmethod
-    def trace(func: Callable, name: Optional[str] = None, metadata: Optional[Dict] = None):
+    def trace(
+        func: Callable, name: Optional[str] = None, metadata: Optional[Dict] = None
+    ) -> Union[Callable, Awaitable, Generator]:
         if Baserun.current_test_suite:
             return Baserun.test(func=func, metadata=metadata)
 
@@ -400,9 +417,11 @@ class Baserun:
 
     @staticmethod
     @contextmanager
-    def start_trace(*args, name: Optional[str] = None, end_on_exit=True, **kwargs) -> Run:
+    def start_trace(
+        *args, name: Optional[str] = None, end_on_exit=True, **kwargs
+    ) -> Generator[Optional[Run], None, None]:
         if not Baserun._initialized:
-            yield
+            yield None
 
         # If given a name, ensure that the run has that name. If not, it will only be set when a new run is created
         explicitly_named = name is not None
@@ -423,11 +442,11 @@ class Baserun:
         if Baserun.current_test_suite:
             run.suite_id = Baserun.current_test_suite.id
 
-        if explicitly_named:
+        if explicitly_named and name:
             run.name = name
 
-        parent_span: _Span = get_current_span()
-        if parent_span and parent_span.is_recording():
+        parent_span: Union[Span, _Span] = get_current_span()
+        if isinstance(parent_span, _Span) and parent_span.is_recording():
             parent_span.update_name(f"{PARENT_SPAN_NAME}.{name}")
 
         # Create a parent span so we can attach the run to it, all child spans are part of this run.
@@ -441,21 +460,21 @@ class Baserun:
             try:
                 yield run
             finally:
-                Baserun._finish_run(run, span)
+                Baserun._finish_run(run)
 
     @staticmethod
-    def test(func: Callable, metadata: Optional[Dict] = None) -> Run:
+    def test(func: Callable, metadata: Optional[Dict] = None) -> Union[Callable, Awaitable, Generator]:
         return Baserun._trace(func=func, run_type=Run.RunType.RUN_TYPE_TEST, metadata=metadata)
 
     @staticmethod
-    def log(name: str, payload: Union[str, Dict]) -> Log:
+    def log(name: str, payload: Union[str, Dict]) -> Union[Log, None]:
         if not Baserun._initialized:
-            return
+            return None
 
         run = Baserun.current_run()
         if not run:
             logger.warning("Cannot send logs to baserun as there is no current trace active.")
-            return
+            return None
 
         log_message = Log(
             run_id=run.run_id,
@@ -467,14 +486,16 @@ class Baserun:
 
         # noinspection PyBroadException
         try:
-            Baserun.futures.append(get_or_create_submission_service().SubmitLog.future(log_request))
+            Baserun.add_future(get_or_create_submission_service().SubmitLog.future(log_request))
         except Exception as e:
             logger.warning(f"Failed to submit log to Baserun: {e}")
 
         return log_message
 
     @staticmethod
-    def annotate(completion_id: Optional[str] = None, run: Optional[Run] = None, trace: Optional[Run] = None) -> "Annotation":
+    def annotate(
+        completion_id: Optional[str] = None, run: Optional[Run] = None, trace: Optional[Run] = None
+    ) -> "Annotation":
         """Capture annotations for a particular run and/or completion. the `trace` kwarg here is simply an alias"""
         from baserun.annotation import Annotation
 
@@ -492,16 +513,17 @@ class Baserun:
         if template and not template_id:
             template_id = template.id
 
-        submit_request = SubmitInputVariableRequest(
-            input_variable=InputVariable(
-                key=key,
-                value=value,
-                label=label,
-                test_case_id=test_case_id,
-                template_id=template_id,
-            )
+        input_variable = InputVariable(
+            key=key,
+            value=value,
+            label=label,
+            test_case_id=test_case_id,
+            template_id=template_id,
         )
-        Baserun.futures.append(get_or_create_submission_service().SubmitInputVariable.future(submit_request))
+        submit_request = SubmitInputVariableRequest(input_variable=input_variable)
+        Baserun.add_future(get_or_create_submission_service().SubmitInputVariable.future(submit_request))
+
+        return input_variable
 
     @staticmethod
     def finish(timeout=1):

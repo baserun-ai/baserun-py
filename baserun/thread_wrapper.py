@@ -1,11 +1,11 @@
-from typing import Callable
+from typing import Callable, Union
 
-from .constants import INNER_THREAD_SPAN_PARENT_NAME
 from opentelemetry import trace
-from opentelemetry.sdk.trace import Span
-from opentelemetry.trace import get_current_span, SpanKind
+from opentelemetry.sdk.trace import _Span
+from opentelemetry.trace import get_current_span, SpanKind, Span
 
 from baserun import Baserun
+from .constants import INNER_THREAD_SPAN_PARENT_NAME
 
 
 def baserun_thread_wrapper(target: Callable):
@@ -14,15 +14,19 @@ def baserun_thread_wrapper(target: Callable):
     if not Baserun._initialized:
         return target
 
-    parent_span: Span = get_current_span()
+    parent_span: Union[Span, _Span] = get_current_span()
 
     def wrapper(*args, **kwargs):
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
+        attributes = {}
+        if isinstance(parent_span, _Span):
+            attributes = parent_span.attributes
+
         span = tracer.start_span(
             INNER_THREAD_SPAN_PARENT_NAME,
             kind=SpanKind.CLIENT,
-            attributes=parent_span.attributes,
+            attributes=attributes,
         )
         with trace.use_span(span, end_on_exit=False):
             try:

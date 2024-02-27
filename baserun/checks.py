@@ -1,5 +1,4 @@
 import json
-from numbers import Number
 from typing import Optional, Any, Union
 
 from baserun import Baserun
@@ -13,7 +12,7 @@ def check(
     name: str,
     actual: Any,
     expected: Any,
-    score: Number,
+    score: float,
     metadata: Optional[dict[str, Any]] = None,
     eval_type: Optional[str] = None,
 ):
@@ -44,7 +43,7 @@ def check_equals(
         metadata=metadata,
         actual=actual,
         expected=expected,
-        score=1 if result else 0,
+        score=1.0 if result else 0.0,
     )
 
 
