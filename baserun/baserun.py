@@ -1,7 +1,9 @@
+import atexit
 import inspect
 import json
 import logging
 import os
+import signal
 import traceback
 import uuid
 from contextlib import contextmanager
@@ -82,6 +84,9 @@ class Baserun:
         Baserun.exporter_thread = Thread(target=worker, args=(Baserun.exporter_queue,))
         Baserun.exporter_thread.daemon = True
         Baserun.exporter_thread.start()
+        signal.signal(signal.SIGINT, Baserun.exit_handler)
+        signal.signal(signal.SIGTERM, Baserun.exit_handler)
+        atexit.register(Baserun.exit_handler)
 
         Baserun._initialized = True
         Baserun.templates = {}
@@ -93,6 +98,11 @@ class Baserun:
         Baserun.configure_logging()
         if instrument:
             Baserun.instrument()
+
+    @staticmethod
+    def exit_handler(*args, **kwargs):
+        Baserun.finish()
+        Baserun.exporter_queue.put(None)
 
     @staticmethod
     def configure_logging():
@@ -491,7 +501,7 @@ class Baserun:
                 template_id=template_id,
             )
         )
-        get_or_create_submission_service().SubmitInputVariable(submit_request)
+        Baserun.futures.append(get_or_create_submission_service().SubmitInputVariable.future(submit_request))
 
     @staticmethod
     def finish(timeout=1):

@@ -1,5 +1,5 @@
 import logging
-from queue import Queue
+from queue import Queue, Empty
 from time import sleep
 
 from baserun.v1.baserun_pb2 import (
@@ -13,7 +13,10 @@ logger = logging.getLogger(__name__)
 def worker(queue: Queue):
     submission_service = get_or_create_submission_service()
     while True:
-        item: SubmitSpanRequest = queue.get()
+        try:
+            item: SubmitSpanRequest = queue.get(timeout=1)
+        except Empty:
+            continue
 
         if item is None:
             break
