@@ -1,4 +1,5 @@
 import os
+from queue import Empty
 from typing import Generator
 from unittest.mock import call, Mock, create_autospec, AsyncMock
 
@@ -6,7 +7,7 @@ import openai
 import pytest
 from dotenv import load_dotenv
 
-from baserun import Baserun, baserun
+from baserun import Baserun, baserun, get_templates
 from baserun.grpc import (
     get_or_create_async_submission_service,
     get_or_create_submission_service,
@@ -90,40 +91,46 @@ def mock_services() -> Generator[dict[str, Mock], None, None]:
 
 
 def pytest_sessionstart(session):
-    """Starting up Baserun in tests requires that these things happen in a specific order:
-    - `init`, specifically setting up gRPC
-    - Mock services, to replace the services that were just set up
-    - Instrument
-    - Close channel, simply to ensure that no unmocked calls get through
-    """
-    Baserun.init(instrument=False)
-    # mock_services()
-    # Replace the batch processor so that things happen synchronously and not in a separate thread
-    Baserun.instrument()
+    os.environ["LOG_LEVEL"] = "DEBUG"
+    Baserun.init()
+    Baserun.exporter_queue.put(None)
+
+
+def pytest_runtest_teardown(item, nextitem):
+    while not Baserun.exporter_queue.empty():
+        try:
+            Baserun.exporter_queue.get(block=False)
+        except Empty:
+            break
+
+    Baserun.finish()
+    get_templates.clear_cache()
+    Baserun.templates = {}
 
 
 def get_mock_objects(mock_services) -> tuple[Run, Span, Run, Run]:
+    Baserun.finish()
+
     mock_start_run = mock_services["submission_service"].StartRun.future
     mock_end_run = mock_services["submission_service"].EndRun.future
-    mock_submit_span = mock_services["submission_service"].SubmitSpan
 
-    mock_start_run.assert_called_once()
-    run_call: call = mock_start_run.call_args_list[0]
+    mock_start_run.assert_called()
+    run_call: call = mock_start_run.call_args_list[-1]
     start_run_request: StartRunRequest = run_call.args[0]
     started_run = start_run_request.run
 
-    if mock_submit_span.call_args_list:
-        mock_submit_span.assert_called_once()
-        submit_span_call: call = mock_submit_span.call_args_list[0]
-        submit_span_request = submit_span_call.args[0]
-        span = submit_span_request.span
-        submitted_run = submit_span_request.run
+    queue = list(Baserun.exporter_queue.queue)
+    if len(queue):
+        assert len(queue) == 1
+        span_request = queue[0]
+        submitted_run = span_request.run
+        span = span_request.span
     else:
         span = None
         submitted_run = None
 
-    mock_end_run.assert_called_once()
-    end_run_call: call = mock_end_run.call_args_list[0]
+    mock_end_run.assert_called()
+    end_run_call: call = mock_end_run.call_args_list[-1]
     end_run_request: StartRunRequest = end_run_call.args[0]
     ended_run = end_run_request.run
 

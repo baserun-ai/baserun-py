@@ -93,13 +93,13 @@ def apply_template(
                     logger.warning("Cannot render Jinja2 template as jinja2 package is not installed")
                     # TODO: Is this OK? should we raise? or return blank string?
                     formatted_messages.append({**message, "content": template_string})
+            else:
+                try:
+                    formatted_content = template_string.format(**parameters)
+                except KeyError:
+                    formatted_content = template_string
 
-            try:
-                formatted_content = template_string.format(**parameters)
-            except KeyError:
-                formatted_content = template_string
-
-            formatted_messages.append({**message, "content": formatted_content})
+                formatted_messages.append({**message, "content": formatted_content})
         else:
             formatted_messages.append(message)
 
@@ -117,6 +117,12 @@ def apply_template(
         formatted_template_list = {set_value}
 
     Baserun.formatted_templates[template_name] = formatted_template_list
+
+    register_template(
+        template_messages=template_messages,
+        template_name=template_name,
+        template_type=template_type_enum,
+    )
 
     return formatted_messages
 
@@ -161,7 +167,7 @@ def format_prompt(
     template_messages: Optional[list[dict[str, Union[str, dict[str, Any]]]]] = None,
     template_type: Optional[str] = None,
     submit_variables: bool = True,
-):
+) -> list[dict[str, str | dict[str, Any]]]:
     import baserun
 
     template_type_enum = get_template_type_enum(template_type)

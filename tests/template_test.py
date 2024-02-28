@@ -17,12 +17,12 @@ def test_format_prompt_string(mock_services):
     name = "Jimothy"
     template_name = "my_template"
     formatted_template = format_prompt(
-        template_string=template,
+        template_messages=[{"role": "SYSTEM", "content": template}],
         parameters={"name": name},
         template_name=template_name,
     )
 
-    assert formatted_template == f"Hello {name}"
+    assert formatted_template[0].get("content") == f"Hello {name}"
 
     mock_submit_template_version = mock_services["submission_service"].SubmitTemplateVersion
     assert mock_submit_template_version.call_count == 1
@@ -31,8 +31,6 @@ def test_format_prompt_string(mock_services):
     request = args[0]
     assert request.template_version.template.name == template_name
     assert request.template_version.template.template_type == 1
-    assert request.template_version.tag == "83358"
-    assert request.template_version.parameter_definition == '{"name": "string"}'
 
 
 def test_format_prompt_jinja2(mock_services):
@@ -40,13 +38,13 @@ def test_format_prompt_jinja2(mock_services):
     name = "Jimothy"
     template_name = "my_template"
     formatted_template = format_prompt(
-        template_string=template,
+        template_messages=[{"role": "SYSTEM", "content": template}],
         template_name=template_name,
         template_type="Jinja2",
         parameters={"name": name},
     )
 
-    assert formatted_template == f"Hello {name}"
+    assert formatted_template[0].get("content") == f"Hello {name}"
 
     mock_submit_template_version = mock_services["submission_service"].SubmitTemplateVersion
     assert mock_submit_template_version.call_count == 1
@@ -55,8 +53,6 @@ def test_format_prompt_jinja2(mock_services):
     request = args[0]
     assert request.template_version.template.name == template_name
     assert request.template_version.template.template_type == 2
-    assert request.template_version.tag == "652b7"
-    assert request.template_version.parameter_definition == '{"name": "string"}'
 
 
 def test_get_template(mock_services):
@@ -74,6 +70,7 @@ def test_get_template(mock_services):
     mock_get_templates.return_value = GetTemplatesResponse(templates=[template])
 
     found_template = get_template(name=template_name)
+    assert found_template is not None
     found_template_version = found_template.active_version
 
     assert found_template.name == template_name

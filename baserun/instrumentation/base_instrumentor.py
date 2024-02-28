@@ -95,12 +95,16 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk") -> Ba
         # Stream has ended, compile the deltas and submit
         if first_delta.content is None and first_delta.function_call is None and first_delta.tool_calls is None:
             content = ""
+            role = ""
             function_name = ""
             function_args = ""
             tool_calls: list[ToolCall] = []
             for delta in response.deltas:
                 if new_content := delta.choices[0].delta.content:
                     content += new_content
+
+                if new_role := delta.choices[0].delta.role:
+                    role += new_role
 
                 if new_function := delta.choices[0].delta.function_call:
                     if new_function.name:
@@ -134,8 +138,7 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk") -> Ba
                             tool_call.function.arguments += new_tool_call.function.arguments
 
             completion_message = Message(
-                # Role is set on the first delta
-                role=first_delta.role,
+                role=role,
                 # Content is the aggregate of all deltas
                 content=content,
                 # Finish reason is on the last delta
@@ -200,7 +203,7 @@ def find_template_match(messages: list[Message]) -> Union[str, None]:
 
     message_contents = [message.content for message in messages]
 
-    if not Baserun.formatted_templates:
+    if Baserun.formatted_templates is None:
         logger.warning(f"Baserun attempted to submit span, but baserun.init() was not called")
         return None
 
@@ -215,6 +218,7 @@ def find_template_match(messages: list[Message]) -> Union[str, None]:
 
 def spy_on_process_response(original_method) -> Callable:
     if iscoroutinefunction(original_method):
+
         async def awrapper(self, *args, **kwargs) -> "ChatCompletion":
             response = kwargs.get("response")
             result: ChatCompletion = await original_method(self, *args, **kwargs)

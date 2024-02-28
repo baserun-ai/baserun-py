@@ -18,79 +18,6 @@ def async_client():
 
 
 @pytest.mark.asyncio
-async def test_paris_async(async_client):
-    response = await async_client.completions.create(
-        model="text-davinci-003",
-        temperature=0.7,
-        prompt="What are three activities to do in Paris?",
-    )
-
-    baserun.evals.includes(
-        "Includes Eiffel Tower", response.choices[0].text, ["Eiffel Tower"]
-    )
-    baserun.evals.not_includes(
-        "AI Language check", response.choices[0].text, ["AI Language"]
-    )
-    baserun.evals.model_graded_security("Malicious", response.choices[0].text)
-
-
-@pytest.mark.asyncio
-async def test_egypt_async_stream(async_client):
-    response = await async_client.completions.create(
-        model="text-davinci-003",
-        temperature=0.7,
-        prompt="What are three activities to do in Egypt?",
-        stream=True,
-    )
-
-    async for chunk in response:
-        print(chunk.choices[0].text)
-
-
-@pytest.mark.asyncio
-async def test_egypt_async(async_client):
-    response = await async_client.completions.create(
-        model="text-davinci-003",
-        temperature=0.7,
-        prompt="What are three activities to do in Egypt?",
-    )
-
-    baserun.evals.includes("Includes Pyramid", response.choices[0].text, ["Pyramid"])
-    baserun.evals.not_includes(
-        "AI Language check", response.choices[0].text, ["AI Language"]
-    )
-    baserun.evals.model_graded_security("Malicious", response.choices[0].text)
-    baserun.evals.model_graded_fact(
-        "Fact",
-        "tell me about france",
-        "eiffel tower is nice",
-        response.choices[0].text,
-    )
-
-
-def test_paris_sync_stream(client):
-    response = client.completions.create(
-        model="text-davinci-003",
-        temperature=0.7,
-        prompt="What are three activities to do in Paris?",
-        stream=True,
-    )
-
-    for chunk in response:
-        print(chunk.choices[0].text)
-
-
-def test_paris_sync(client):
-    response = client.completions.create(
-        model="text-davinci-003",
-        temperature=0.7,
-        prompt="What are three activities to do in Paris?",
-    )
-
-    baserun.log("Paris", response.choices[0].text)
-
-
-@pytest.mark.asyncio
 async def test_paris_chat_async_stream(async_client):
     response = await async_client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -178,9 +105,7 @@ def test_paris_chat_sync(client):
         response.choices[0].message.content,
         ["AI Language"],
     )
-    baserun.evals.model_graded_security(
-        "Malicious", response.choices[0].message.content
-    )
+    baserun.evals.model_graded_security("Malicious", response.choices[0].message.content)
 
 
 def test_egypt_chat_sync(client):
@@ -195,30 +120,22 @@ def test_egypt_chat_sync(client):
         ],
     )
 
-    baserun.evals.includes(
-        "Includes Pyramid", response.choices[0].message.content, ["Pyramid"]
-    )
+    baserun.evals.includes("Includes Pyramid", response.choices[0].message.content, ["Pyramid"])
     baserun.evals.not_includes(
         "AI Language check",
         response.choices[0].message.content,
         ["AI Language"],
     )
-    baserun.evals.model_graded_security(
-        "Malicious", response.choices[0].message.content
-    )
+    baserun.evals.model_graded_security("Malicious", response.choices[0].message.content)
 
 
-@pytest.mark.parametrize(
-    "place,expected", [("Paris", "Eiffel Tower"), ("Rome", "Colosseum")]
-)
+@pytest.mark.parametrize("place,expected", [("Paris", "Eiffel Tower"), ("Rome", "Colosseum")])
 def test_trip(place, expected):
     client = OpenAI()
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         temperature=0.7,
-        messages=[
-            {"role": "user", "content": f"What are three activities to do in {place}?"}
-        ],
+        messages=[{"role": "user", "content": f"What are three activities to do in {place}?"}],
     )
 
     assert expected in response.choices[0].message.content

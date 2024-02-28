@@ -53,6 +53,11 @@ def memoize_for_time(seconds):
             cache["timestamp"] = now
             return result
 
+        def clear_cache():
+            cache.clear()
+
+        wrapper.clear_cache = clear_cache
+
         return wrapper
 
     return decorator
