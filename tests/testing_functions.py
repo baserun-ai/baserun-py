@@ -458,6 +458,34 @@ def use_sessions(prompt="What is the capital of the US?", user_identifier="examp
         return content
 
 
+async def create_full_trace(question="What is the capital of the US?") -> str:
+    with baserun.with_session(user_identifier="erik@baserun.ai"):
+        with baserun.start_trace(name="Answer Question") as trace:
+            client = OpenAI()
+
+            completion = client.chat.completions.create(
+                model="gpt-4-1106-preview",
+                messages=[{"role": "user", "content": question}],
+            )
+            content = completion.choices[0].message.content
+
+            annotation = baserun.annotate(completion.id)
+            annotation.feedback(
+                name="use_annotation_feedback",
+                score=0.8,
+                metadata={"comment": "This is correct but is too concise"},
+            )
+            # baserun.evals.includes("Answer is correct", "Washington", content)
+            annotation.log(f"OpenAI Chat Results", metadata={"result": content, "input": question})
+            annotation.check_includes("Answer is correct", "Washington", content)
+            trace.metadata = json.dumps({"customer_tier": "Pro"})
+            trace.result = content
+
+            await annotation.asubmit()
+
+            return content
+
+
 @baserun.trace
 async def use_annotation(question="What is the capital of the US?") -> str:
     client = OpenAI()

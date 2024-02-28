@@ -74,7 +74,7 @@ def start_session(
         Baserun.sessions[session.id] = end_user
 
         # If they're already in a trace go ahead and attach the session to it
-        run = Baserun.current_run()
+        run = Baserun.current_run(create=False)
         if run:
             run.session_id = session.id
 
