@@ -1,7 +1,7 @@
 import logging
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Union
+from typing import Optional, Union
 from uuid import uuid4
 
 from opentelemetry import trace
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 @contextmanager
-def with_session(user_identifier: str, session_identifier: str = None, auto_end: bool = True):
+def with_session(user_identifier: str, session_identifier: Optional[str] = None, auto_end: bool = True):
     # If there's a current span, start the session in that context. Otherwise, create a parent span
     current_span = get_current_span()
     if current_span.is_recording():
@@ -53,8 +53,8 @@ def with_session(user_identifier: str, session_identifier: str = None, auto_end:
 
 def start_session(
     user_identifier: str,
-    start_timestamp: datetime = None,
-    session_identifier: str = None,
+    start_timestamp: Optional[datetime] = None,
+    session_identifier: Optional[str] = None,
 ) -> Session:
     """Start a session without a context manager. If this function is called directly:
     - A current span must be active
@@ -96,7 +96,7 @@ def start_session(
 
 def end_session(
     session: Union[str, Session],
-    completion_timestamp: datetime = None,
+    completion_timestamp: Optional[datetime] = None,
 ):
     if not isinstance(session, Session):
         session = Session(
@@ -106,7 +106,7 @@ def end_session(
     session.completion_timestamp.FromDatetime(completion_timestamp or datetime.utcnow())
     session_request = EndSessionRequest(session=session)
     try:
-        Baserun.futures.append(get_or_create_submission_service().EndSession.future(session_request))
+        Baserun.add_future(get_or_create_submission_service().EndSession.future(session_request))
     except Exception as e:
         if hasattr(e, "details"):
             logger.warning(f"Failed to submit session to Baserun: {e.details()}")
@@ -116,8 +116,8 @@ def end_session(
 
 async def astart_session(
     user_identifier: str,
-    start_timestamp: datetime = None,
-    identifier: str = None,
+    start_timestamp: Optional[datetime] = None,
+    identifier: Optional[str] = None,
 ):
     session = Session(
         identifier=identifier or str(uuid4()),
@@ -136,7 +136,7 @@ async def astart_session(
 
 async def aend_session(
     identifier: str,
-    completion_timestamp: datetime = None,
+    completion_timestamp: Optional[datetime] = None,
 ):
     session = Session(
         identifier=identifier,

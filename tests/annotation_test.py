@@ -16,7 +16,7 @@ async def test_annotation(mock_services):
 
     submit_annotation_request: SubmitAnnotationsRequest = args[0]
 
-    assert submit_annotation_request.run.name == "test_annotation"
+    assert submit_annotation_request.run.name == "use_annotation"
 
     annotations = submit_annotation_request.annotations
 

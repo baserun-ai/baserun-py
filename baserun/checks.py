@@ -1,6 +1,5 @@
 import json
-from numbers import Number
-from typing import Any, Union
+from typing import Optional, Any, Union
 
 from baserun import Baserun
 
@@ -13,9 +12,9 @@ def check(
     name: str,
     actual: Any,
     expected: Any,
-    score: Number,
-    metadata: dict[str, Any] = None,
-    eval_type: str = None,
+    score: float,
+    metadata: Optional[dict[str, Any]] = None,
+    eval_type: Optional[str] = None,
 ):
     Baserun.evals._store_eval_data(
         name=name,
@@ -33,7 +32,7 @@ def check_equals(
     name: str,
     actual: str,
     expected: Union[str, list[str]],
-    metadata: dict[str, Any] = None,
+    metadata: Optional[dict[str, Any]] = None,
 ):
     expected_list = [expected] if isinstance(expected, str) else expected
     result = any(actual == item for item in expected_list)
@@ -44,7 +43,7 @@ def check_equals(
         metadata=metadata,
         actual=actual,
         expected=expected,
-        score=1 if result else 0,
+        score=1.0 if result else 0.0,
     )
 
 
@@ -52,7 +51,7 @@ def check_includes(
     name: str,
     actual: str,
     expected: Union[str, list[str]],
-    metadata: dict[str, Any] = None,
+    metadata: Optional[dict[str, Any]] = None,
 ):
     expected_list = [expected] if isinstance(expected, str) else expected
     result = any(item in actual for item in expected_list)

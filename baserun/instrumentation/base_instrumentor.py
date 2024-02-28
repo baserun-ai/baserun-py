@@ -3,11 +3,12 @@ import logging
 from datetime import datetime
 from inspect import iscoroutinefunction
 from random import randint
-from typing import Union, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING, Callable, Optional, cast
 from uuid import UUID
 
 import httpx
-from httpx import Response
+from httpx import Response, URL
+from openai import BaseModel
 from openai.types.chat.chat_completion_message import FunctionCall
 
 from baserun.v1.baserun_pb2 import Span, Message, Status, SubmitSpanRequest, ToolCall, ToolFunction
@@ -15,7 +16,16 @@ from baserun.v1.baserun_pb2 import Span, Message, Status, SubmitSpanRequest, Too
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from openai.types.chat import ChatCompletionChunk
     from openai.types.chat.chat_completion import Choice, ChatCompletion
+
+
+class ResponseWithDelta(Response):
+    deltas: list["ChatCompletionChunk"]
+
+    def __init__(self):
+        super().__init__()
+        self.deltas = []
 
 
 def spy_on_build_request(original_method):
@@ -27,39 +37,41 @@ def spy_on_build_request(original_method):
     return wrapper
 
 
-def spy_on_process_response_data(original_method):
+def spy_on_process_response_data(original_method) -> Callable:
     if iscoroutinefunction(original_method):
 
-        async def awrapper(self, *args, **kwargs):
+        async def awrapper(self, *args, **kwargs) -> "ChatCompletionChunk":
             from openai.types.chat import ChatCompletionChunk
 
             result: ChatCompletionChunk = await original_method(self, *args, **kwargs)
             if not isinstance(result, ChatCompletionChunk):
                 return result
 
-            response = kwargs.get("response")
-            parse_response_data(response, result)
+            response: Optional[Response] = kwargs.get("response")
+            if response is not None:
+                parse_response_data(response, result)
 
             return result
 
         return awrapper
 
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs) -> "ChatCompletionChunk":
         from openai.types.chat import ChatCompletionChunk
 
         result: ChatCompletionChunk = original_method(self, *args, **kwargs)
         if not isinstance(result, ChatCompletionChunk):
             return result
 
-        response = kwargs.get("response")
-        parse_response_data(response, result)
+        response: Optional[Response] = kwargs.get("response")
+        if response is not None:
+            parse_response_data(response, result)
 
         return result
 
     return wrapper
 
 
-def parse_response_data(response: Response, result: "ChatCompletionChunk"):
+def parse_response_data(response: Response, result: "ChatCompletionChunk") -> BaseModel:
     from baserun import Baserun
 
     from openai.types import ModerationCreateResponse, CreateEmbeddingResponse
@@ -76,18 +88,23 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk"):
         if not hasattr(response, "deltas"):
             setattr(response, "deltas", [])
 
+        response = cast(ResponseWithDelta, response)
         response.deltas.append(result)
         first_delta = result.choices[0].delta
 
         # Stream has ended, compile the deltas and submit
         if first_delta.content is None and first_delta.function_call is None and first_delta.tool_calls is None:
             content = ""
+            role = ""
             function_name = ""
             function_args = ""
-            tool_calls = []
+            tool_calls: list[ToolCall] = []
             for delta in response.deltas:
                 if new_content := delta.choices[0].delta.content:
                     content += new_content
+
+                if new_role := delta.choices[0].delta.role:
+                    role += new_role
 
                 if new_function := delta.choices[0].delta.function_call:
                     if new_function.name:
@@ -97,10 +114,16 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk"):
 
                 if new_tool_calls := delta.choices[0].delta.tool_calls:
                     for new_tool_call in new_tool_calls:
+                        if not new_tool_call or not new_tool_call.function:
+                            continue
+
                         while len(tool_calls) <= new_tool_call.index:
                             tool_calls.append(ToolCall(function=ToolFunction()))
 
                         tool_call = tool_calls[new_tool_call.index]
+
+                        if not tool_call.function:
+                            tool_call.function = ToolFunction()
 
                         if new_tool_call.id:
                             tool_call.id = new_tool_call.id
@@ -114,11 +137,8 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk"):
                         if new_tool_call.function.arguments:
                             tool_call.function.arguments += new_tool_call.function.arguments
 
-            first_delta = response.deltas[0]
-
             completion_message = Message(
-                # Role is set on the first delta
-                role=first_delta.choices[0].delta.role,
+                role=role,
                 # Content is the aggregate of all deltas
                 content=content,
                 # Finish reason is on the last delta
@@ -134,7 +154,7 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk"):
             span_request = getattr(response, "_span_request")
             if not span_request:
                 logger.warning("Baserun response not instrumented correctly, missing span info")
-                return
+                return result
 
             span = span_request.span
             span.completions.append(completion_message)
@@ -146,17 +166,20 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk"):
             span.prompt_tokens = 0
             span.total_tokens = span.completion_tokens + span.prompt_tokens
 
-            # TODO: Templates
+            if not Baserun.exporter_queue:
+                logger.warning(f"Baserun attempted to submit span, but baserun.init() was not called")
+                return result
 
             logger.debug(f"Baserun assembled span request {span_request}, submitting")
             Baserun.exporter_queue.put(span_request)
+        return result
     except BaseException as e:
         logger.warning(f"Failed to collect span for Baserun: {e}")
-        pass
+        return result
 
 
 def compile_tool_calls(choice: "Choice") -> list[ToolCall]:
-    calls = []
+    calls: list[ToolCall] = []
     if not choice.message.tool_calls:
         return calls
 
@@ -180,6 +203,10 @@ def find_template_match(messages: list[Message]) -> Union[str, None]:
 
     message_contents = [message.content for message in messages]
 
+    if Baserun.formatted_templates is None:
+        logger.warning(f"Baserun attempted to submit span, but baserun.init() was not called")
+        return None
+
     for template_name, formatted_templates in Baserun.formatted_templates.items():
         for formatted_template in formatted_templates:
             # FIXME? What if there are multiple matches? Maybe check for the highest # of messages
@@ -189,10 +216,10 @@ def find_template_match(messages: list[Message]) -> Union[str, None]:
     return None
 
 
-def spy_on_process_response(original_method):
+def spy_on_process_response(original_method) -> Callable:
     if iscoroutinefunction(original_method):
 
-        async def awrapper(self, *args, **kwargs):
+        async def awrapper(self, *args, **kwargs) -> "ChatCompletion":
             response = kwargs.get("response")
             result: ChatCompletion = await original_method(self, *args, **kwargs)
             parse_response(response, result)
@@ -201,7 +228,7 @@ def spy_on_process_response(original_method):
 
         return awrapper
 
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs) -> "ChatCompletion":
         result: ChatCompletion = original_method(self, *args, **kwargs)
         response = kwargs.get("response")
         parse_response(response, result)
@@ -211,7 +238,7 @@ def spy_on_process_response(original_method):
     return wrapper
 
 
-def parse_response(response, result):
+def parse_response(response, result) -> "BaseModel":
     from baserun import Baserun, get_template
     import openai
     from openai.types import ModerationCreateResponse, CreateEmbeddingResponse
@@ -310,7 +337,13 @@ def parse_response(response, result):
             span.end_time.FromDatetime(datetime.utcnow())
 
             span.api_type = openai.api_type or "open_ai"
-            span.api_base = openai.base_url or "https://api.openai.com/v1"
+
+            base_url = openai.base_url
+            if isinstance(base_url, URL):
+                span.api_base = str(base_url.raw)
+            else:
+                span.api_base = base_url or "https://api.openai.com/v1"
+
             span.stream = parsed_request.get("stream", False)
 
             if max_tokens := parsed_request.get("max_tokens"):
@@ -354,10 +387,13 @@ def parse_response(response, result):
 
                 span_request = SubmitSpanRequest(span=span, run=current_run)
                 setattr(response, "_span_request", span_request)
+
+                if not Baserun.exporter_queue:
+                    logger.warning(f"Baserun attempted to submit span, but baserun.init() was not called")
+                    return result
+
                 logger.debug(f"Baserun assembled span request {span_request}, submitting")
-                # TODO: Templates
                 Baserun.exporter_queue.put(span_request)
-                return result
             # Streaming- will get submitted in `spy_on_process_response_data` after streaming finishes
             else:
                 span_request = SubmitSpanRequest(span=span, run=current_run)
@@ -366,10 +402,12 @@ def parse_response(response, result):
 
         except BaseException as e:
             logger.warning(f"Failed to collect span for Baserun: {e}")
-            pass
+            return result
+
+    return result
 
 
-original_methods = {}
+original_methods: dict[str, Callable] = {}
 
 
 def instrument():

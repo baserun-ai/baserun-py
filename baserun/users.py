@@ -14,8 +14,9 @@ def submit_user(identifier: str):
 
     user = EndUser(identifier=identifier)
     user_request = SubmitUserRequest(user=user)
+
     try:
-        Baserun.futures.append(get_or_create_submission_service().SubmitUser.future(user_request))
+        Baserun.add_future(get_or_create_submission_service().SubmitUser.future(user_request))
     except Exception as e:
         if hasattr(e, "details"):
             logger.warning(f"Failed to submit user to Baserun: {e.details()}")
