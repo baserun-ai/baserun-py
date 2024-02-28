@@ -1,28 +1,27 @@
 import json
 import logging
-import re
 from datetime import datetime
 from inspect import iscoroutinefunction
 from random import randint
-from typing import Union, TYPE_CHECKING, Callable, Optional, cast
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union, cast
 from uuid import UUID
 
 import httpx
-from httpx import Response, URL
+from httpx import URL, Response
 from openai import BaseModel
 from openai.types.chat.chat_completion_message import FunctionCall
 
-from baserun.v1.baserun_pb2 import Span, Message, Status, SubmitSpanRequest, ToolCall, ToolFunction
+from baserun.v1.baserun_pb2 import Message, Span, Status, SubmitSpanRequest, ToolCall, ToolFunction
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from openai.types.chat import ChatCompletionChunk
-    from openai.types.chat.chat_completion import Choice, ChatCompletion
+    from openai.types.chat.chat_completion import ChatCompletion, Choice
 
 
 class ResponseWithDelta(Response):
-    deltas: list["ChatCompletionChunk"]
+    deltas: List["ChatCompletionChunk"]
 
     def __init__(self):
         super().__init__()
@@ -73,9 +72,9 @@ def spy_on_process_response_data(original_method) -> Callable:
 
 
 def parse_response_data(response: Response, result: "ChatCompletionChunk") -> BaseModel:
-    from baserun import Baserun
+    from openai.types import CreateEmbeddingResponse, ModerationCreateResponse
 
-    from openai.types import ModerationCreateResponse, CreateEmbeddingResponse
+    from baserun import Baserun
 
     if isinstance(result, ModerationCreateResponse):
         return result
@@ -99,7 +98,7 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk") -> Ba
             role = ""
             function_name = ""
             function_args = ""
-            tool_calls: list[ToolCall] = []
+            tool_calls: List[ToolCall] = []
             for delta in response.deltas:
                 if new_content := delta.choices[0].delta.content:
                     content += new_content
@@ -168,7 +167,7 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk") -> Ba
             span.total_tokens = span.completion_tokens + span.prompt_tokens
 
             if not Baserun.exporter_queue:
-                logger.warning(f"Baserun attempted to submit span, but baserun.init() was not called")
+                logger.warning("Baserun attempted to submit span, but baserun.init() was not called")
                 return result
 
             logger.debug(f"Baserun assembled span request {span_request}, submitting")
@@ -179,8 +178,8 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk") -> Ba
         return result
 
 
-def compile_tool_calls(choice: "Choice") -> list[ToolCall]:
-    calls: list[ToolCall] = []
+def compile_tool_calls(choice: "Choice") -> List[ToolCall]:
+    calls: List[ToolCall] = []
     if not choice.message.tool_calls:
         return calls
 
@@ -196,7 +195,7 @@ def compile_tool_calls(choice: "Choice") -> list[ToolCall]:
     return calls
 
 
-def find_template_match(messages: list[Message]) -> Union[str, None]:
+def find_template_match(messages: List[Message]) -> Union[str, None]:
     from baserun import Baserun
 
     if not messages:
@@ -205,7 +204,7 @@ def find_template_match(messages: list[Message]) -> Union[str, None]:
     message_contents = [message.content for message in messages]
 
     if Baserun.formatted_templates is None:
-        logger.warning(f"Baserun attempted to submit span, but baserun.init() was not called")
+        logger.warning("Baserun attempted to submit span, but baserun.init() was not called")
         return None
 
     for template_name, formatted_templates in Baserun.formatted_templates.items():
@@ -215,23 +214,6 @@ def find_template_match(messages: list[Message]) -> Union[str, None]:
                 return template_name
 
     return None
-
-
-def reverse_engineer_variables(template: str, formatted_string: str) -> dict[str, str]:
-    # Escape any characters in the template that might be interpreted as regex special characters, except for the
-    # variable braces {}.
-    template_escaped = re.sub(r"([\[\].*+?^=!:${}()|\[\]\\/])", r"\\\1", template)
-
-    # Convert the template into a regex pattern, turning {variable} into named regex groups.
-    pattern = re.sub(r"\\{([a-zA-Z0-9_-]+)\\}", r"(?P<\1>[^,]+)", template_escaped)
-
-    # Use the regex pattern to search the formatted string.
-    match = re.match(pattern, formatted_string)
-    if match:
-        # Extract the variable values from the match.
-        return match.groupdict()
-    else:
-        return {}
 
 
 def spy_on_process_response(original_method) -> Callable:
@@ -257,9 +239,10 @@ def spy_on_process_response(original_method) -> Callable:
 
 
 def parse_response(response, result) -> "BaseModel":
-    from baserun import Baserun, get_template, submit_input_variable
     import openai
-    from openai.types import ModerationCreateResponse, CreateEmbeddingResponse
+    from openai.types import CreateEmbeddingResponse, ModerationCreateResponse
+
+    from baserun import Baserun, get_template
 
     if isinstance(result, ModerationCreateResponse):
         return result
@@ -327,17 +310,6 @@ def parse_response(response, result) -> "BaseModel":
             matched_template = find_template_match(prompt_messages)
             if matched_template and (template := get_template(matched_template)):
                 span.template_id = template.id
-
-                if template.active_version:
-                    template_variables = {}
-                    for message in prompt_messages:
-                        for template_message in template.active_version.template_messages:
-                            template_variables.update(
-                                reverse_engineer_variables(template_message.message, message.content)
-                            )
-
-                    for key, value in template_variables:
-                        submit_input_variable(key, value, template)
 
             if tools := parsed_request.get("tools"):
                 span.tools = json.dumps(tools)
@@ -418,7 +390,7 @@ def parse_response(response, result) -> "BaseModel":
                 setattr(response, "_span_request", span_request)
 
                 if not Baserun.exporter_queue:
-                    logger.warning(f"Baserun attempted to submit span, but baserun.init() was not called")
+                    logger.warning("Baserun attempted to submit span, but baserun.init() was not called")
                     return result
 
                 logger.debug(f"Baserun assembled span request {span_request}, submitting")
@@ -436,7 +408,7 @@ def parse_response(response, result) -> "BaseModel":
     return result
 
 
-original_methods: dict[str, Callable] = {}
+original_methods: Dict[str, Callable] = {}
 
 
 def instrument():
@@ -453,7 +425,7 @@ def instrument():
     logger.debug("Baserun attempting to instrument OpenAI")
 
     try:
-        from openai._base_client import SyncAPIClient, AsyncAPIClient
+        from openai._base_client import AsyncAPIClient, SyncAPIClient
 
         original_methods["sync__process_response"] = SyncAPIClient._process_response
         SyncAPIClient._process_response = spy_on_process_response(SyncAPIClient._process_response)
@@ -464,5 +436,5 @@ def instrument():
         try:
             logger.debug("Baserun failed to instrument as new OpenAI Version, falling back")
             BaseClient._process_response = spy_on_process_response(BaseClient._process_response)
-        except BaseException as e:
-            logger.info(f"Baserun couldn't patch OpenAI, requests may not be logged")
+        except BaseException:
+            logger.info("Baserun couldn't patch OpenAI, requests may not be logged")

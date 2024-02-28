@@ -2,7 +2,7 @@ from uuid import uuid4
 
 import pytest
 
-from baserun import start_session, end_session, aend_session, astart_session
+from baserun import aend_session, astart_session, end_session, start_session
 
 
 def test_start_session(mock_services):

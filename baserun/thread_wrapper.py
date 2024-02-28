@@ -2,9 +2,10 @@ from typing import Callable, Union
 
 from opentelemetry import trace
 from opentelemetry.sdk.trace import _Span
-from opentelemetry.trace import get_current_span, SpanKind, Span
+from opentelemetry.trace import Span, SpanKind, get_current_span
 
 from baserun import Baserun
+
 from .constants import INNER_THREAD_SPAN_PARENT_NAME
 
 

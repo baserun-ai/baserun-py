@@ -7,13 +7,13 @@ from tests.conftest import get_mock_objects
 from tests.testing_functions import (
     openai_chat,
     openai_chat_async,
+    openai_chat_async_streaming,
+    openai_chat_error,
     openai_chat_functions,
     openai_chat_functions_streaming,
     openai_chat_streaming,
-    openai_chat_error,
-    traced_fn_error,
-    openai_chat_async_streaming,
     openai_contextmanager,
+    traced_fn_error,
 )
 
 

@@ -9,7 +9,8 @@ from openai import OpenAI
 
 from baserun.evals.json import is_valid_json
 from baserun.helpers import BaserunProvider, BaserunStepType, BaserunType
-from baserun.v1.baserun_pb2 import SubmitEvalRequest, Eval
+from baserun.v1.baserun_pb2 import Eval, SubmitEvalRequest
+
 from ..grpc import get_or_create_submission_service
 
 logger = logging.getLogger(__name__)

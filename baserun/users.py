@@ -1,10 +1,10 @@
 import logging
 
 from baserun.grpc import (
-    get_or_create_submission_service,
     get_or_create_async_submission_service,
+    get_or_create_submission_service,
 )
-from baserun.v1.baserun_pb2 import SubmitUserRequest, EndUser
+from baserun.v1.baserun_pb2 import EndUser, SubmitUserRequest
 
 logger = logging.getLogger(__name__)
 

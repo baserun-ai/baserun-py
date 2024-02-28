@@ -105,7 +105,7 @@ def test_paris_trip():
             }
         ],
     )
-    
+
     assert "Eiffel Tower" in response['choices'][0]['message']['content']
 ```
 

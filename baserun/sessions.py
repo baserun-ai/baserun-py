@@ -9,15 +9,16 @@ from opentelemetry.context import set_value
 from opentelemetry.trace import get_current_span
 
 from baserun.grpc import (
-    get_or_create_submission_service,
     get_or_create_async_submission_service,
+    get_or_create_submission_service,
 )
 from baserun.v1.baserun_pb2 import (
-    StartSessionRequest,
-    Session,
-    EndUser,
     EndSessionRequest,
+    EndUser,
+    Session,
+    StartSessionRequest,
 )
+
 from . import Baserun
 from .constants import UNTRACED_SPAN_PARENT_NAME
 from .instrumentation.span_attributes import BASERUN_SESSION_ID, BASERUN_USER_ID

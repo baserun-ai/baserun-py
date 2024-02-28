@@ -12,7 +12,7 @@ authors = [
     { name = "Adam Ginzberg", email = "adam@baserun.ai" },
     { name = "Erik Peterson", email = "erik@baserun.ai" }
 ]
-requires-python = ">=3.7.1"
+requires-python = ">=3.8"
 dependencies = [
     "requests>=2.31.0",
     "openai>=1.7.2",
@@ -29,3 +29,27 @@ Repository = "https://github.com/baserun-ai/baserun-py"
 
 [project.entry-points.pytest11]
 pbaserun = "baserun.pytest_plugin"
+
+[tool.ruff]
+extend-select = ["I", "T20"]  # isort, flake8-print
+target-version = "py38"
+line-length = 120
+extend-exclude = [
+    "baserun/v1/*",  # autegenerated
+    "baserun/__init__.py",  # it makes it look bad for multiple "as" imports in a single from statement
+]
+
+[tool.ruff.per-file-ignores]
+"baserun/v1/baserun_pb2.py" = ["E501"]  # Line too long
+"tests/*" = ["T201"]  # `print` found
+
+[tool.black]
+line-length = 120
+
+[tool.mypy]
+exclude = ["baserun/v1/*", "tests"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "baserun.v1.*"
+disable_error_code = ["var-annotated"]

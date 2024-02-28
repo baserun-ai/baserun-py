@@ -7,7 +7,8 @@ from datetime import datetime
 from opentelemetry.context import Context
 
 from baserun import Baserun
-from baserun.v1.baserun_pb2 import TestSuite, StartTestSuiteRequest, EndTestSuiteRequest
+from baserun.v1.baserun_pb2 import EndTestSuiteRequest, StartTestSuiteRequest, TestSuite
+
 from .grpc import get_or_create_submission_service
 
 logger = logging.getLogger(__name__)

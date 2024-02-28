@@ -8,9 +8,7 @@ from .v1.baserun_pb2_grpc import SubmissionServiceStub
 
 def credentials() -> grpc.ChannelCredentials:
     if key_chain := os.environ.get("SSL_KEY_CHAIN"):
-        ssl_creds = grpc.ssl_channel_credentials(
-            root_certificates=bytes(key_chain, "utf-8")
-        )
+        ssl_creds = grpc.ssl_channel_credentials(root_certificates=bytes(key_chain, "utf-8"))
     else:
         ssl_creds = grpc.ssl_channel_credentials()
 

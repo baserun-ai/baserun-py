@@ -9,7 +9,7 @@ from threading import Thread
 
 import openai
 import pytest
-from openai import OpenAI, AsyncOpenAI, NotFoundError
+from openai import AsyncOpenAI, NotFoundError, OpenAI
 from openai.types.chat.chat_completion_message import FunctionCall
 
 import baserun
@@ -37,7 +37,7 @@ def openai_chat_with_log(prompt="What is the capital of the US?") -> str:
     content = completion.choices[0].message.content
     baserun.check_includes("openai_chat.content", content, "Washington")
     command = " ".join(sys.argv)
-    baserun.log(f"OpenAI Chat Results", payload={"command": command})
+    baserun.log("OpenAI Chat Results", payload={"command": command})
     return content
 
 
@@ -379,6 +379,7 @@ def openai_contextmanager(prompt="What is the capital of the US?", name: str = "
         )
         content = completion.choices[0].message.content
         run.result = content
+        return content
 
 
 TEMPLATES = {
@@ -454,7 +455,7 @@ def use_sessions(prompt="What is the capital of the US?", user_identifier="examp
         )
         content = completion.choices[0].message.content
         baserun.check_includes("openai_chat.content", content, "Washington")
-        baserun.log(f"OpenAI Chat Results", payload={"result": content, "input": prompt})
+        baserun.log("OpenAI Chat Results", payload={"result": content, "input": prompt})
         return content
 
 
@@ -503,16 +504,17 @@ async def use_annotation(question="What is the capital of the US?") -> str:
         metadata={"comment": "This is correct but not concise enough"},
     )
     annotation.check_includes("openai_chat.content", "Washington", content)
-    annotation.log(f"OpenAI Chat Results", metadata={"result": content, "input": question})
+    annotation.log("OpenAI Chat Results", metadata={"result": content, "input": question})
     await annotation.asubmit()
 
     return content
 
 
 def use_langchain(question="What is the capital of the US?") -> str:
-    from baserun.instrumentation.langchain import BaserunCallbackHandler
     from langchain.chat_models import ChatOpenAI
     from langchain_core.messages import HumanMessage
+
+    from baserun.instrumentation.langchain import BaserunCallbackHandler
 
     chat = ChatOpenAI(callbacks=[BaserunCallbackHandler()])
     messages = [HumanMessage(content=question)]
@@ -522,10 +524,11 @@ def use_langchain(question="What is the capital of the US?") -> str:
 
 def use_langchain_tools(question="What is the capital of the US?") -> str:
     # Note: To run this, you must `pip install wikipedia langchain`
-    from langchain.chat_models import ChatOpenAI
-    from langchain_core.messages import HumanMessage
-    from langchain.tools.render import format_tool_to_openai_tool
     from langchain.agents import load_tools
+    from langchain.chat_models import ChatOpenAI
+    from langchain.tools.render import format_tool_to_openai_tool
+    from langchain_core.messages import HumanMessage
+
     from baserun.instrumentation.langchain import BaserunCallbackHandler
 
     chat = ChatOpenAI(callbacks=[BaserunCallbackHandler()])
@@ -536,9 +539,10 @@ def use_langchain_tools(question="What is the capital of the US?") -> str:
 
 
 def use_langchain_chain(question="What is the capital of {location}?") -> str:
+    from langchain.chains import LLMChain
     from langchain.chat_models import ChatOpenAI
     from langchain_core.prompts import PromptTemplate
-    from langchain.chains import LLMChain
+
     from baserun.instrumentation.langchain import BaserunCallbackHandler
 
     chat = ChatOpenAI()
@@ -556,12 +560,11 @@ def use_langchain_chain(question="What is the capital of {location}?") -> str:
 
 def use_langchain_agent_tools(question="Using Wikipedia, look up the population of {location} as of 2023.") -> str:
     # Note: To run this, you must `pip install wikipedia langchain`
+    from langchain.agents import AgentType, initialize_agent, load_tools
     from langchain.chat_models import ChatOpenAI
-    from langchain_core.prompts import PromptTemplate
-    from langchain.agents import initialize_agent
-    from langchain.agents import AgentType
-    from langchain.agents import load_tools
     from langchain_core.callbacks import BaseCallbackManager
+    from langchain_core.prompts import PromptTemplate
+
     from baserun.instrumentation.langchain import BaserunCallbackHandler
 
     chat = ChatOpenAI()
@@ -686,6 +689,7 @@ def call_function(functions, function_name: str, parsed_args: argparse.Namespace
 # Allows you to call any of these functions, e.g. python tests/testing_functions.py openai_chat_functions_streaming
 if __name__ == "__main__":
     from dotenv import load_dotenv
+
     from baserun import Baserun
 
     load_dotenv()
@@ -708,7 +712,8 @@ if __name__ == "__main__":
             try:
                 result = call_function(traced_functions, name, parsed_args)
                 print(f"----- {name} result:\n{result}\n-----")
-            except Exception as e:
-                traceback.print_exception(e)
+            except Exception:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
     else:
         call_function(traced_functions, function_name, parsed_args)

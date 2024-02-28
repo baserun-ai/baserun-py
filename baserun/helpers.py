@@ -4,7 +4,7 @@ from enum import Enum, auto
 from typing import Union
 
 from opentelemetry.sdk.trace import _Span
-from opentelemetry.trace import get_current_span, Span
+from opentelemetry.trace import Span, get_current_span
 
 from baserun.instrumentation.span_attributes import BASERUN_SESSION_ID
 from baserun.v1.baserun_pb2 import Run
