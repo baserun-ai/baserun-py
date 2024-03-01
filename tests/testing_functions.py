@@ -475,7 +475,7 @@ async def create_full_trace(question="What is the capital of the US?") -> str:
                 score=0.8,
                 metadata={"comment": "This is correct but is too concise"},
             )
-            # baserun.evals.includes("Answer is correct", "Washington", content)
+            baserun.evals.includes("Contains answer", "Washington", content)
             annotation.log(f"OpenAI Chat Results", metadata={"result": content, "input": question})
             annotation.check_includes("Answer is correct", "Washington", content)
             trace.metadata = json.dumps({"customer_tier": "Pro"})
@@ -647,6 +647,20 @@ def use_annotated_input_variables():
     annotation.input("country", "the US")
     # there's a race condition because submit happens before the span is processed (and the completion is created)
     annotation.submit()
+
+
+def use_contextmanager_multiple_calls():
+    with baserun.start_trace():
+        OpenAI().chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": "What is the capital of the US?"}],
+        )
+
+    with baserun.start_trace():
+        OpenAI().chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": "What is the capital of the US?"}],
+        )
 
 
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):
