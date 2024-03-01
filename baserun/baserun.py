@@ -231,7 +231,7 @@ class Baserun:
         """Gets the current run or creates one"""
         if not force_new:
             existing_run = Baserun.current_run(create=False)
-            if existing_run:
+            if existing_run and not existing_run.completion_timestamp.ToSeconds():
                 return existing_run
 
         run_id = str(uuid.uuid4())
