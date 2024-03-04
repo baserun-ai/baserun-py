@@ -76,7 +76,7 @@ def apply_template(
     parameters: dict[str, Any],
     template_messages: list[dict[str, Union[str, dict[str, Any]]]],
     template_type_enum,
-) -> list[dict[str, str | dict[str, Any]]]:
+) -> list[dict[str, Union[str, dict[str, Any]]]]:
     formatted_messages = []
     for message in template_messages:
         template_string = message.get("content")
@@ -106,7 +106,7 @@ def apply_template(
     if not Baserun.formatted_templates:
         Baserun.formatted_templates = {}
 
-    formatted_template_list: Set[tuple] | None = Baserun.formatted_templates.get(
+    formatted_template_list: Union[Set[tuple], None] = Baserun.formatted_templates.get(
         template_name,
     )
     set_value = tuple([message.get("content") for message in formatted_messages])
@@ -167,7 +167,7 @@ def format_prompt(
     template_messages: Optional[list[dict[str, Union[str, dict[str, Any]]]]] = None,
     template_type: Optional[str] = None,
     submit_variables: bool = True,
-) -> list[dict[str, str | dict[str, Any]]]:
+) -> list[dict[str, Union[str, dict[str, Any]]]]:
     import baserun
 
     template_type_enum = get_template_type_enum(template_type)
