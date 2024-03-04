@@ -36,9 +36,6 @@ logger = logging.getLogger(__name__)
 
 @memoize_for_time(os.environ.get("BASERUN_CACHE_INTERVAL", 600))
 def get_templates(environment: Union[str, None] = None) -> Dict[str, Template]:
-    if not Baserun.templates:
-        Baserun.templates = {}
-
     try:
         request = GetTemplatesRequest(environment=environment or Baserun.environment)
         response: GetTemplatesResponse = get_or_create_submission_service().GetTemplates(request)
@@ -104,9 +101,6 @@ def apply_template(
                 formatted_messages.append({**message, "content": formatted_content})
         else:
             formatted_messages.append(message)
-
-    if not Baserun.formatted_templates:
-        Baserun.formatted_templates = {}
 
     formatted_template_list = Baserun.formatted_templates.get(
         template_name,
@@ -233,11 +227,6 @@ def register_template(
     template_tag: Optional[str] = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
 ) -> Template:
-    from baserun import Baserun
-
-    if not Baserun.templates:
-        Baserun.templates = {}
-
     if template := Baserun.templates.get(template_name):
         return template
 
@@ -264,11 +253,6 @@ async def aregister_template(
     template_tag: Optional[str] = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
 ) -> Template:
-    from baserun import Baserun
-
-    if not Baserun.templates:
-        Baserun.templates = {}
-
     if template := Baserun.templates.get(template_name):
         return template
 

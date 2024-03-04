@@ -70,8 +70,6 @@ def start_session(
         response = get_or_create_submission_service().StartSession(session_request)
         session.id = response.session.id
 
-        if not Baserun.sessions:
-            Baserun.sessions = {}
         Baserun.sessions[session.id] = end_user
 
         # If they're already in a trace go ahead and attach the session to it

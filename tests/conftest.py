@@ -7,7 +7,7 @@ import openai
 import pytest
 from dotenv import load_dotenv
 
-from baserun import Baserun, baserun, get_templates
+from baserun import Baserun, get_templates
 from baserun.grpc import (
     get_or_create_async_submission_service,
     get_or_create_submission_service,
@@ -19,7 +19,7 @@ load_dotenv()
 
 @pytest.fixture(autouse=True)
 def clear_context():
-    baserun.baserun_contexts = {}
+    Baserun.baserun_contexts = {}
 
 
 @pytest.fixture(autouse=True)

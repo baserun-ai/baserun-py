@@ -1,5 +1,6 @@
 import os
 
+from .annotation import Annotation
 from .baserun import Baserun
 from .checks import (
     check as check,
@@ -32,7 +33,7 @@ trace = Baserun.trace
 log = Baserun.log
 evals = Baserun.evals
 api_key = os.environ.get("BASERUN_API_KEY")
-annotate = Baserun.annotate
+annotate = Annotation.exported_annotate
 submit_input_variable = Baserun.submit_input_variable
 finish = Baserun.finish
 

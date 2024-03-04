@@ -284,7 +284,7 @@ class Evals:
             "step": {
                 "stepType": BaserunStepType.AUTO_LLM.name.lower(),
                 "type": BaserunType.CHAT.name.lower(),
-                "provider": BaserunProvider.OPENAI.name.lower(),
+                "provider": BaserunProvider.OPENAI,
                 "config": model_config,
                 "messages": messages,
                 "output": output,

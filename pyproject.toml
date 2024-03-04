@@ -49,6 +49,8 @@ line-length = 120
 [tool.mypy]
 exclude = ["baserun/v1/*", "tests"]
 ignore_missing_imports = true
+#TODO
+#disallow_untyped_defs = true
 
 [[tool.mypy.overrides]]
 module = "baserun.v1.*"

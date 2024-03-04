@@ -8,7 +8,7 @@ from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from opentelemetry.sdk.trace import _Span
 from opentelemetry.trace import Span, get_current_span
 
-from baserun import Baserun
+from baserun.baserun import Baserun
 from baserun.constants import PARENT_SPAN_NAME
 from baserun.grpc import (
     get_or_create_async_submission_service,
@@ -28,6 +28,7 @@ from baserun.v1.baserun_pb2 import (
 logger = logging.getLogger(__name__)
 
 
+# TODO: would be nice to depend on any _Baserun instance rather than a default one
 class Annotation:
     completion_id: str
     span: Span
@@ -48,6 +49,15 @@ class Annotation:
 
         if completion_id:
             self.completion_id = completion_id
+
+    # Annotation initializer from Baserun class. I felt like it didn't belong there
+    @classmethod
+    def exported_annotate(
+        cls, completion_id: Optional[str] = None, run: Optional[Run] = None, trace: Optional[Run] = None
+    ) -> "Annotation":
+        """Capture annotations for a particular run and/or completion. the `trace` kwarg here is simply an alias"""
+
+        return cls(completion_id=completion_id, run=run or trace)
 
     @classmethod
     def annotate(cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None):
@@ -112,7 +122,7 @@ class Annotation:
         if metadata:
             feedback_kwargs["metadata"] = json.dumps(metadata)
 
-        if run.session_id and Baserun.sessions:
+        if run.session_id:
             end_user = Baserun.sessions.get(run.session_id)
             if end_user:
                 feedback_kwargs["end_user"] = end_user

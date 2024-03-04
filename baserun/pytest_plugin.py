@@ -35,7 +35,7 @@ def pytest_sessionstart(session):
 
 
 def pytest_sessionfinish(session):
-    if Baserun._initialized:
+    if Baserun.initialized:
         Baserun.finish()
 
         suite = Baserun.current_test_suite or getattr(session, "suite", None)
@@ -49,7 +49,7 @@ def pytest_sessionfinish(session):
 
 
 def pytest_runtest_teardown(item, nextitem):
-    if Baserun._initialized:
+    if Baserun.initialized:
         Baserun.finish()
         Baserun.set_context(Context())
 

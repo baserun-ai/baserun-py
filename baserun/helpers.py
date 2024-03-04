@@ -10,14 +10,15 @@ from baserun.instrumentation.span_attributes import BASERUN_SESSION_ID
 from baserun.v1.baserun_pb2 import Run
 
 
-class BaserunProvider(Enum):
-    ANTHROPIC = auto()
-    OPENAI = auto()
+class BaserunProvider(str, Enum):
+    ANTHROPIC = "anthropic"
+    OPENAI = "openai"
+    GOOGLE = "google"
 
 
-class BaserunType(Enum):
-    CHAT = auto()
-    COMPLETION = auto()
+class BaserunType(str, Enum):
+    CHAT = "chat"
+    COMPLETION = "completion"
 
 
 class BaserunStepType(Enum):
