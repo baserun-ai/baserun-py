@@ -16,13 +16,14 @@ def check(
     metadata: Optional[dict[str, Any]] = None,
     eval_type: Optional[str] = None,
 ):
+    submission_payload = {"expected": expected, **metadata}
     Baserun.evals._store_eval_data(
         name=name,
         eval_type=eval_type or "match",
         result=json.dumps(actual),
         score=score,
         submission=json.dumps(expected),
-        payload=metadata or {},
+        payload=submission_payload,
     )
 
     return actual
