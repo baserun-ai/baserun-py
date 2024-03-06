@@ -23,7 +23,7 @@ def openai_chat(prompt="What is the capital of the US?") -> str:
         messages=[{"role": "user", "content": prompt}],
     )
     content = completion.choices[0].message.content
-    baserun.check_includes("openai_chat.content", content, "Washington")
+    baserun.check_includes("openai_chat.content", content, "Washington", metadata={"foo": "bar"})
     return content
 
 

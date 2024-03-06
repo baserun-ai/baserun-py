@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import time
-from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Union
+from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Union, Any
 
 import requests
 from openai import OpenAI
@@ -84,7 +84,7 @@ class Evals:
             logger.warning(f"Failed to submit eval to Baserun: {e}")
 
     @staticmethod
-    def match(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
+    def match(name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None) -> bool:
         expected_list = [expected] if isinstance(expected, str) else expected
         result = any(submission.startswith(item) for item in expected)
         Evals._store_eval_data(
@@ -93,12 +93,12 @@ class Evals:
             result=str(result).lower(),
             score=int(result),
             submission=submission,
-            payload={"expected": expected_list},
+            payload={"expected": expected_list, **metadata},
         )
         return result
 
     @staticmethod
-    def includes(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
+    def includes(name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None) -> bool:
         expected_list = [expected] if isinstance(expected, str) else expected
         result = any(item in submission for item in expected)
         Evals._store_eval_data(
@@ -107,12 +107,14 @@ class Evals:
             result=str(result).lower(),
             score=int(result),
             submission=submission,
-            payload={"expected": expected_list},
+            payload={"expected": expected_list, **metadata},
         )
         return result
 
     @staticmethod
-    def fuzzy_match(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
+    def fuzzy_match(
+        name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None
+    ) -> bool:
         expected_list = [expected] if isinstance(expected, str) else expected
         result = any(submission in item or item in submission for item in expected)
         Evals._store_eval_data(
@@ -121,12 +123,12 @@ class Evals:
             result=str(result).lower(),
             score=int(result),
             submission=submission,
-            payload={"expected": expected_list},
+            payload={"expected": expected_list, **metadata},
         )
         return result
 
     @staticmethod
-    def not_match(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
+    def not_match(name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None) -> bool:
         expected_list = [expected] if isinstance(expected, str) else expected
         result = not any(submission.startswith(item) for item in expected)
         Evals._store_eval_data(
@@ -135,12 +137,14 @@ class Evals:
             result=str(result).lower(),
             score=int(result),
             submission=submission,
-            payload={"expected": expected_list},
+            payload={"expected": expected_list, **metadata},
         )
         return result
 
     @staticmethod
-    def not_includes(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
+    def not_includes(
+        name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None
+    ) -> bool:
         expected_list = [expected] if isinstance(expected, str) else expected
         result = not any(item in submission for item in expected)
         Evals._store_eval_data(
@@ -149,12 +153,14 @@ class Evals:
             result=str(result).lower(),
             score=int(result),
             submission=submission,
-            payload={"expected": expected_list},
+            payload={"expected": expected_list, **metadata},
         )
         return result
 
     @staticmethod
-    def not_fuzzy_match(name: str, submission: str, expected: Union[str, List[str]]) -> bool:
+    def not_fuzzy_match(
+        name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None
+    ) -> bool:
         expected_list = [expected] if isinstance(expected, str) else expected
         result = not any(submission in item or item in submission for item in expected)
         Evals._store_eval_data(
@@ -163,12 +169,12 @@ class Evals:
             result=str(result).lower(),
             score=int(result),
             submission=submission,
-            payload={"expected": expected_list},
+            payload={"expected": expected_list, **metadata},
         )
         return result
 
     @staticmethod
-    def valid_json(name: str, submission: str) -> bool:
+    def valid_json(name: str, submission: str, metadata: dict[str, Any] = None) -> bool:
         result = is_valid_json(submission)
         Evals._store_eval_data(
             name=name,
@@ -176,12 +182,14 @@ class Evals:
             result=str(result).lower(),
             score=int(result),
             submission=submission,
-            payload={},
+            payload=metadata or {},
         )
         return result
 
     @staticmethod
-    def custom(name: str, submission: str, eval_function: Callable[[str], bool]) -> bool:
+    def custom(
+        name: str, submission: str, eval_function: Callable[[str], bool], metadata: dict[str, Any] = None
+    ) -> bool:
         result = eval_function(submission)
         Evals._store_eval_data(
             name=name,
@@ -189,12 +197,14 @@ class Evals:
             result=str(result).lower(),
             score=int(result),
             submission=submission,
-            payload={},
+            payload=metadata or {},
         )
         return result
 
     @staticmethod
-    async def custom_async(name: str, submission: str, evaluation_func: Callable[[str], Awaitable[bool]]) -> bool:
+    async def custom_async(
+        name: str, submission: str, evaluation_func: Callable[[str], Awaitable[bool]], metadata: dict[str, Any] = None
+    ) -> bool:
         result = await evaluation_func(submission)
         Evals._store_eval_data(
             name=name,
@@ -202,7 +212,7 @@ class Evals:
             result=str(result).lower(),
             score=int(result),
             submission=submission,
-            payload={},
+            payload=metadata or {},
         )
         return result
 
@@ -218,7 +228,7 @@ class Evals:
         return contains_attack
 
     @staticmethod
-    def check_injection(name: str, submission: str) -> bool:
+    def check_injection(name: str, submission: str, metadata: dict[str, Any] = None) -> bool:
         api_key = os.environ.get("PROMPTARMOR_API_KEY")
         if not api_key:
             logger.warning("PromptArmor is not configured, PROMPTARMOR_API_KEY must be set")
@@ -232,7 +242,7 @@ class Evals:
             result=str(not result).lower(),
             score=int(not result),
             submission=submission,
-            payload={},
+            payload=metadata or {},
         )
         return result
 
@@ -285,7 +295,12 @@ class Evals:
 
     @staticmethod
     def model_graded_custom(
-        name: str, prompt: str, choices: dict[str, float], model: str = "gpt-4-0125-preview", **kwargs
+        name: str,
+        prompt: str,
+        choices: dict[str, float],
+        model: str = "gpt-4-0125-preview",
+        metadata: dict[str, Any] = None,
+        **kwargs,
     ) -> str:
         formatted_prompt = prompt.format(**kwargs)
         model_config = {
@@ -304,11 +319,13 @@ class Evals:
             model_config=model_config,
             get_choice_and_score_func=get_choice_and_score(choices),
             submission=formatted_prompt,
-            payload=kwargs,
+            payload={**kwargs, **metadata},
         )
 
     @staticmethod
-    def model_graded_fact(name: str, question: str, expert: str, submission: str) -> str:
+    def model_graded_fact(
+        name: str, question: str, expert: str, submission: str, metadata: dict[str, Any] = None
+    ) -> str:
         choices = ["A", "B", "C", "D", "E"]
         model_config = {
             "model": "gpt-4-0125-preview",
@@ -334,7 +351,7 @@ class Evals:
                 }
             ],
         }
-        payload = {"question": question, "expert": expert}
+        payload = {"question": question, "expert": expert, **metadata}
         return Evals._model_graded(
             name=name,
             eval_type="model_graded_fact",
@@ -345,7 +362,9 @@ class Evals:
         )
 
     @staticmethod
-    def model_graded_closedqa(name: str, task: str, submission: str, criterion: str) -> str:
+    def model_graded_closedqa(
+        name: str, task: str, submission: str, criterion: str, metadata: dict[str, Any] = None
+    ) -> str:
         choice_scores = {"Yes": 1.0, "No": 0.0}
         choices = list(choice_scores.keys())
         model_config = {
@@ -362,7 +381,7 @@ class Evals:
                 }
             ],
         }
-        payload = {"task": task, "criterion": criterion}
+        payload = {"task": task, "criterion": criterion, **metadata}
         return Evals._model_graded(
             name=name,
             eval_type="model_graded_closedqa",
@@ -373,7 +392,7 @@ class Evals:
         )
 
     @staticmethod
-    def model_graded_security(name: str, submission: str) -> str:
+    def model_graded_security(name: str, submission: str, metadata: dict[str, Any] = None) -> str:
         choice_scores = {"Yes": 1.0, "Unsure": 0.5, "No": 0.0}
         choices = list(choice_scores.keys())
         model_config = {
@@ -392,5 +411,5 @@ class Evals:
             model_config=model_config,
             submission=submission,
             get_choice_and_score_func=get_choice_and_score(choice_scores),
-            payload={},
+            payload=metadata or {},
         )
