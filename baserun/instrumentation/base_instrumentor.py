@@ -9,15 +9,15 @@ from uuid import UUID
 import httpx
 from httpx import Response, URL
 from openai import BaseModel
-from openai.types.chat.chat_completion_message import FunctionCall
 
+from baserun.openai import get_messages_from_completion, set_span_values_from_kwargs
 from baserun.v1.baserun_pb2 import Span, Message, Status, SubmitSpanRequest, ToolCall, ToolFunction
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from openai.types.chat import ChatCompletionChunk
-    from openai.types.chat.chat_completion import Choice, ChatCompletion
+    from openai.types.chat.chat_completion import ChatCompletion
 
 
 class ResponseWithDelta(Response):
@@ -167,7 +167,7 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk") -> Ba
             span.total_tokens = span.completion_tokens + span.prompt_tokens
 
             if not Baserun.exporter_queue:
-                logger.warning(f"Baserun attempted to submit span, but baserun.init() was not called")
+                logger.warning("Baserun attempted to submit span, but baserun.init() was not called")
                 return result
 
             logger.debug(f"Baserun assembled span request {span_request}, submitting")
@@ -176,23 +176,6 @@ def parse_response_data(response: Response, result: "ChatCompletionChunk") -> Ba
     except BaseException as e:
         logger.warning(f"Failed to collect span for Baserun: {e}")
         return result
-
-
-def compile_tool_calls(choice: "Choice") -> list[ToolCall]:
-    calls: list[ToolCall] = []
-    if not choice.message.tool_calls:
-        return calls
-
-    for call in choice.message.tool_calls:
-        calls.append(
-            ToolCall(
-                id=call.id,
-                type=call.type,
-                function=ToolFunction(name=call.function.name, arguments=call.function.arguments),
-            )
-        )
-
-    return calls
 
 
 def find_template_match(messages: list[Message]) -> Union[str, None]:
@@ -204,7 +187,7 @@ def find_template_match(messages: list[Message]) -> Union[str, None]:
     message_contents = [message.content for message in messages]
 
     if Baserun.formatted_templates is None:
-        logger.warning(f"Baserun attempted to submit span, but baserun.init() was not called")
+        logger.warning("Baserun attempted to submit span, but baserun.init() was not called")
         return None
 
     for template_name, formatted_templates in Baserun.formatted_templates.items():
@@ -275,25 +258,7 @@ def parse_response(response, result) -> "BaseModel":
                 )
 
             if hasattr(result, "choices"):
-                completion_messages = []
-                for choice in result.choices:
-                    raw_function_call = choice.message.function_call
-                    if isinstance(raw_function_call, FunctionCall):
-                        function_call = raw_function_call.model_dump_json()
-                    elif isinstance(raw_function_call, str):
-                        function_call = raw_function_call
-                    else:
-                        function_call = json.dumps(raw_function_call)
-
-                    message = Message(
-                        role=choice.message.role,
-                        content=choice.message.content,
-                        finish_reason=choice.finish_reason,
-                        function_call=function_call,
-                        tool_calls=compile_tool_calls(choice),
-                        system_fingerprint=result.system_fingerprint,
-                    )
-                    completion_messages.append(message)
+                completion_messages = get_messages_from_completion(result)
             else:
                 # Streaming response, will set the completion data later
                 completion_messages = []
@@ -312,9 +277,6 @@ def parse_response(response, result) -> "BaseModel":
 
             if tools := parsed_request.get("tools"):
                 span.tools = json.dumps(tools)
-
-            if functions := parsed_request.get("functions"):
-                span.functions = json.dumps(functions)
 
             if x_request_id:
                 span.span_id = int.from_bytes(bytes.fromhex(x_request_id[-8:]), "big")
@@ -344,38 +306,7 @@ def parse_response(response, result) -> "BaseModel":
             else:
                 span.api_base = base_url or "https://api.openai.com/v1"
 
-            span.stream = parsed_request.get("stream", False)
-
-            if max_tokens := parsed_request.get("max_tokens"):
-                span.max_tokens = max_tokens
-            if temperature := parsed_request.get("temperature"):
-                span.temperature = temperature
-            if top_p := parsed_request.get("top_p"):
-                span.top_p = top_p
-            if top_k := parsed_request.get("top_k"):
-                span.top_k = top_k
-            if frequency_penalty := parsed_request.get("frequency_penalty"):
-                span.frequency_penalty = frequency_penalty
-            if presence_penalty := parsed_request.get("presence_penalty"):
-                span.presence_penalty = presence_penalty
-            if n := parsed_request.get("n"):
-                span.n = n
-            if logit_bias := parsed_request.get("logit_bias"):
-                span.logit_bias = logit_bias
-            if logprobs := parsed_request.get("logprobs"):
-                span.logprobs = logprobs
-            if echo := parsed_request.get("echo"):
-                span.echo = echo
-            if suffix := parsed_request.get("suffix"):
-                span.suffix = suffix
-            if best_of := parsed_request.get("best_of"):
-                span.best_of = best_of
-            if user := parsed_request.get("user"):
-                span.user = user
-            if function_call := parsed_request.get("function_call"):
-                span.function_call = json.dumps(function_call)
-            if tool_choice := parsed_request.get("tool_choice"):
-                span.tool_choice = json.dumps(tool_choice)
+            set_span_values_from_kwargs(span, **parsed_request)
 
             # Non-streaming
             if hasattr(result, "model"):
@@ -389,7 +320,7 @@ def parse_response(response, result) -> "BaseModel":
                 setattr(response, "_span_request", span_request)
 
                 if not Baserun.exporter_queue:
-                    logger.warning(f"Baserun attempted to submit span, but baserun.init() was not called")
+                    logger.warning("Baserun attempted to submit span, but baserun.init() was not called")
                     return result
 
                 logger.debug(f"Baserun assembled span request {span_request}, submitting")

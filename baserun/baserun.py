@@ -100,8 +100,7 @@ class Baserun:
     @staticmethod
     def add_future(future: grpc.Future):
         if Baserun.futures is None:
-            logger.warning("Baserun attempted to submit data, but baserun.init() was not called")
-            return
+            Baserun.futures = []
 
         Baserun.futures.append(future)
 
@@ -216,6 +215,14 @@ class Baserun:
     @staticmethod
     def create_run(*args, **kwargs):
         return Baserun.get_or_create_current_run(*args, **kwargs, force_new=True)
+
+    @staticmethod
+    def start_manual_trace(name: str, *args, **kwargs):
+        return Baserun.get_or_create_current_run(name, *args, **kwargs)
+
+    @staticmethod
+    def finish_manual_trace(trace: Run):
+        return Baserun._finish_run(trace)
 
     @staticmethod
     def get_or_create_current_run(

@@ -6,6 +6,7 @@ from .checks import (
     check_equals as check_equals,
     check_includes as check_includes,
 )
+from .openai import submit_openai_completion
 from .sessions import (
     start_session as start_session,
     end_session as end_session,
@@ -35,6 +36,9 @@ api_key = os.environ.get("BASERUN_API_KEY")
 annotate = Baserun.annotate
 submit_input_variable = Baserun.submit_input_variable
 finish = Baserun.finish
+start_manual_trace = Baserun.start_manual_trace
+finish_manual_trace = Baserun.finish_manual_trace
+submit_openai_completion = submit_openai_completion
 
 __all__ = [
     "Baserun",
@@ -63,4 +67,7 @@ __all__ = [
     "check_includes",
     "submit_input_variable",
     "finish",
+    "start_manual_trace",
+    "finish_manual_trace",
+    "submit_openai_completion",
 ]

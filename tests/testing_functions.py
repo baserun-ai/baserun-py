@@ -509,6 +509,58 @@ async def use_annotation(question="What is the capital of the US?") -> str:
     return content
 
 
+def manually_submit_completion_with_tools(what_to_say="Hello World!") -> str:
+    trace = baserun.start_manual_trace("Manual Submission Test")
+
+    client = OpenAI()
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "say",
+                "description": "Convert some text to speech",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string", "description": "The text to speak"},
+                    },
+                    "required": ["text"],
+                },
+            },
+        }
+    ]
+
+    openai_kwargs = {
+        "model": "gpt-4-1106-preview",
+        "messages": [{"role": "user", "content": f"Say {what_to_say}"}],
+        "tools": tools,
+        "tool_choice": {"type": "function", "function": {"name": "say"}},
+    }
+    completion = client.chat.completions.create(**openai_kwargs)
+
+    baserun.submit_openai_completion(completion, trace, **openai_kwargs)
+    trace.result = str(completion.choices[0].message.tool_calls)
+
+    baserun.finish_manual_trace(trace)
+
+    return trace.result
+
+
+def manually_submit_completion(question="What is the capital of the US?") -> str:
+    client = OpenAI()
+
+    trace = baserun.start_manual_trace("Manual Submission Test")
+
+    openai_kwargs = {"model": "gpt-4-1106-preview", "messages": [{"role": "user", "content": question}]}
+    completion = client.chat.completions.create(**openai_kwargs)
+    baserun.submit_openai_completion(completion, trace, **openai_kwargs)
+
+    trace.result = completion.choices[0].message.content
+    baserun.finish_manual_trace(trace)
+
+    return trace.result
+
+
 def use_langchain(question="What is the capital of the US?") -> str:
     from baserun.instrumentation.langchain import BaserunCallbackHandler
     from langchain.chat_models import ChatOpenAI
@@ -690,13 +742,16 @@ if __name__ == "__main__":
 
     load_dotenv()
     openai.api_key = os.environ.get("OPENAI_API_KEY")
-    Baserun.init()
 
     parser = argparse.ArgumentParser(description="Execute a function with a prompt.")
     parser.add_argument("function_to_call", type=str, help="Name of the function to call")
     parser.add_argument("--prompt", type=str, help="Prompt to pass to the function", default=None)
+    parser.add_argument("--no-init", help="Don't call Baserun.init", default=False, action="store_true")
 
     parsed_args = parser.parse_args()
+
+    if not parsed_args.no_init:
+        Baserun.init()
 
     # Resolve the string function name to the function object
     function_name = parsed_args.function_to_call
