@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from datetime import datetime
 from inspect import iscoroutinefunction
 from random import randint
@@ -245,6 +246,23 @@ class OpenAIInstrumentation(Instrumentation):
 
         return None
 
+    @staticmethod
+    def reverse_engineer_variables(template: str, formatted_string: str) -> Dict[str, str]:
+        # Escape any characters in the template that might be interpreted as regex special characters, except for the
+        # variable braces {}.
+        template_escaped = re.sub(r"([\[\].*+?^=!:${}()|\[\]\\/])", r"\\\1", template)
+
+        # Convert the template into a regex pattern, turning {variable} into named regex groups.
+        pattern = re.sub(r"\\{([a-zA-Z0-9_-]+)\\}", r"(?P<\1>[^,]+)", template_escaped)
+
+        # Use the regex pattern to search the formatted string.
+        match = re.match(pattern, formatted_string)
+        if match:
+            # Extract the variable values from the match.
+            return match.groupdict()
+        else:
+            return {}
+
     def spy_on_process_response(self, original_method) -> Callable:
         if iscoroutinefunction(original_method):
 
@@ -270,7 +288,7 @@ class OpenAIInstrumentation(Instrumentation):
         import openai
         from openai.types import CreateEmbeddingResponse, ModerationCreateResponse
 
-        from baserun import Baserun, get_template
+        from baserun import Baserun, get_template, submit_input_variable
 
         if isinstance(result, ModerationCreateResponse):
             return result
@@ -335,6 +353,17 @@ class OpenAIInstrumentation(Instrumentation):
                 matched_template = self.find_template_match(prompt_messages)
                 if matched_template and (template := get_template(matched_template)):
                     span.template_id = template.id
+
+                    if template.active_version:
+                        template_variables = {}
+                        for message in prompt_messages:
+                            for template_message in template.active_version.template_messages:
+                                template_variables.update(
+                                    self.reverse_engineer_variables(template_message.message, message.content)
+                                )
+
+                        for key, value in template_variables.items():
+                            submit_input_variable(key, value, template)
 
                 if tools := parsed_request.get("tools"):
                     span.tools = json.dumps(tools)
