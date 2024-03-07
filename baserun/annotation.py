@@ -1,6 +1,7 @@
 import json
 import logging
-from typing import Any, Dict, List, Optional, Union
+from contextlib import asynccontextmanager, contextmanager
+from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union
 
 from openai import Stream
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
@@ -66,6 +67,42 @@ class Annotation:
             return cls(completion_id=completion_id)
         else:
             return cls()
+
+    @classmethod
+    @asynccontextmanager
+    async def aanotate(
+        cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None
+    ) -> AsyncGenerator["Annotation", None]:
+        if not Baserun.initialized:
+            yield cls()
+            return
+
+        annotation = cls.annotate(completion=completion)
+        try:
+            yield annotation
+        finally:
+            try:
+                await annotation.asubmit()
+            except BaseException as e:
+                logger.warning(f"Could not submit annotation to baserun: {e}")
+
+    @classmethod
+    @contextmanager
+    def with_annotation(
+        cls, completion: Union[None, ChatCompletion, Stream[ChatCompletionChunk]] = None
+    ) -> Generator["Annotation", None, None]:
+        if not Baserun.initialized:
+            yield cls()
+            return
+
+        annotation = cls.annotate(completion=completion)
+        try:
+            yield annotation
+        finally:
+            try:
+                annotation.submit()
+            except BaseException as e:
+                logger.warning(f"Could not submit annotation to baserun: {e}")
 
     def feedback(
         self,
