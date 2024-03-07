@@ -46,19 +46,31 @@ from .v1.baserun_pb2_grpc import SubmissionServiceStub
 logger = logging.getLogger(__name__)
 
 
-def ensure_initialized(func: Callable) -> Callable:
-    @wraps(func)
-    def wrapper(self: "_Baserun", *args, **kwargs) -> Any:
-        if not self._initialized:
-            raise NotInitializedException
-        return func(self, *args, **kwargs)
+def ensure_initialized(uninitialized_return: Any = None, uninitialized_return_factory: Optional[Callable] = None):
+    def inner(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(self: "_Baserun", *args, **kwargs) -> Any:
+            if not self._initialized and self.raise_on_uninitialized:
+                raise NotInitializedException
+            if not self._initialized:
+                val = uninitialized_return_factory() if uninitialized_return_factory else uninitialized_return
+                logger.debug(f"Baserun not initialized. Skipping {func.__name__} call and returning {val}")
+                return val
+            return func(self, *args, **kwargs)
 
-    return wrapper
+        return wrapper
+
+    return inner
+
+
+def dummy_generator(yield_val: Any) -> Generator:
+    yield yield_val
 
 
 class _Baserun:
-    def __init__(self):
+    def __init__(self) -> None:
         self._initialized = False
+        self.raise_on_uninitialized = bool(os.environ.get("BASERUN_RAISE_UNINITIALIZED", False))
 
         self.baserun_contexts: Dict[int, Context] = {}
 
@@ -105,16 +117,16 @@ class _Baserun:
 
         self._initialized = True
 
-    @ensure_initialized
-    def add_future(self, future: grpc.Future):
+    @ensure_initialized()
+    def add_future(self, future: grpc.Future) -> None:
         self.futures.append(future)
 
-    def exit_handler(self, *args, **kwargs):
+    def exit_handler(self, *args, **kwargs) -> None:
         self.finish()
         self.exporter_queue.put(None)
 
     @staticmethod
-    def configure_logging():
+    def configure_logging() -> None:
         default_log_level = logging.INFO
         log_level_str = os.getenv("LOG_LEVEL", "").upper()
 
@@ -133,13 +145,13 @@ class _Baserun:
         # Configure logging
         logging.basicConfig(level=log_level)
 
-    @ensure_initialized
-    def set_context(self, new_context: Context):
+    @ensure_initialized()
+    def set_context(self, new_context: Context) -> None:
         current_span = get_current_span()
         trace_id = current_span.get_span_context().trace_id
         self.baserun_contexts[trace_id] = new_context
 
-    @ensure_initialized
+    @ensure_initialized(Context())
     def get_context(self) -> Context:
         current_span = get_current_span()
         trace_id = current_span.get_span_context().trace_id
@@ -148,8 +160,8 @@ class _Baserun:
 
         return self.baserun_contexts[trace_id]
 
-    @ensure_initialized
-    def propagate_context(self, old_context: Context):
+    @ensure_initialized()
+    def propagate_context(self, old_context: Context) -> None:
         current_span = get_current_span()
         trace_id = current_span.get_span_context().trace_id
         new_context = self.get_context()
@@ -159,7 +171,7 @@ class _Baserun:
 
         self.baserun_contexts[trace_id] = new_context
 
-    def instrument(self):
+    def instrument(self) -> None:
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
         if not hasattr(tracer, "active_span_processor"):
@@ -171,8 +183,8 @@ class _Baserun:
 
         InstrumentationManager.instrument_all(self)
 
-    @ensure_initialized
-    def current_run(self, create: bool = True) -> Union[Run, None]:
+    @ensure_initialized()
+    def current_run(self) -> Optional[Run]:
         """Gets the current run"""
 
         current_run = get_value(BASERUN_RUN, self.get_context())
@@ -185,10 +197,6 @@ class _Baserun:
             if isinstance(run, Run):
                 return run
 
-        if create:
-            logger.debug("Couldn't find existing run, creating an Untraced run")
-            return self.get_or_create_current_run(name="Untraced", force_new=True)
-
         return None
 
     def _finish_run(self, run: Run):
@@ -199,14 +207,10 @@ class _Baserun:
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
 
-    @ensure_initialized
-    def create_run(self, *args, **kwargs):
-        return self.get_or_create_current_run(*args, **kwargs, force_new=True)
-
-    @ensure_initialized
+    @ensure_initialized(Run())
     def get_or_create_current_run(
         self,
-        name: Optional[str] = None,
+        name: str = "Untraced",
         suite_id: Optional[str] = None,
         start_timestamp: Optional[datetime] = None,
         completion_timestamp: Optional[datetime] = None,
@@ -217,16 +221,13 @@ class _Baserun:
     ) -> Run:
         """Gets the current run or creates one"""
         if not force_new:
-            existing_run = self.current_run(create=False)
+            existing_run = self.current_run()
             if existing_run and not existing_run.completion_timestamp.ToSeconds():
                 return existing_run
 
         run_id = str(uuid.uuid4())
         if not trace_type:
             trace_type = Run.RunType.RUN_TYPE_TEST if self.current_test_suite else Run.RunType.RUN_TYPE_PRODUCTION
-
-        if not name:
-            raise ValueError("Could not initialize run without a name")
 
         if not session_id:
             session_id = get_session_id()
@@ -282,12 +283,13 @@ class _Baserun:
                     return await func(*args, **kwargs)
 
                 session_id = get_session_id()
-                run = self.create_run(
+                run = self.get_or_create_current_run(
                     name=run_name,
                     trace_type=run_type,
                     metadata=metadata,
                     suite_id=suite_id,
                     session_id=session_id,
+                    force_new=True,
                 )
                 old_context = self.get_context()
                 with tracer.start_as_current_span(
@@ -393,7 +395,7 @@ class _Baserun:
         )
 
     @contextmanager
-    @ensure_initialized
+    @ensure_initialized(uninitialized_return_factory=lambda: dummy_generator(Run()))
     def start_trace(self, name: Optional[str] = None, end_on_exit=True, **kwargs) -> Generator[Run, None, None]:
         # If given a name, ensure that the run has that name. If not, it will only be set when a new run is created
         explicitly_named = name is not None
@@ -435,10 +437,10 @@ class _Baserun:
     def test(self, func: Callable, metadata: Optional[Dict] = None) -> Union[Callable, Awaitable, Generator]:
         return self._trace(func=func, run_type=Run.RunType.RUN_TYPE_TEST, metadata=metadata)
 
-    @ensure_initialized
+    @ensure_initialized(Log())
     def log(self, name: str, payload: Union[str, Dict]) -> Log:
         # creates new untraced run if current run does not exist
-        run = self.current_run()
+        run = self.get_or_create_current_run()
 
         log_message = Log(
             run_id=run.run_id,
@@ -456,7 +458,7 @@ class _Baserun:
 
         return log_message
 
-    @ensure_initialized
+    @ensure_initialized(InputVariable())
     def submit_input_variable(
         self,
         key: str,
@@ -481,8 +483,8 @@ class _Baserun:
 
         return input_variable
 
-    @ensure_initialized
-    def finish(self, timeout=1):
+    @ensure_initialized()
+    def finish(self, timeout=1) -> None:
         if self.futures:
             logger.debug(f"Baserun finishing {len(self.futures)} futures")
             for future in self.futures:

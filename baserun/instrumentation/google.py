@@ -135,7 +135,7 @@ class GoogleInstrumentation(Instrumentation):
         return span
 
     def submit_span(self, span: Span) -> None:
-        current_run: Run = self.baserun.current_run()
+        current_run: Run = self.baserun.get_or_create_current_run()
         span.run_id = current_run.run_id
         # not sure how should one set these trace_id and span_id. I don't really like it byt I'll set it like in
         #  the openai instrumentation. js sdk sets these to zeros...so maybe it doesn't matter anyway

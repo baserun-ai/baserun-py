@@ -16,6 +16,10 @@ def credentials() -> grpc.ChannelCredentials:
     return grpc.composite_channel_credentials(ssl_creds, call_credentials)
 
 
+# TODO come up with a nicer way of doing this to e.g. not actually send some of the requests
+#  until baserun is initialized
+
+
 def get_or_create_submission_service() -> SubmissionServiceStub:
     from baserun import Baserun
 

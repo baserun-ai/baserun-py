@@ -6,8 +6,6 @@ import sys
 import traceback
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
-from langchain_core.messages import BaseMessage
-
 from baserun import Baserun
 from baserun.grpc import (
     get_or_create_async_submission_service,
@@ -132,6 +130,7 @@ def create_langchain_template(
     tools: Optional[List[Union["Tool", Any]]] = None,
 ):
     from langchain.prompts import ChatPromptTemplate
+    from langchain_core.messages import BaseMessage
 
     parameters = parameters or {}
     input_variables = list(parameters.keys())

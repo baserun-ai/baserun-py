@@ -12,7 +12,7 @@ from .constants import INNER_THREAD_SPAN_PARENT_NAME
 def baserun_thread_wrapper(target: Callable):
     """Given a target function intended to be run in a new thread, wrap the target in a function and start a new
     parent span which propagates attributes from the parent thread's parent span."""
-    if not Baserun._initialized:
+    if not Baserun.initialized:
         return target
 
     parent_span: Union[Span, _Span] = get_current_span()

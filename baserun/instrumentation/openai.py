@@ -284,10 +284,7 @@ class OpenAIInstrumentation(Instrumentation):
             try:
                 request: httpx.Request = response.request
                 parsed_request = json.loads(request.content)
-                current_run = Baserun.current_run()
-                if not current_run:
-                    # TODO handle this case
-                    return result
+                current_run = Baserun.get_or_create_current_run()
 
                 prompt_messages = []
                 for message in parsed_request.get("messages", []):

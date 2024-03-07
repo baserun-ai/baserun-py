@@ -76,7 +76,7 @@ class Evals:
         if score is not None:
             eval_message.score = score
 
-        run = Baserun.current_run()
+        run = Baserun.get_or_create_current_run()
         try:
             Baserun.add_future(
                 get_or_create_submission_service().SubmitEval.future(SubmitEvalRequest(eval=eval_message, run=run))
