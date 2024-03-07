@@ -24,7 +24,7 @@ from .constants import PARENT_SPAN_NAME
 from .evals.evals import Evals
 from .exporter import worker
 from .grpc import get_or_create_submission_service
-from .helpers import get_session_id
+from .helpers import get_session_id, patch_run_for_metadata
 from .instrumentation.base_instrumentor import instrument
 from .instrumentation.span_attributes import BASERUN_RUN
 from .v1.baserun_pb2 import (
@@ -94,6 +94,9 @@ class Baserun:
         current_span = get_current_span()
         baserun_contexts = {current_span.get_span_context().trace_id: Context()}
         Baserun.configure_logging()
+
+        patch_run_for_metadata()
+
         if instrument:
             Baserun.instrument()
 

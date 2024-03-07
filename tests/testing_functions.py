@@ -478,7 +478,7 @@ async def create_full_trace(question="What is the capital of the US?") -> str:
             baserun.evals.includes("Contains answer", "Washington", content)
             annotation.log(f"OpenAI Chat Results", metadata={"result": content, "input": question})
             annotation.check_includes("Answer is correct", "Washington", content)
-            trace.metadata = json.dumps({"customer_tier": "Pro"})
+            trace.metadata = {"customer_tier": "Pro"}
             trace.result = content
 
             await annotation.asubmit()

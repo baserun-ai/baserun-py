@@ -85,6 +85,7 @@ class Evals:
 
     @staticmethod
     def match(name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None) -> bool:
+        metadata = metadata or {}
         expected_list = [expected] if isinstance(expected, str) else expected
         result = any(submission.startswith(item) for item in expected)
         Evals._store_eval_data(
@@ -99,6 +100,7 @@ class Evals:
 
     @staticmethod
     def includes(name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None) -> bool:
+        metadata = metadata or {}
         expected_list = [expected] if isinstance(expected, str) else expected
         result = any(item in submission for item in expected)
         Evals._store_eval_data(
@@ -115,6 +117,7 @@ class Evals:
     def fuzzy_match(
         name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None
     ) -> bool:
+        metadata = metadata or {}
         expected_list = [expected] if isinstance(expected, str) else expected
         result = any(submission in item or item in submission for item in expected)
         Evals._store_eval_data(
@@ -129,6 +132,7 @@ class Evals:
 
     @staticmethod
     def not_match(name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None) -> bool:
+        metadata = metadata or {}
         expected_list = [expected] if isinstance(expected, str) else expected
         result = not any(submission.startswith(item) for item in expected)
         Evals._store_eval_data(
@@ -145,6 +149,7 @@ class Evals:
     def not_includes(
         name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None
     ) -> bool:
+        metadata = metadata or {}
         expected_list = [expected] if isinstance(expected, str) else expected
         result = not any(item in submission for item in expected)
         Evals._store_eval_data(
@@ -161,6 +166,7 @@ class Evals:
     def not_fuzzy_match(
         name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None
     ) -> bool:
+        metadata = metadata or {}
         expected_list = [expected] if isinstance(expected, str) else expected
         result = not any(submission in item or item in submission for item in expected)
         Evals._store_eval_data(
@@ -175,6 +181,7 @@ class Evals:
 
     @staticmethod
     def valid_json(name: str, submission: str, metadata: dict[str, Any] = None) -> bool:
+        metadata = metadata or {}
         result = is_valid_json(submission)
         Evals._store_eval_data(
             name=name,
@@ -190,6 +197,7 @@ class Evals:
     def custom(
         name: str, submission: str, eval_function: Callable[[str], bool], metadata: dict[str, Any] = None
     ) -> bool:
+        metadata = metadata or {}
         result = eval_function(submission)
         Evals._store_eval_data(
             name=name,
@@ -205,6 +213,7 @@ class Evals:
     async def custom_async(
         name: str, submission: str, evaluation_func: Callable[[str], Awaitable[bool]], metadata: dict[str, Any] = None
     ) -> bool:
+        metadata = metadata or {}
         result = await evaluation_func(submission)
         Evals._store_eval_data(
             name=name,
@@ -229,6 +238,7 @@ class Evals:
 
     @staticmethod
     def check_injection(name: str, submission: str, metadata: dict[str, Any] = None) -> bool:
+        metadata = metadata or {}
         api_key = os.environ.get("PROMPTARMOR_API_KEY")
         if not api_key:
             logger.warning("PromptArmor is not configured, PROMPTARMOR_API_KEY must be set")
@@ -302,6 +312,7 @@ class Evals:
         metadata: dict[str, Any] = None,
         **kwargs,
     ) -> str:
+        metadata = metadata or {}
         formatted_prompt = prompt.format(**kwargs)
         model_config = {
             "model": model,
@@ -326,6 +337,7 @@ class Evals:
     def model_graded_fact(
         name: str, question: str, expert: str, submission: str, metadata: dict[str, Any] = None
     ) -> str:
+        metadata = metadata or {}
         choices = ["A", "B", "C", "D", "E"]
         model_config = {
             "model": "gpt-4-0125-preview",
@@ -365,6 +377,7 @@ class Evals:
     def model_graded_closedqa(
         name: str, task: str, submission: str, criterion: str, metadata: dict[str, Any] = None
     ) -> str:
+        metadata = metadata or {}
         choice_scores = {"Yes": 1.0, "No": 0.0}
         choices = list(choice_scores.keys())
         model_config = {
@@ -393,6 +406,7 @@ class Evals:
 
     @staticmethod
     def model_graded_security(name: str, submission: str, metadata: dict[str, Any] = None) -> str:
+        metadata = metadata or {}
         choice_scores = {"Yes": 1.0, "Unsure": 0.5, "No": 0.0}
         choices = list(choice_scores.keys())
         model_config = {
