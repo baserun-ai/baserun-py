@@ -16,6 +16,7 @@ def check(
     metadata: Optional[dict[str, Any]] = None,
     eval_type: Optional[str] = None,
 ):
+    metadata = metadata or {}
     submission_payload = {"expected": expected, **metadata}
     Baserun.evals._store_eval_data(
         name=name,
