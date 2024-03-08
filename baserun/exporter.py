@@ -1,10 +1,11 @@
 import logging
-from queue import Queue, Empty
+from queue import Empty, Queue
 from time import sleep
 
 from baserun.v1.baserun_pb2 import (
     SubmitSpanRequest,
 )
+
 from .grpc import get_or_create_submission_service
 
 logger = logging.getLogger(__name__)

@@ -1,7 +1,7 @@
 import logging
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Optional, Union
+from typing import Generator, Optional, Union
 from uuid import uuid4
 
 from opentelemetry import trace
@@ -9,15 +9,16 @@ from opentelemetry.context import set_value
 from opentelemetry.trace import get_current_span
 
 from baserun.grpc import (
-    get_or_create_submission_service,
     get_or_create_async_submission_service,
+    get_or_create_submission_service,
 )
 from baserun.v1.baserun_pb2 import (
-    StartSessionRequest,
-    Session,
-    EndUser,
     EndSessionRequest,
+    EndUser,
+    Session,
+    StartSessionRequest,
 )
+
 from . import Baserun
 from .constants import UNTRACED_SPAN_PARENT_NAME
 from .instrumentation.span_attributes import BASERUN_SESSION_ID, BASERUN_USER_ID
@@ -26,13 +27,20 @@ logger = logging.getLogger(__name__)
 
 
 @contextmanager
-def with_session(user_identifier: str, session_identifier: Optional[str] = None, auto_end: bool = True):
+def with_session(
+    user_identifier: str, session_identifier: Optional[str] = None, auto_end: bool = True
+) -> Generator[Session, None, None]:
+    # TODO: analyze all corner cases of what user can do with sessions whilst baserun not initialized
+    if not Baserun.initialized:
+        yield Session()
+        return
+
     # If there's a current span, start the session in that context. Otherwise, create a parent span
     current_span = get_current_span()
     if current_span.is_recording():
         session = start_session(user_identifier=user_identifier, session_identifier=session_identifier)
         try:
-            yield
+            yield session
         finally:
             if auto_end:
                 end_session(session)
@@ -45,7 +53,7 @@ def with_session(user_identifier: str, session_identifier: Optional[str] = None,
             Baserun.propagate_context(old_context)
             session = start_session(user_identifier=user_identifier, session_identifier=session_identifier)
             try:
-                yield
+                yield session
             finally:
                 if auto_end:
                     end_session(session)
@@ -69,8 +77,6 @@ def start_session(
         response = get_or_create_submission_service().StartSession(session_request)
         session.id = response.session.id
 
-        if not Baserun.sessions:
-            Baserun.sessions = {}
         Baserun.sessions[session.id] = end_user
 
         # If they're already in a trace go ahead and attach the session to it
@@ -97,7 +103,7 @@ def start_session(
 def end_session(
     session: Union[str, Session],
     completion_timestamp: Optional[datetime] = None,
-):
+) -> None:
     if not isinstance(session, Session):
         session = Session(
             identifier=session,
@@ -119,6 +125,7 @@ async def astart_session(
     start_timestamp: Optional[datetime] = None,
     identifier: Optional[str] = None,
 ):
+    # TODO: why it doesn't return session like sync version? also session_identifier in sync vs identifier here
     session = Session(
         identifier=identifier or str(uuid4()),
         end_user=EndUser(identifier=user_identifier),

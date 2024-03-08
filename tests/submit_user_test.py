@@ -1,6 +1,6 @@
 import pytest
 
-from baserun import submit_user, asubmit_user
+from baserun import asubmit_user, submit_user
 
 
 def test_submit_user(mock_services):

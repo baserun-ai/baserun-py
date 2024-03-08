@@ -1,5 +1,5 @@
 import json
-from typing import Optional, Any, Union
+from typing import Any, Dict, List, Optional, Union
 
 from baserun import Baserun
 
@@ -13,7 +13,7 @@ def check(
     actual: Any,
     expected: Any,
     score: float,
-    metadata: Optional[dict[str, Any]] = None,
+    metadata: Optional[Dict[str, Any]] = None,
     eval_type: Optional[str] = None,
 ):
     metadata = metadata or {}
@@ -33,8 +33,8 @@ def check(
 def check_equals(
     name: str,
     actual: str,
-    expected: Union[str, list[str]],
-    metadata: Optional[dict[str, Any]] = None,
+    expected: Union[str, List[str]],
+    metadata: Optional[Dict[str, Any]] = None,
 ):
     expected_list = [expected] if isinstance(expected, str) else expected
     result = any(actual == item for item in expected_list)
@@ -52,8 +52,8 @@ def check_equals(
 def check_includes(
     name: str,
     actual: str,
-    expected: Union[str, list[str]],
-    metadata: Optional[dict[str, Any]] = None,
+    expected: Union[str, List[str]],
+    metadata: Optional[Dict[str, Any]] = None,
 ):
     expected_list = [expected] if isinstance(expected, str) else expected
     result = any(item in actual for item in expected_list)

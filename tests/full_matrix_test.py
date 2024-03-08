@@ -1,8 +1,8 @@
 import concurrent
 
 import pytest
-from anthropic import AsyncAnthropic, Anthropic, HUMAN_PROMPT, AI_PROMPT
-from openai import OpenAI, AsyncOpenAI
+from anthropic import AI_PROMPT, HUMAN_PROMPT, Anthropic, AsyncAnthropic
+from openai import AsyncOpenAI, OpenAI
 
 import baserun
 

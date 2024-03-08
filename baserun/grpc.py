@@ -8,14 +8,16 @@ from .v1.baserun_pb2_grpc import SubmissionServiceStub
 
 def credentials() -> grpc.ChannelCredentials:
     if key_chain := os.environ.get("SSL_KEY_CHAIN"):
-        ssl_creds = grpc.ssl_channel_credentials(
-            root_certificates=bytes(key_chain, "utf-8")
-        )
+        ssl_creds = grpc.ssl_channel_credentials(root_certificates=bytes(key_chain, "utf-8"))
     else:
         ssl_creds = grpc.ssl_channel_credentials()
 
     call_credentials = grpc.access_token_call_credentials(get_api_key())
     return grpc.composite_channel_credentials(ssl_creds, call_credentials)
+
+
+# TODO come up with a nicer way of doing this to e.g. not actually send some of the requests
+#  until baserun is initialized
 
 
 def get_or_create_submission_service() -> SubmissionServiceStub:

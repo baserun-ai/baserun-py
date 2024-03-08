@@ -1,13 +1,13 @@
 import os
 from queue import Empty
-from typing import Generator
-from unittest.mock import call, Mock, create_autospec, AsyncMock
+from typing import Callable, Dict, Generator, Tuple
+from unittest.mock import AsyncMock, Mock, call, create_autospec
 
 import openai
 import pytest
 from dotenv import load_dotenv
 
-from baserun import Baserun, baserun, get_templates
+from baserun import Baserun, get_templates
 from baserun.grpc import (
     get_or_create_async_submission_service,
     get_or_create_submission_service,
@@ -19,7 +19,7 @@ load_dotenv()
 
 @pytest.fixture(autouse=True)
 def clear_context():
-    baserun.baserun_contexts = {}
+    Baserun.baserun_contexts = {}
 
 
 @pytest.fixture(autouse=True)
@@ -30,12 +30,12 @@ def set_openai_api_key():
 
 
 @pytest.fixture
-def mock_services() -> Generator[dict[str, Mock], None, None]:
+def mock_services() -> Generator[Dict[str, Mock], None, None]:
     # First, create the services
     get_or_create_async_submission_service()
     get_or_create_submission_service()
 
-    services = {
+    services: Dict[str, Callable] = {
         "submission_service": create_autospec,
         "async_submission_service": AsyncMock,
     }
@@ -108,7 +108,7 @@ def pytest_runtest_teardown(item, nextitem):
     Baserun.templates = {}
 
 
-def get_mock_objects(mock_services) -> tuple[Run, Span, Run, Run]:
+def get_mock_objects(mock_services) -> Tuple[Run, Span, Run, Run]:
     Baserun.finish()
 
     mock_start_run = mock_services["submission_service"].StartRun.future

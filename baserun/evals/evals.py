@@ -2,14 +2,15 @@ import json
 import logging
 import os
 import time
-from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Union, Any
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
 import requests
 from openai import OpenAI
 
 from baserun.evals.json import is_valid_json
 from baserun.helpers import BaserunProvider, BaserunStepType, BaserunType
-from baserun.v1.baserun_pb2 import SubmitEvalRequest, Eval
+from baserun.v1.baserun_pb2 import Eval, SubmitEvalRequest
+
 from ..grpc import get_or_create_submission_service
 
 logger = logging.getLogger(__name__)
@@ -75,7 +76,7 @@ class Evals:
         if score is not None:
             eval_message.score = score
 
-        run = Baserun.current_run()
+        run = Baserun.get_or_create_current_run()
         try:
             Baserun.add_future(
                 get_or_create_submission_service().SubmitEval.future(SubmitEvalRequest(eval=eval_message, run=run))
@@ -84,7 +85,9 @@ class Evals:
             logger.warning(f"Failed to submit eval to Baserun: {e}")
 
     @staticmethod
-    def match(name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None) -> bool:
+    def match(
+        name: str, submission: str, expected: Union[str, List[str]], metadata: Optional[Dict[str, Any]] = None
+    ) -> bool:
         metadata = metadata or {}
         expected_list = [expected] if isinstance(expected, str) else expected
         result = any(submission.startswith(item) for item in expected)
@@ -99,7 +102,9 @@ class Evals:
         return result
 
     @staticmethod
-    def includes(name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None) -> bool:
+    def includes(
+        name: str, submission: str, expected: Union[str, List[str]], metadata: Optional[Dict[str, Any]] = None
+    ) -> bool:
         metadata = metadata or {}
         expected_list = [expected] if isinstance(expected, str) else expected
         result = any(item in submission for item in expected)
@@ -115,7 +120,7 @@ class Evals:
 
     @staticmethod
     def fuzzy_match(
-        name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None
+        name: str, submission: str, expected: Union[str, List[str]], metadata: Optional[Dict[str, Any]] = None
     ) -> bool:
         metadata = metadata or {}
         expected_list = [expected] if isinstance(expected, str) else expected
@@ -131,7 +136,9 @@ class Evals:
         return result
 
     @staticmethod
-    def not_match(name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None) -> bool:
+    def not_match(
+        name: str, submission: str, expected: Union[str, List[str]], metadata: Optional[Dict[str, Any]] = None
+    ) -> bool:
         metadata = metadata or {}
         expected_list = [expected] if isinstance(expected, str) else expected
         result = not any(submission.startswith(item) for item in expected)
@@ -147,7 +154,7 @@ class Evals:
 
     @staticmethod
     def not_includes(
-        name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None
+        name: str, submission: str, expected: Union[str, List[str]], metadata: Optional[Dict[str, Any]] = None
     ) -> bool:
         metadata = metadata or {}
         expected_list = [expected] if isinstance(expected, str) else expected
@@ -164,7 +171,7 @@ class Evals:
 
     @staticmethod
     def not_fuzzy_match(
-        name: str, submission: str, expected: Union[str, List[str]], metadata: dict[str, Any] = None
+        name: str, submission: str, expected: Union[str, List[str]], metadata: Optional[Dict[str, Any]] = None
     ) -> bool:
         metadata = metadata or {}
         expected_list = [expected] if isinstance(expected, str) else expected
@@ -180,7 +187,7 @@ class Evals:
         return result
 
     @staticmethod
-    def valid_json(name: str, submission: str, metadata: dict[str, Any] = None) -> bool:
+    def valid_json(name: str, submission: str, metadata: Optional[Dict[str, Any]] = None) -> bool:
         metadata = metadata or {}
         result = is_valid_json(submission)
         Evals._store_eval_data(
@@ -195,7 +202,7 @@ class Evals:
 
     @staticmethod
     def custom(
-        name: str, submission: str, eval_function: Callable[[str], bool], metadata: dict[str, Any] = None
+        name: str, submission: str, eval_function: Callable[[str], bool], metadata: Optional[Dict[str, Any]] = None
     ) -> bool:
         metadata = metadata or {}
         result = eval_function(submission)
@@ -211,7 +218,10 @@ class Evals:
 
     @staticmethod
     async def custom_async(
-        name: str, submission: str, evaluation_func: Callable[[str], Awaitable[bool]], metadata: dict[str, Any] = None
+        name: str,
+        submission: str,
+        evaluation_func: Callable[[str], Awaitable[bool]],
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> bool:
         metadata = metadata or {}
         result = await evaluation_func(submission)
@@ -237,7 +247,7 @@ class Evals:
         return contains_attack
 
     @staticmethod
-    def check_injection(name: str, submission: str, metadata: dict[str, Any] = None) -> bool:
+    def check_injection(name: str, submission: str, metadata: Optional[Dict[str, Any]] = None) -> bool:
         metadata = metadata or {}
         api_key = os.environ.get("PROMPTARMOR_API_KEY")
         if not api_key:
@@ -283,7 +293,7 @@ class Evals:
             "step": {
                 "stepType": BaserunStepType.AUTO_LLM.name.lower(),
                 "type": BaserunType.CHAT.name.lower(),
-                "provider": BaserunProvider.OPENAI.name.lower(),
+                "provider": BaserunProvider.OPENAI,
                 "config": model_config,
                 "messages": messages,
                 "output": output,
@@ -307,9 +317,9 @@ class Evals:
     def model_graded_custom(
         name: str,
         prompt: str,
-        choices: dict[str, float],
+        choices: Dict[str, float],
         model: str = "gpt-4-0125-preview",
-        metadata: dict[str, Any] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> str:
         metadata = metadata or {}
@@ -335,7 +345,7 @@ class Evals:
 
     @staticmethod
     def model_graded_fact(
-        name: str, question: str, expert: str, submission: str, metadata: dict[str, Any] = None
+        name: str, question: str, expert: str, submission: str, metadata: Optional[Dict[str, Any]] = None
     ) -> str:
         metadata = metadata or {}
         choices = ["A", "B", "C", "D", "E"]
@@ -375,7 +385,7 @@ class Evals:
 
     @staticmethod
     def model_graded_closedqa(
-        name: str, task: str, submission: str, criterion: str, metadata: dict[str, Any] = None
+        name: str, task: str, submission: str, criterion: str, metadata: Optional[Dict[str, Any]] = None
     ) -> str:
         metadata = metadata or {}
         choice_scores = {"Yes": 1.0, "No": 0.0}
@@ -405,7 +415,7 @@ class Evals:
         )
 
     @staticmethod
-    def model_graded_security(name: str, submission: str, metadata: dict[str, Any] = None) -> str:
+    def model_graded_security(name: str, submission: str, metadata: Optional[Dict[str, Any]] = None) -> str:
         metadata = metadata or {}
         choice_scores = {"Yes": 1.0, "Unsure": 0.5, "No": 0.0}
         choices = list(choice_scores.keys())

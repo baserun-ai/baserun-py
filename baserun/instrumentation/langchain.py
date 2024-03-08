@@ -1,10 +1,10 @@
 import json
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import BaseMessage
-from langchain_core.outputs import LLMResult, ChatGeneration
+from langchain_core.outputs import ChatGeneration, LLMResult
 from opentelemetry.trace import Span, get_current_span
 
 import baserun
@@ -14,9 +14,9 @@ from baserun import Baserun
 class BaserunCallbackHandler(BaseCallbackHandler):
     """Base callback handler that can be used to handle callbacks from langchain."""
 
-    spans: Optional[dict[str, Span]] = None
+    spans: Optional[Dict[str, Span]] = None
 
-    def on_chat_model_start(self, serialized: dict[str, Any], messages: list[list[BaseMessage]], **kwargs: Any) -> Any:
+    def on_chat_model_start(self, serialized: Dict[str, Any], messages: List[List[BaseMessage]], **kwargs: Any) -> Any:
         """Run when Chat Model starts running."""
         if self.spans is None:
             self.spans = {}
@@ -37,7 +37,7 @@ class BaserunCallbackHandler(BaseCallbackHandler):
         if not run:
             return
 
-        outputs: list[Any] = []
+        outputs: List[Any] = []
         for choice in response.generations:
             for generation in choice:
                 if generation.text:
@@ -58,7 +58,7 @@ class BaserunCallbackHandler(BaseCallbackHandler):
             span.end()
             Baserun._finish_run(run)
 
-    def on_chain_start(self, serialized: dict[str, Any], inputs: dict[str, Any], **kwargs: Any) -> Any:
+    def on_chain_start(self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any) -> Any:
         """Run when chain starts running."""
 
         if kwargs.get("parent_run_id"):
@@ -68,11 +68,11 @@ class BaserunCallbackHandler(BaseCallbackHandler):
         if self.spans is None:
             self.spans = {}
 
-        with baserun.start_trace("on_chain_start", end_on_exit=False) as run:
+        with baserun.start_trace("on_chain_start", end_on_exit=False):
             self.spans[str(kwargs.get("run_id"))] = get_current_span()
             yield
 
-    def on_chain_end(self, outputs: dict[str, Any], **kwargs: Any) -> Any:
+    def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> Any:
         """Run when chain ends running."""
         if self.spans is None:
             self.spans = {}

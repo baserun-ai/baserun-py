@@ -90,6 +90,7 @@ def main():
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
+
     from baserun import Baserun
 
     load_dotenv()

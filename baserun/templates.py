@@ -2,23 +2,24 @@ import hashlib
 import inspect
 import logging
 import os
+import sys
 import traceback
-from typing import Optional, Any, TYPE_CHECKING, Union, Set
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from baserun import Baserun
 from baserun.grpc import (
-    get_or_create_submission_service,
     get_or_create_async_submission_service,
+    get_or_create_submission_service,
 )
 from baserun.helpers import memoize_for_time
 from baserun.v1.baserun_pb2 import (
-    Template,
-    TemplateVersion,
-    SubmitTemplateVersionRequest,
-    SubmitTemplateVersionResponse,
     GetTemplatesRequest,
     GetTemplatesResponse,
+    SubmitTemplateVersionRequest,
+    SubmitTemplateVersionResponse,
+    Template,
     TemplateMessage,
+    TemplateVersion,
 )
 
 if TYPE_CHECKING:
@@ -32,19 +33,17 @@ logger = logging.getLogger(__name__)
 
 
 @memoize_for_time(os.environ.get("BASERUN_CACHE_INTERVAL", 600))
-def get_templates(environment: Union[str, None] = None) -> dict[str, Template]:
-    if not Baserun.templates:
-        Baserun.templates = {}
-
+def get_templates(environment: Union[str, None] = None) -> Dict[str, Template]:
     try:
         request = GetTemplatesRequest(environment=environment or Baserun.environment)
         response: GetTemplatesResponse = get_or_create_submission_service().GetTemplates(request)
         for template in response.templates:
             Baserun.templates[template.name] = template
 
-    except BaseException as e:
+    except BaseException:
         logger.error(f"Could not fetch templates from Baserun. Using {len(Baserun.templates.keys())} cached templates")
-        logger.info(traceback.format_exception(e))
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        logger.info(traceback.format_exception(exc_type, exc_value, exc_traceback))
 
     return Baserun.templates
 
@@ -71,10 +70,10 @@ def get_template_type_enum(template_type: Optional[str] = None):
 
 def apply_template(
     template_name: str,
-    parameters: dict[str, Any],
-    template_messages: list[dict[str, Union[str, dict[str, Any]]]],
+    parameters: Dict[str, Any],
+    template_messages: List[Dict[str, Union[str, Dict[str, Any]]]],
     template_type_enum,
-) -> list[dict[str, Union[str, dict[str, Any]]]]:
+) -> List[Dict[str, Union[str, Dict[str, Any]]]]:
     formatted_messages = []
     for message in template_messages:
         template_string = message.get("content")
@@ -101,13 +100,10 @@ def apply_template(
         else:
             formatted_messages.append(message)
 
-    if not Baserun.formatted_templates:
-        Baserun.formatted_templates = {}
-
-    formatted_template_list: Union[Set[tuple], None] = Baserun.formatted_templates.get(
+    formatted_template_list = Baserun.formatted_templates.get(
         template_name,
     )
-    set_value = tuple([message.get("content") for message in formatted_messages])
+    set_value: Tuple[str, ...] = tuple([message.get("content") for message in formatted_messages])  # type: ignore
 
     if formatted_template_list:
         formatted_template_list.add(set_value)
@@ -127,11 +123,11 @@ def apply_template(
 
 def create_langchain_template(
     template_string: str,
-    parameters: Optional[dict[str, Any]] = None,
+    parameters: Optional[Dict[str, Any]] = None,
     template_name: Optional[str] = None,
     template_tag: Optional[str] = None,
     template_type: Optional[str] = None,
-    tools: Optional[list[Union["Tool", Any]]] = None,
+    tools: Optional[List[Union["Tool", Any]]] = None,
 ):
     from langchain.prompts import ChatPromptTemplate
     from langchain_core.messages import BaseMessage
@@ -162,11 +158,11 @@ def create_langchain_template(
 
 def format_prompt(
     template_name: str,
-    parameters: dict[str, Any],
-    template_messages: Optional[list[dict[str, Union[str, dict[str, Any]]]]] = None,
+    parameters: Dict[str, Any],
+    template_messages: Optional[List[Dict[str, Union[str, Dict[str, Any]]]]] = None,
     template_type: Optional[str] = None,
     submit_variables: bool = True,
-) -> list[dict[str, Union[str, dict[str, Any]]]]:
+) -> List[Dict[str, Union[str, Dict[str, Any]]]]:
     import baserun
 
     template_type_enum = get_template_type_enum(template_type)
@@ -195,7 +191,7 @@ def format_prompt(
 
 
 def construct_template_version(
-    template_messages: list[dict[str, Union[str, dict[str, Any]]]],
+    template_messages: List[Dict[str, Union[str, Dict[str, Any]]]],
     template_name: Optional[str] = None,
     template_tag: Optional[str] = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
@@ -225,16 +221,11 @@ def construct_template_version(
 
 
 def register_template(
-    template_messages: list[dict[str, Union[str, dict[str, Any]]]],
+    template_messages: List[Dict[str, Union[str, Dict[str, Any]]]],
     template_name: str,
     template_tag: Optional[str] = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
 ) -> Template:
-    from baserun import Baserun
-
-    if not Baserun.templates:
-        Baserun.templates = {}
-
     if template := Baserun.templates.get(template_name):
         return template
 
@@ -256,16 +247,11 @@ def register_template(
 
 
 async def aregister_template(
-    template_messages: list[dict[str, Union[str, dict[str, Any]]]],
+    template_messages: List[Dict[str, Union[str, Dict[str, Any]]]],
     template_name: str,
     template_tag: Optional[str] = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
 ) -> Template:
-    from baserun import Baserun
-
-    if not Baserun.templates:
-        Baserun.templates = {}
-
     if template := Baserun.templates.get(template_name):
         return template
 

@@ -2,9 +2,9 @@ from uuid import uuid4
 
 import pytest
 
-from baserun import format_prompt, Baserun
+from baserun import Baserun, format_prompt
 from baserun.templates import get_template
-from baserun.v1.baserun_pb2 import Template, TemplateVersion, GetTemplatesResponse
+from baserun.v1.baserun_pb2 import GetTemplatesResponse, Template, TemplateVersion
 
 
 @pytest.fixture(autouse=True)

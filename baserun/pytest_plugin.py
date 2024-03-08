@@ -7,7 +7,8 @@ from datetime import datetime
 from opentelemetry.context import Context
 
 from baserun import Baserun
-from baserun.v1.baserun_pb2 import TestSuite, StartTestSuiteRequest, EndTestSuiteRequest
+from baserun.v1.baserun_pb2 import EndTestSuiteRequest, StartTestSuiteRequest, TestSuite
+
 from .grpc import get_or_create_submission_service
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ def pytest_sessionstart(session):
 
 
 def pytest_sessionfinish(session):
-    if Baserun._initialized:
+    if Baserun.initialized:
         Baserun.finish()
 
         suite = Baserun.current_test_suite or getattr(session, "suite", None)
@@ -48,7 +49,7 @@ def pytest_sessionfinish(session):
 
 
 def pytest_runtest_teardown(item, nextitem):
-    if Baserun._initialized:
+    if Baserun.initialized:
         Baserun.finish()
         Baserun.set_context(Context())
 
