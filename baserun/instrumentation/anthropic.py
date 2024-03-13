@@ -203,6 +203,7 @@ class AnthropicInstrumentation(Instrumentation):
                 span.template_id = s.template_data.template_id
                 for key, value in s.template_data.variables.items():
                     self.baserun.submit_input_variable(key, value, template_id=s.template_data.template_id)
+                break
 
         span.start_time.FromDatetime(datetime.utcnow())
         return span
