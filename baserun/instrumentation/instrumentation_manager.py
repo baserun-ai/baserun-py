@@ -2,7 +2,6 @@ import logging
 from typing import TYPE_CHECKING, Dict, Optional, Type
 
 from baserun.helpers import BaserunProvider
-from baserun.instrumentation.anthropic import AnthropicInstrumentation
 from baserun.instrumentation.instrumentation import Instrumentation
 from baserun.instrumentation.openai import OpenAIInstrumentation
 
@@ -29,7 +28,7 @@ class InstrumentationManager:
         logger.debug("google.ai.generativelanguage not available")
 
     try:
-        from anthropic.resources import Messages
+        from baserun.instrumentation.anthropic import AnthropicInstrumentation
 
         instrumentation_classes[BaserunProvider.ANTHROPIC] = AnthropicInstrumentation
     except ImportError:
