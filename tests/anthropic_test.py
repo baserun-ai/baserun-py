@@ -1,18 +1,19 @@
 from typing import Iterable, Sequence
+from uuid import uuid4
 
 import pytest
 from anthropic import Anthropic, AsyncAnthropic, MessageStream
 from anthropic.types import Message as AnthropicMessage
 from anthropic.types import MessageParam
 
-from baserun import Baserun
+import baserun
 from baserun.helpers import BaserunProvider
-from baserun.v1.baserun_pb2 import Message
+from baserun.v1.baserun_pb2 import Message, SubmitInputVariableRequest
 from tests.conftest import get_mock_objects
 
 
 # asserts in mock_services makes it so that we need a trace
-@Baserun.trace
+@baserun.trace
 def create(
     messages: Iterable[MessageParam],
     max_tokens: int = 50,
@@ -23,7 +24,7 @@ def create(
     return anthropic.messages.create(max_tokens=max_tokens, messages=messages, model=model, **kwargs)
 
 
-@Baserun.trace
+@baserun.trace
 async def acreate(
     messages: Iterable[MessageParam],
     max_tokens: int = 50,
@@ -34,7 +35,7 @@ async def acreate(
     return await anthropic.messages.create(max_tokens=max_tokens, messages=messages, model=model, **kwargs)
 
 
-@Baserun.trace
+@baserun.trace
 def stream(
     messages: Iterable[MessageParam],
     max_tokens: int = 50,
@@ -45,7 +46,7 @@ def stream(
     return anthropic.messages.stream(max_tokens=max_tokens, messages=messages, model=model, **kwargs)
 
 
-@Baserun.trace
+@baserun.trace
 def astream(
     messages: Iterable[MessageParam],
     max_tokens: int = 50,
@@ -268,3 +269,39 @@ async def test_claude_stream_async(mock_services):
     assert span.prompt_messages[0].content == "tell me a story"
     assert span.prompt_messages[0].role == "user"
     assert_completions_match_message(span.completions, msg)
+
+
+def test_claude_template(mock_services):
+    template_id = str(uuid4())
+    template_name = str(uuid4())
+    mock_services["submission_service"].SubmitTemplateVersion.return_value.template_version.template.id = template_id
+
+    template = baserun.register_template(
+        [{"role": "user", "content": "answer this question: {question}"}], template_name=template_name
+    )
+    prompt = baserun.format_prompt(
+        template_name=template_name,
+        template_messages=[{"role": "user", "content": "answer this question: {question}"}],
+        parameters={"question": "how to copy output of a command in a terminal on macos?"},
+    )
+    response = create(prompt)
+
+    mock_submit_variable = mock_services["submission_service"].SubmitInputVariable.future
+    mock_submit_variable.assert_called()
+    assert len(mock_submit_variable.call_args_list) == 1
+    submit_variable_request: SubmitInputVariableRequest = mock_submit_variable.call_args_list[0].args[0]
+    assert submit_variable_request.input_variable.key == "question"
+    assert submit_variable_request.input_variable.value == "how to copy output of a command in a terminal on macos?"
+    assert submit_variable_request.input_variable.template_id == template.id
+
+    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+
+    assert span.vendor == BaserunProvider.ANTHROPIC
+    assert span.model == "claude-3-sonnet-20240229"
+    assert span.stream is False
+    assert span.request_type == "chat"
+    assert len(span.prompt_messages) == 1
+    assert span.prompt_messages[0].content == prompt[0]["content"]
+    assert span.prompt_messages[0].role == "user"
+    assert_completions_match_message(span.completions, response)
+    assert span.template_id == template.id

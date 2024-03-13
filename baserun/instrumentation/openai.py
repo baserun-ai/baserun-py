@@ -1,18 +1,19 @@
 import json
 import logging
-import re
 from datetime import datetime
 from inspect import iscoroutinefunction
 from random import randint
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, cast
 from uuid import UUID
 
 import httpx
 from httpx import URL, Response
 from openai import BaseModel
+from openai._models import FinalRequestOptions
 from openai.types.chat.chat_completion_message import FunctionCall
 
 from baserun.instrumentation.instrumentation import Instrumentation
+from baserun.templates_util import FormattedContentString
 from baserun.v1.baserun_pb2 import Message, Span, Status, SubmitSpanRequest, ToolCall, ToolFunction
 
 logger = logging.getLogger(__name__)
@@ -65,11 +66,20 @@ class OpenAIInstrumentation(Instrumentation):
         # TODO
         ...
 
-    @staticmethod
-    def spy_on_build_request(original_method):
-        def wrapper(obj, *args, **kwargs):
-            result = original_method(obj, *args, **kwargs)
+    def spy_on_build_request(self, original_method):
+        def wrapper(obj, options: FinalRequestOptions):
+            result = original_method(obj, options)
             setattr(result, "_timestamp", datetime.utcnow())
+            if isinstance(options.json_data, dict):
+                messages = options.json_data.get("messages", [])
+                for message in messages:  # probably pretty safe to assume it's iterable
+                    if isinstance(message, dict) and isinstance(v := message.get("content"), FormattedContentString):
+                        # not nice to add some random attributes to a response...but that's how it's been done before
+                        #  and thus is the easiest thing to do without a bigger refactor
+                        setattr(result, "_baserun_template_id", v.template_data.template_id)
+                        for key, value in v.template_data.variables.items():
+                            self.baserun.submit_input_variable(key, value, template_id=v.template_data.template_id)
+                        break
             return result
 
         return wrapper
@@ -228,41 +238,6 @@ class OpenAIInstrumentation(Instrumentation):
 
         return calls
 
-    def find_template_match(self, messages: List[Message]) -> Union[str, None]:
-        if not messages:
-            return None
-
-        message_contents = [message.content for message in messages]
-
-        if not self.baserun.initialized:
-            logger.warning("Baserun attempted to submit span, but baserun.init() was not called")
-            return None
-
-        for template_name, formatted_templates in self.baserun.formatted_templates.items():
-            for formatted_template in formatted_templates:
-                # FIXME? What if there are multiple matches? Maybe check for the highest # of messages
-                if all(message in message_contents for message in formatted_template):
-                    return template_name
-
-        return None
-
-    @staticmethod
-    def reverse_engineer_variables(template: str, formatted_string: str) -> Dict[str, str]:
-        # Escape any characters in the template that might be interpreted as regex special characters, except for the
-        # variable braces {}.
-        template_escaped = re.sub(r"([\[\].*+?^=!:${}()|\[\]\\/])", r"\\\1", template)
-
-        # Convert the template into a regex pattern, turning {variable} into named regex groups.
-        pattern = re.sub(r"\\{([a-zA-Z0-9_-]+)\\}", r"(?P<\1>[^,]+)", template_escaped)
-
-        # Use the regex pattern to search the formatted string.
-        match = re.match(pattern, formatted_string)
-        if match:
-            # Extract the variable values from the match.
-            return match.groupdict()
-        else:
-            return {}
-
     def spy_on_process_response(self, original_method) -> Callable:
         if iscoroutinefunction(original_method):
 
@@ -288,7 +263,7 @@ class OpenAIInstrumentation(Instrumentation):
         import openai
         from openai.types import CreateEmbeddingResponse, ModerationCreateResponse
 
-        from baserun import Baserun, get_template, submit_input_variable
+        from baserun import Baserun
 
         if isinstance(result, ModerationCreateResponse):
             return result
@@ -350,20 +325,8 @@ class OpenAIInstrumentation(Instrumentation):
                     completions=completion_messages,
                 )
 
-                matched_template = self.find_template_match(prompt_messages)
-                if matched_template and (template := get_template(matched_template)):
-                    span.template_id = template.id
-
-                    if template.active_version:
-                        template_variables = {}
-                        for message in prompt_messages:
-                            for template_message in template.active_version.template_messages:
-                                template_variables.update(
-                                    self.reverse_engineer_variables(template_message.message, message.content)
-                                )
-
-                        for key, value in template_variables.items():
-                            submit_input_variable(key, value, template)
+                if template_id := getattr(request, "_baserun_template_id", None):
+                    span.template_id = template_id
 
                 if tools := parsed_request.get("tools"):
                     span.tools = json.dumps(tools)

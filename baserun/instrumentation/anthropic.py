@@ -38,6 +38,7 @@ from anthropic.types import Message as AnthropicMessage
 
 from baserun.helpers import BaserunProvider, BaserunType
 from baserun.instrumentation.instrumentation import Instrumentation
+from baserun.templates_util import FormattedContentString
 from baserun.v1.baserun_pb2 import Message, Run, Span, SubmitSpanRequest
 
 if TYPE_CHECKING:
@@ -181,6 +182,7 @@ class AnthropicInstrumentation(Instrumentation):
 
     def process_kwargs(self, kwargs: CommonKwargs) -> Span:
         # TODO: what do we do with system message?
+
         span = Span(
             request_type=BaserunType.CHAT,
             name=f"{BaserunProvider.ANTHROPIC}.{BaserunType.CHAT}",
@@ -195,6 +197,13 @@ class AnthropicInstrumentation(Instrumentation):
             top_k=None if isinstance(v := kwargs.get("top_k"), NotGiven) else v,
             temperature=None if isinstance(v := kwargs.get("temperature"), NotGiven) else v,
         )
+
+        for msg in kwargs["messages"]:
+            if isinstance(s := msg["content"], FormattedContentString):
+                span.template_id = s.template_data.template_id
+                for key, value in s.template_data.variables.items():
+                    self.baserun.submit_input_variable(key, value, template_id=s.template_data.template_id)
+
         span.start_time.FromDatetime(datetime.utcnow())
         return span
 
