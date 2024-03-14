@@ -54,6 +54,7 @@ def mock_services() -> Generator[Dict[str, Mock], None, None]:
         "SubmitSpan",
         "SubmitTemplateVersion",
         "SubmitUser",
+        "SubmitInputVariable",
     ]
 
     # Create a dictionary to hold the mocks

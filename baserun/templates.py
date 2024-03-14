@@ -4,7 +4,7 @@ import logging
 import os
 import sys
 import traceback
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from baserun import Baserun
 from baserun.grpc import (
@@ -12,6 +12,7 @@ from baserun.grpc import (
     get_or_create_submission_service,
 )
 from baserun.helpers import memoize_for_time
+from baserun.templates_util import FormattedContentString, FormattedTemplateData
 from baserun.v1.baserun_pb2 import (
     GetTemplatesRequest,
     GetTemplatesResponse,
@@ -72,9 +73,18 @@ def apply_template(
     template_name: str,
     parameters: Dict[str, Any],
     template_messages: List[Dict[str, Union[str, Dict[str, Any]]]],
-    template_type_enum,
+    template_type_enum: Template.TemplateType,
 ) -> List[Dict[str, Union[str, Dict[str, Any]]]]:
+    # why are we doing this hidden template registration?
+    template = register_template(
+        template_messages=template_messages,
+        template_name=template_name,
+        template_type=template_type_enum,
+    )
+
     formatted_messages = []
+    template_data = FormattedTemplateData(parameters, template_id=template.id)
+
     for message in template_messages:
         template_string = message.get("content")
         if isinstance(template_string, str):
@@ -84,39 +94,22 @@ def apply_template(
                     from jinja2 import Template as JinjaTemplate
 
                     template = JinjaTemplate(template_string)
-                    formatted_content = template.render(parameters)
-                    formatted_messages.append({**message, "content": formatted_content})
+                    formatted_content = template.render(parameters)  # type: ignore
                 except ImportError:
                     logger.warning("Cannot render Jinja2 template as jinja2 package is not installed")
                     # TODO: Is this OK? should we raise? or return blank string?
-                    formatted_messages.append({**message, "content": template_string})
+                    formatted_content = template_string
             else:
                 try:
                     formatted_content = template_string.format(**parameters)
                 except KeyError:
                     formatted_content = template_string
 
-                formatted_messages.append({**message, "content": formatted_content})
+            formatted_messages.append({**message, "content": FormattedContentString(formatted_content, template_data)})
         else:
             formatted_messages.append(message)
 
-    formatted_template_list = Baserun.formatted_templates.get(
-        template_name,
-    )
-    set_value: Tuple[str, ...] = tuple([message.get("content") for message in formatted_messages])  # type: ignore
-
-    if formatted_template_list:
-        formatted_template_list.add(set_value)
-    else:
-        formatted_template_list = {set_value}
-
-    Baserun.formatted_templates[template_name] = formatted_template_list
-
-    register_template(
-        template_messages=template_messages,
-        template_name=template_name,
-        template_type=template_type_enum,
-    )
+    template_data.formatted_messages = formatted_messages
 
     return formatted_messages
 
@@ -161,17 +154,15 @@ def format_prompt(
     parameters: Dict[str, Any],
     template_messages: Optional[List[Dict[str, Union[str, Dict[str, Any]]]]] = None,
     template_type: Optional[str] = None,
-    submit_variables: bool = True,
+    submit_variables: bool = True,  # unused, left for compatibility
 ) -> List[Dict[str, Union[str, Dict[str, Any]]]]:
-    import baserun
-
     template_type_enum = get_template_type_enum(template_type)
     template = get_template(template_name)
 
     if template:
-        if submit_variables:
-            for key, value in parameters.items():
-                baserun.submit_input_variable(key=key, value=value, template=template)
+        # if submit_variables:
+        # for key, value in parameters.items():
+        #     baserun.submit_input_variable(key=key, value=value, template=template)
 
         if not template_messages:
             template_messages = [
@@ -226,6 +217,7 @@ def register_template(
     template_tag: Optional[str] = None,
     template_type=Template.TEMPLATE_TYPE_FORMATTED_STRING,
 ) -> Template:
+    # TODO: if template already exists you'd probably want to create new version of it instead of doing nothing
     if template := Baserun.templates.get(template_name):
         return template
 

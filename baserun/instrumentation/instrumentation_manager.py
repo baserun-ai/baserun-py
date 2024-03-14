@@ -27,6 +27,13 @@ class InstrumentationManager:
     except ImportError:
         logger.debug("google.ai.generativelanguage not available")
 
+    try:
+        from baserun.instrumentation.anthropic import AnthropicInstrumentation
+
+        instrumentation_classes[BaserunProvider.ANTHROPIC] = AnthropicInstrumentation
+    except ImportError:
+        logger.debug("anthropic not available")
+
     @classmethod
     def instrument_all(cls, baserun_inst: "_Baserun"):
         for k, v in cls.instrumentation_classes.items():

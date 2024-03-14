@@ -13,7 +13,7 @@ from functools import wraps
 from queue import Queue
 from threading import Thread
 from time import sleep
-from typing import Any, Awaitable, Callable, Dict, Generator, List, Optional, Set, Tuple, Union
+from typing import Any, Awaitable, Callable, Dict, Generator, List, Optional, Union
 
 import grpc
 from opentelemetry import trace
@@ -81,7 +81,6 @@ class _Baserun:
         self.evals = Evals
 
         self.templates: Dict[str, Template] = {}
-        self.formatted_templates: Dict[str, Set[Tuple[str, ...]]] = {}
 
         # TODO: not quite sure if these belong here
         self.submission_service: Optional[SubmissionServiceStub] = None
