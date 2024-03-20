@@ -694,13 +694,16 @@ if __name__ == "__main__":
 
     load_dotenv()
     openai.api_key = os.environ.get("OPENAI_API_KEY")
-    Baserun.init()
 
     parser = argparse.ArgumentParser(description="Execute a function with a prompt.")
     parser.add_argument("function_to_call", type=str, help="Name of the function to call")
     parser.add_argument("--prompt", type=str, help="Prompt to pass to the function", default=None)
+    parser.add_argument("--skip-init", action="store_true", help="Skip Baserun.init()")
 
     parsed_args = parser.parse_args()
+
+    if not parsed_args.skip_init:
+        Baserun.init()
 
     # Resolve the string function name to the function object
     function_name = parsed_args.function_to_call
