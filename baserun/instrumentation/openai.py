@@ -13,7 +13,7 @@ from openai._models import FinalRequestOptions
 from openai.types.chat.chat_completion_message import FunctionCall
 
 from baserun.instrumentation.instrumentation import Instrumentation
-from baserun.templates_util import FormattedContentString
+from baserun.templates_util import FormattedContentString, match_messages_to_template
 from baserun.v1.baserun_pb2 import Message, Span, Status, SubmitSpanRequest, ToolCall, ToolFunction
 
 logger = logging.getLogger(__name__)
@@ -78,7 +78,9 @@ class OpenAIInstrumentation(Instrumentation):
                         #  and thus is the easiest thing to do without a bigger refactor
                         setattr(result, "_baserun_template_id", v.template_data.template_id)
                         for key, value in v.template_data.variables.items():
-                            self.baserun.submit_input_variable(key, value, template_id=v.template_data.template_id)
+                            self.baserun.submit_input_variable(
+                                key=key, value=value, template_id=v.template_data.template_id
+                            )
                         break
             return result
 
@@ -209,6 +211,7 @@ class OpenAIInstrumentation(Instrumentation):
                 # TODO: How does one count prompt tokens here?
                 span.prompt_tokens = 0
                 span.total_tokens = span.completion_tokens + span.prompt_tokens
+                match_messages_to_template(span)
 
                 if not self.baserun.exporter_queue:
                     logger.warning("Baserun attempted to submit span, but baserun.init() was not called")
@@ -402,6 +405,7 @@ class OpenAIInstrumentation(Instrumentation):
                     span.completion_tokens = result.usage.completion_tokens
                     span.prompt_tokens = result.usage.prompt_tokens
                     span.completion_id = result.id
+                    match_messages_to_template(span)
 
                     span_request = SubmitSpanRequest(span=span, run=current_run)
                     setattr(response, "_span_request", span_request)

@@ -13,7 +13,7 @@ from functools import wraps
 from queue import Queue
 from threading import Thread
 from time import sleep
-from typing import Any, Awaitable, Callable, Dict, Generator, List, Optional, Union
+from typing import Any, Awaitable, Callable, Dict, Generator, List, Optional, Union, Set, Tuple
 
 import grpc
 from opentelemetry import trace
@@ -81,6 +81,7 @@ class _Baserun:
         self.evals = Evals
 
         self.templates: Dict[str, Template] = {}
+        self.formatted_templates: Dict[str, Set[Tuple[str, ...]]] = {}
 
         # TODO: not quite sure if these belong here
         self.submission_service: Optional[SubmissionServiceStub] = None
@@ -437,9 +438,11 @@ class _Baserun:
         return self._trace(func=func, run_type=Run.RunType.RUN_TYPE_TEST, metadata=metadata)
 
     @ensure_initialized(Log())
-    def log(self, name: str, payload: Union[str, Dict]) -> Log:
-        # creates new untraced run if current run does not exist
-        run = self.get_or_create_current_run()
+    def log(self, name: str, payload: Union[str, Dict]) -> Union[Log, None]:
+        run = Baserun.current_run()
+        if not run:
+            logger.warning("Cannot send logs to baserun as there is no current trace active.")
+            return Log()
 
         log_message = Log(
             run_id=run.run_id,
@@ -457,7 +460,18 @@ class _Baserun:
 
         return log_message
 
-    @ensure_initialized(InputVariable())
+    @ensure_initialized()
+    def annotate(
+        self,
+        completion_id: Optional[str] = None,
+        run: Optional[Run] = None,
+        trace: Optional[Run] = None,
+    ) -> "Annotation":
+        """Capture annotations for a particular run and/or completion. the `trace` kwarg here is simply an alias"""
+        from baserun.annotation import Annotation
+
+        return Annotation(completion_id=completion_id, run=run or trace)
+
     def submit_input_variable(
         self,
         key: str,
@@ -470,13 +484,13 @@ class _Baserun:
         if template and not template_id:
             template_id = template.id
 
-        input_variable = InputVariable(
-            key=key,
-            value=value,
-            label=label,
-            test_case_id=test_case_id,
-            template_id=template_id,
-        )
+        input_variable = InputVariable(key=key, value=value, label=label or key)
+        if test_case_id:
+            input_variable.test_case_id = test_case_id
+
+        if template_id:
+            input_variable.template_id = template_id
+
         submit_request = SubmitInputVariableRequest(input_variable=input_variable)
         self.add_future(get_or_create_submission_service().SubmitInputVariable.future(submit_request))
 
@@ -499,5 +513,5 @@ class _Baserun:
             try_count += 1
 
 
-# I find it more manageable to have a default instance of a class rather than making everything in there static
+# Singleton object
 Baserun = _Baserun()
