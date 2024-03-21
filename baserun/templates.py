@@ -75,7 +75,7 @@ def apply_template(
     template_messages: List[Dict[str, Union[str, Dict[str, Any]]]],
     template_type_enum: Template.TemplateType,
 ) -> List[Dict[str, Union[str, Dict[str, Any]]]]:
-    # why are we doing this hidden template registration?
+    # Ensure the latest templates used in production are synced to the UI
     template = register_template(
         template_messages=template_messages,
         template_name=template_name,
@@ -95,6 +95,7 @@ def apply_template(
 
                     template = JinjaTemplate(template_string)
                     formatted_content = template.render(parameters)  # type: ignore
+                    formatted_messages.append({**message, "content": formatted_content})
                 except ImportError:
                     logger.warning("Cannot render Jinja2 template as jinja2 package is not installed")
                     # TODO: Is this OK? should we raise? or return blank string?
@@ -105,11 +106,25 @@ def apply_template(
                 except KeyError:
                     formatted_content = template_string
 
-            formatted_messages.append({**message, "content": FormattedContentString(formatted_content, template_data)})
+            formatted_messages.append(
+                {
+                    **message,
+                    "content": FormattedContentString(formatted_content, template_data),
+                }
+            )
         else:
             formatted_messages.append(message)
 
     template_data.formatted_messages = formatted_messages
+    formatted_template_list = Baserun.formatted_templates.get(template_name)
+    set_value: Tuple[str, ...] = tuple([message.get("content") for message in formatted_messages])  # type: ignore
+
+    if formatted_template_list:
+        formatted_template_list.add(set_value)
+    else:
+        formatted_template_list = {set_value}
+
+    Baserun.formatted_templates[template_name] = formatted_template_list
 
     return formatted_messages
 
@@ -135,7 +150,8 @@ def create_langchain_template(
         template_name = f"{caller}_template"
 
     langchain_template = ChatPromptTemplate(
-        messages=[BaseMessage(role="SYSTEM", content=template_string)], input_variables=input_variables
+        messages=[BaseMessage(role="SYSTEM", content=template_string)],
+        input_variables=input_variables,
     )
 
     template_type_enum = get_template_type_enum(template_type)

@@ -79,6 +79,7 @@ async def openai_chat_async(prompt="What is the capital of the US?") -> str:
 
 @baserun.trace
 def openai_chat_tools(prompt="Say 'hello world'") -> FunctionCall:
+    messages = [{"role": "user", "content": prompt}]
     client = OpenAI()
     tools = [
         {
@@ -108,6 +109,17 @@ def openai_chat_tools(prompt="Say 'hello world'") -> FunctionCall:
         json.dumps([{"id": call.id, "type": call.type, "function": call.function.__dict__} for call in tool_calls]),
         "say",
     )
+
+    assistant_message = completion.choices[0].message
+    messages.append(assistant_message)
+    client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=messages.append(
+            {"role": "tool", "content": "wow", "tool_call_id": assistant_message.tool_calls[0].id}
+        ),
+        tools=tools,
+    )
+
     return tool_calls
 
 
@@ -376,6 +388,7 @@ def openai_contextmanager(prompt="What is the capital of the US?", name: str = "
         completion = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
+            user="erik@baserun.ai"
         )
         content = completion.choices[0].message.content
         run.result = content
@@ -413,7 +426,7 @@ def use_template(question="What is the capital of the US?", template_name: str =
 @baserun.trace
 async def use_template_async(question="What is the capital of the US?", template_name: str = "Question & Answer"):
     await baserun.aregister_template(TEMPLATES.get(template_name), template_name)
-    prompt = await baserun.format_prompt(
+    prompt = baserun.format_prompt(
         template_name=template_name,
         template_messages=TEMPLATES.get(template_name),
         parameters={"question": question},
