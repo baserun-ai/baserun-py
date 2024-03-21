@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "baserun"
-version = "0.9.31"
+version = "0.9.32"
 description = "tools for testing, debugging, and evaluating llm features."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -18,7 +18,7 @@ dependencies = [
     "openai>=1.7.2",
     "opentelemetry-sdk>=1.21",
     "opentelemetry-instrumentation>=0.40b0",
-    "grpcio~=1.58.0",
+    "grpcio~=1.62.1",
     "protobuf~=4.24.3",
     "grpcio-tools~=1.58.0",
 ]
