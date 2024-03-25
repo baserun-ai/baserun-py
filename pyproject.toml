@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "baserun"
-version = "0.9.32"
+version = "0.9.33"
 description = "tools for testing, debugging, and evaluating llm features."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -12,7 +12,7 @@ authors = [
     { name = "Adam Ginzberg", email = "adam@baserun.ai" },
     { name = "Erik Peterson", email = "erik@baserun.ai" }
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.8, <3.12"
 dependencies = [
     "requests>=2.31.0",
     "openai>=1.7.2",

@@ -104,8 +104,12 @@ class _Baserun:
         self.exporter_thread = Thread(target=worker, args=(self.exporter_queue,))
         self.exporter_thread.daemon = True
         self.exporter_thread.start()
-        signal.signal(signal.SIGINT, self.exit_handler)
-        signal.signal(signal.SIGTERM, self.exit_handler)
+
+        def signal_function(sig, frame):
+            self.exit_handler(sig, frame)
+
+        signal.signal(signal.SIGINT, signal_function)
+        signal.signal(signal.SIGTERM, signal_function)
         atexit.register(self.exit_handler)
 
         current_span = get_current_span()
@@ -121,9 +125,12 @@ class _Baserun:
     def add_future(self, future: grpc.Future) -> None:
         self.futures.append(future)
 
-    def exit_handler(self, *args, **kwargs) -> None:
+    def exit_handler(self, *args) -> None:
         self.finish()
         self.exporter_queue.put(None)
+
+        if len(args) > 1:
+            sys.exit(0)
 
     @staticmethod
     def configure_logging() -> None:
@@ -497,7 +504,7 @@ class _Baserun:
         return input_variable
 
     @ensure_initialized()
-    def finish(self, timeout=1) -> None:
+    def finish(self, timeout=2) -> None:
         if self.futures:
             logger.debug(f"Baserun finishing {len(self.futures)} futures")
             for future in self.futures:
