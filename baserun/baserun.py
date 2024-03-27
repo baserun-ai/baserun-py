@@ -13,7 +13,7 @@ from functools import wraps
 from queue import Queue
 from threading import Thread
 from time import sleep
-from typing import Any, Awaitable, Callable, Dict, Generator, List, Optional, Union, Set, Tuple
+from typing import Any, Awaitable, Callable, Dict, Generator, List, Optional, TypeVar, Union, Set, Tuple
 
 import grpc
 from opentelemetry import trace
@@ -44,6 +44,8 @@ from .v1.baserun_pb2 import (
 from .v1.baserun_pb2_grpc import SubmissionServiceStub
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 
 def ensure_initialized(uninitialized_return: Any = None, uninitialized_return_factory: Optional[Callable] = None):
@@ -388,9 +390,7 @@ class _Baserun:
 
         return wrapper
 
-    def trace(
-        self, func: Callable, name: Optional[str] = None, metadata: Optional[Dict] = None
-    ) -> Union[Callable, Awaitable, Generator]:
+    def trace(self, func: T, name: Optional[str] = None, metadata: Optional[Dict] = None) -> T:
         if self.current_test_suite:
             return self.test(func=func, metadata=metadata)
 
