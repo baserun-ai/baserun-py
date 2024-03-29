@@ -4,7 +4,7 @@ import logging
 import os
 import sys
 import traceback
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from baserun import Baserun
 from baserun.grpc import (
@@ -93,9 +93,8 @@ def apply_template(
                     # noinspection PyUnresolvedReferences
                     from jinja2 import Template as JinjaTemplate
 
-                    template = JinjaTemplate(template_string)
-                    formatted_content = template.render(parameters)  # type: ignore
-                    formatted_messages.append({**message, "content": formatted_content})
+                    jinja_template = JinjaTemplate(template_string)
+                    formatted_content = jinja_template.render(parameters)
                 except ImportError:
                     logger.warning("Cannot render Jinja2 template as jinja2 package is not installed")
                     # TODO: Is this OK? should we raise? or return blank string?
@@ -117,7 +116,7 @@ def apply_template(
 
     template_data.formatted_messages = formatted_messages
     formatted_template_list = Baserun.formatted_templates.get(template_name)
-    set_value: Tuple[str, ...] = tuple([message.get("content") for message in formatted_messages])  # type: ignore
+    set_value: Tuple[str, ...] = tuple([str(message.get("content")) for message in formatted_messages])
 
     if formatted_template_list:
         formatted_template_list.add(set_value)

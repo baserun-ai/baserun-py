@@ -2,7 +2,7 @@ import logging
 import re
 from typing import Any, Dict, List, Optional, Union
 
-from baserun.v1.baserun_pb2 import Message, Span, InputVariable
+from baserun.v1.baserun_pb2 import InputVariable, Message, Span
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class FormattedContentString(str):
         return inst
 
 
-def find_template_match(messages: list[Message]) -> Union[str, None]:
+def find_template_match(messages: List[Message]) -> Union[str, None]:
     from baserun import Baserun
 
     if not messages:
@@ -37,7 +37,7 @@ def find_template_match(messages: list[Message]) -> Union[str, None]:
     message_contents = [message.content for message in messages]
 
     if Baserun.formatted_templates is None:
-        logger.warning(f"Baserun attempted to submit span, but baserun.init() was not called")
+        logger.warning("Baserun attempted to submit span, but baserun.init() was not called")
         return None
 
     for template_name, formatted_templates in Baserun.formatted_templates.items():
@@ -50,11 +50,10 @@ def find_template_match(messages: list[Message]) -> Union[str, None]:
 
 
 def match_messages_to_template(span: Span):
-    from baserun import Baserun
-    from baserun import get_template
+    from baserun import Baserun, get_template
 
     prompt_messages = span.prompt_messages
-    matched_template = find_template_match(prompt_messages)
+    matched_template = find_template_match(list(prompt_messages))
     if matched_template and (template := get_template(matched_template)):
         annotation = Baserun.annotate(span.completion_id)
         span.template_id = template.id
@@ -72,7 +71,7 @@ def match_messages_to_template(span: Span):
         annotation.submit()
 
 
-def reverse_engineer_variables(template: str, formatted_string: str) -> dict[str, str]:
+def reverse_engineer_variables(template: str, formatted_string: str) -> Dict[str, str]:
     # Escape any characters in the template that might be interpreted as regex special characters, except for the
     # variable braces {}.
     template_escaped = re.sub(r"([\[\].*+?^=!:${}()|\[\]\\/])", r"\\\1", template)

@@ -13,7 +13,7 @@ from functools import wraps
 from queue import Queue
 from threading import Thread
 from time import sleep
-from typing import Any, Awaitable, Callable, Dict, Generator, List, Optional, TypeVar, Union, Set, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, Generator, List, Optional, Set, Tuple, TypeVar, Union, cast
 
 import grpc
 from opentelemetry import trace
@@ -43,9 +43,12 @@ from .v1.baserun_pb2 import (
 )
 from .v1.baserun_pb2_grpc import SubmissionServiceStub
 
+if TYPE_CHECKING:
+    from baserun.annotation import Annotation
+
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T")
+T = TypeVar("T", bound=Callable[..., Any])
 
 
 def ensure_initialized(uninitialized_return: Any = None, uninitialized_return_factory: Optional[Callable] = None):
@@ -270,13 +273,7 @@ class _Baserun:
 
         return run
 
-    def _trace(
-        self,
-        func: Callable,
-        run_type: Run.RunType,
-        name: Optional[str] = None,
-        metadata: Optional[Dict] = None,
-    ) -> Union[Callable, Awaitable, Generator]:
+    def _trace(self, func: T, run_type: Run.RunType, name: Optional[str] = None, metadata: Optional[Dict] = None) -> T:
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
         run_name = name or func.__name__
@@ -388,7 +385,7 @@ class _Baserun:
                     finally:
                         self._finish_run(run)
 
-        return wrapper
+        return cast(T, wrapper)
 
     def trace(self, func: T, name: Optional[str] = None, metadata: Optional[Dict] = None) -> T:
         if self.current_test_suite:
@@ -441,7 +438,7 @@ class _Baserun:
             finally:
                 self._finish_run(run)
 
-    def test(self, func: Callable, metadata: Optional[Dict] = None) -> Union[Callable, Awaitable, Generator]:
+    def test(self, func: T, metadata: Optional[Dict] = None) -> T:
         return self._trace(func=func, run_type=Run.RunType.RUN_TYPE_TEST, metadata=metadata)
 
     @ensure_initialized(Log())
