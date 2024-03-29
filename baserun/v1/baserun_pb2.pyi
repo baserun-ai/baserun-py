@@ -40,9 +40,7 @@ class ToolFunction(_message.Message):
     ARGUMENTS_FIELD_NUMBER: _ClassVar[int]
     name: str
     arguments: str
-    def __init__(
-        self, name: _Optional[str] = ..., arguments: _Optional[str] = ...
-    ) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., arguments: _Optional[str] = ...) -> None: ...
 
 class ToolCall(_message.Message):
     __slots__ = ["id", "type", "function"]
@@ -153,9 +151,7 @@ class Run(_message.Message):
         run_type: _Optional[_Union[Run.RunType, str]] = ...,
         metadata: _Optional[str] = ...,
         start_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
-        completion_timestamp: _Optional[
-            _Union[_timestamp_pb2.Timestamp, _Mapping]
-        ] = ...,
+        completion_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
         result: _Optional[str] = ...,
         error: _Optional[str] = ...,
         session_id: _Optional[str] = ...,
@@ -186,9 +182,7 @@ class EndUser(_message.Message):
     IDENTIFIER_FIELD_NUMBER: _ClassVar[int]
     id: str
     identifier: str
-    def __init__(
-        self, id: _Optional[str] = ..., identifier: _Optional[str] = ...
-    ) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., identifier: _Optional[str] = ...) -> None: ...
 
 class Model(_message.Message):
     __slots__ = ["id", "model_name", "provider", "name"]
@@ -560,9 +554,7 @@ class TestSuite(_message.Message):
         id: _Optional[str] = ...,
         name: _Optional[str] = ...,
         start_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
-        completion_timestamp: _Optional[
-            _Union[_timestamp_pb2.Timestamp, _Mapping]
-        ] = ...,
+        completion_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
     ) -> None: ...
 
 class Template(_message.Message):
@@ -591,9 +583,7 @@ class Template(_message.Message):
         id: _Optional[str] = ...,
         name: _Optional[str] = ...,
         template_type: _Optional[_Union[Template.TemplateType, str]] = ...,
-        template_versions: _Optional[
-            _Iterable[_Union[TemplateVersion, _Mapping]]
-        ] = ...,
+        template_versions: _Optional[_Iterable[_Union[TemplateVersion, _Mapping]]] = ...,
         active_version: _Optional[_Union[TemplateVersion, _Mapping]] = ...,
     ) -> None: ...
 
@@ -625,9 +615,7 @@ class TemplateVersion(_message.Message):
         tag: _Optional[str] = ...,
         parameter_definition: _Optional[str] = ...,
         template_string: _Optional[str] = ...,
-        template_messages: _Optional[
-            _Iterable[_Union[TemplateMessage, _Mapping]]
-        ] = ...,
+        template_messages: _Optional[_Iterable[_Union[TemplateMessage, _Mapping]]] = ...,
     ) -> None: ...
 
 class TemplateMessage(_message.Message):
@@ -674,9 +662,7 @@ class Session(_message.Message):
         id: _Optional[str] = ...,
         identifier: _Optional[str] = ...,
         start_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
-        completion_timestamp: _Optional[
-            _Union[_timestamp_pb2.Timestamp, _Mapping]
-        ] = ...,
+        completion_timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...,
         end_user: _Optional[_Union[EndUser, _Mapping]] = ...,
     ) -> None: ...
 
@@ -786,9 +772,7 @@ class StartTestSuiteRequest(_message.Message):
     __slots__ = ["test_suite"]
     TEST_SUITE_FIELD_NUMBER: _ClassVar[int]
     test_suite: TestSuite
-    def __init__(
-        self, test_suite: _Optional[_Union[TestSuite, _Mapping]] = ...
-    ) -> None: ...
+    def __init__(self, test_suite: _Optional[_Union[TestSuite, _Mapping]] = ...) -> None: ...
 
 class StartTestSuiteResponse(_message.Message):
     __slots__ = ["message"]
@@ -800,9 +784,7 @@ class EndTestSuiteRequest(_message.Message):
     __slots__ = ["test_suite"]
     TEST_SUITE_FIELD_NUMBER: _ClassVar[int]
     test_suite: TestSuite
-    def __init__(
-        self, test_suite: _Optional[_Union[TestSuite, _Mapping]] = ...
-    ) -> None: ...
+    def __init__(self, test_suite: _Optional[_Union[TestSuite, _Mapping]] = ...) -> None: ...
 
 class EndTestSuiteResponse(_message.Message):
     __slots__ = ["message"]
@@ -883,9 +865,7 @@ class SubmitModelConfigRequest(_message.Message):
     __slots__ = ["model_config"]
     MODEL_CONFIG_FIELD_NUMBER: _ClassVar[int]
     model_config: ModelConfig
-    def __init__(
-        self, model_config: _Optional[_Union[ModelConfig, _Mapping]] = ...
-    ) -> None: ...
+    def __init__(self, model_config: _Optional[_Union[ModelConfig, _Mapping]] = ...) -> None: ...
 
 class SubmitModelConfigResponse(_message.Message):
     __slots__ = ["message", "model_config"]
@@ -927,9 +907,7 @@ class GetTemplatesResponse(_message.Message):
     __slots__ = ["templates"]
     TEMPLATES_FIELD_NUMBER: _ClassVar[int]
     templates: _containers.RepeatedCompositeFieldContainer[Template]
-    def __init__(
-        self, templates: _Optional[_Iterable[_Union[Template, _Mapping]]] = ...
-    ) -> None: ...
+    def __init__(self, templates: _Optional[_Iterable[_Union[Template, _Mapping]]] = ...) -> None: ...
 
 class SubmitAnnotationsRequest(_message.Message):
     __slots__ = ["annotations", "run"]
@@ -953,9 +931,7 @@ class SubmitInputVariableRequest(_message.Message):
     __slots__ = ["input_variable"]
     INPUT_VARIABLE_FIELD_NUMBER: _ClassVar[int]
     input_variable: InputVariable
-    def __init__(
-        self, input_variable: _Optional[_Union[InputVariable, _Mapping]] = ...
-    ) -> None: ...
+    def __init__(self, input_variable: _Optional[_Union[InputVariable, _Mapping]] = ...) -> None: ...
 
 class SubmitInputVariableResponse(_message.Message):
     __slots__ = ["message"]

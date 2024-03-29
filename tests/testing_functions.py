@@ -112,11 +112,10 @@ def openai_chat_tools(prompt="Say 'hello world'") -> FunctionCall:
 
     assistant_message = completion.choices[0].message
     messages.append(assistant_message)
+    messages.append({"role": "tool", "content": "wow", "tool_call_id": assistant_message.tool_calls[0].id})
     client.chat.completions.create(
         model="gpt-3.5-turbo",
-        messages=messages.append(
-            {"role": "tool", "content": "wow", "tool_call_id": assistant_message.tool_calls[0].id}
-        ),
+        messages=messages,
         tools=tools,
     )
 
@@ -386,9 +385,7 @@ def openai_contextmanager(prompt="What is the capital of the US?", name: str = "
     client = OpenAI()
     with baserun.start_trace(name=name) as run:
         completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            user="erik@baserun.ai"
+            model="gpt-3.5-turbo", messages=[{"role": "user", "content": prompt}], user="erik@baserun.ai"
         )
         content = completion.choices[0].message.content
         run.result = content
