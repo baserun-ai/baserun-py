@@ -271,9 +271,6 @@ class OpenAIInstrumentation(Instrumentation):
         if isinstance(result, ModerationCreateResponse):
             return result
 
-        if isinstance(result, CreateEmbeddingResponse):
-            return result
-
         logger.debug(f"Baserun processing response {response} for result {result}")
 
         if response:
@@ -283,6 +280,11 @@ class OpenAIInstrumentation(Instrumentation):
                 current_run = Baserun.get_or_create_current_run()
 
                 prompt_messages = []
+
+                # embeddings request
+                for inpt in parsed_request.get("input", []):
+                    prompt_messages.append(Message(role="user", content=inpt))
+
                 for message in parsed_request.get("messages", []):
                     tools_or_function = {}
                     if "tool_calls" in message:
@@ -345,9 +347,14 @@ class OpenAIInstrumentation(Instrumentation):
 
                 span.run_id = current_run.run_id
                 span.trace_id = UUID(current_run.run_id).bytes
-                span.name = "openai.chat"
                 span.vendor = "openai"
-                span.request_type = "chat"
+
+                if isinstance(result, CreateEmbeddingResponse):
+                    span.name = "openai.embeddings"
+                    span.request_type = "embeddings"
+                else:
+                    span.name = "openai.chat"
+                    span.request_type = "chat"
 
                 if hasattr(request, "_timestamp"):
                     span.start_time.FromDatetime(request._timestamp)
@@ -401,10 +408,13 @@ class OpenAIInstrumentation(Instrumentation):
                 # Non-streaming
                 if hasattr(result, "model"):
                     span.model = result.model
+                    usage = result.usage.dict()
                     span.total_tokens = result.usage.total_tokens
-                    span.completion_tokens = result.usage.completion_tokens
+                    span.completion_tokens = usage.get("completion_tokens", 0)
                     span.prompt_tokens = result.usage.prompt_tokens
-                    span.completion_id = result.id
+
+                    if hasattr(result, "id"):
+                        span.completion_id = result.id
                     match_messages_to_template(span)
 
                     span_request = SubmitSpanRequest(span=span, run=current_run)

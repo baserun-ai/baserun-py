@@ -10,6 +10,7 @@ from threading import Thread
 import openai
 import pytest
 from openai import AsyncOpenAI, NotFoundError, OpenAI
+from openai.types import CreateEmbeddingResponse
 from openai.types.chat.chat_completion_message import FunctionCall
 
 import baserun
@@ -390,6 +391,16 @@ def openai_contextmanager(prompt="What is the capital of the US?", name: str = "
         content = completion.choices[0].message.content
         run.result = content
         return content
+
+
+@baserun.trace
+def openai_embeddings(inpt: str = "What is the capital of the US?") -> CreateEmbeddingResponse:
+    client = OpenAI()
+    res = client.embeddings.create(
+        input=inpt,
+        model="text-embedding-ada-002",
+    )
+    return res
 
 
 TEMPLATES = {

@@ -14,6 +14,8 @@ class BaserunProvider(str, Enum):
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
     GOOGLE = "google"
+    # not really a provider but we can treat it as such and it's handy
+    LLAMA_INDEX = "llama_index"
 
 
 class BaserunType(str, Enum):

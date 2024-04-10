@@ -13,6 +13,7 @@ from tests.testing_functions import (
     openai_chat_functions_streaming,
     openai_chat_streaming,
     openai_contextmanager,
+    openai_embeddings,
     traced_fn_error,
 )
 
@@ -221,3 +222,13 @@ def test_traced_fn_error(mock_services):
 
     # The run itself failed but the OpenAI call was successful (see `test_chat_completion_error` for a failed span)
     basic_span_asserts(span)
+
+
+def test_embeddings(mock_services):
+    res = openai_embeddings()
+    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+    assert span.vendor == "openai"
+    assert span.request_type == "embeddings"
+    assert span.model == res.model
+    assert span.total_tokens == res.usage.total_tokens
+    assert span.prompt_tokens == res.usage.prompt_tokens

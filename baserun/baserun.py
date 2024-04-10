@@ -448,10 +448,13 @@ class _Baserun:
             logger.warning("Cannot send logs to baserun as there is no current trace active.")
             return Log()
 
+        if isinstance(payload, dict):
+            payload = json.dumps(payload)
+
         log_message = Log(
             run_id=run.run_id,
             name=name,
-            payload=json.dumps(payload),
+            payload=payload,
         )
         log_message.timestamp.FromDatetime(datetime.utcnow())
         log_request = SubmitLogRequest(log=log_message, run=run)
