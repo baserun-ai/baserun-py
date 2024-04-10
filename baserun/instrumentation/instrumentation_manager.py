@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Dict, Optional, Type
 
 from baserun.helpers import BaserunProvider
 from baserun.instrumentation.instrumentation import Instrumentation
+from baserun.instrumentation.llamaindex import LLamaIndexInstrumentation
 from baserun.instrumentation.openai import OpenAIInstrumentation
 
 if TYPE_CHECKING:
@@ -18,6 +19,7 @@ class InstrumentationManager:
         BaserunProvider.ANTHROPIC: None,
         BaserunProvider.OPENAI: OpenAIInstrumentation,
         BaserunProvider.GOOGLE: None,
+        BaserunProvider.LLAMA_INDEX: None,
     }
 
     try:
@@ -33,6 +35,13 @@ class InstrumentationManager:
         instrumentation_classes[BaserunProvider.ANTHROPIC] = AnthropicInstrumentation
     except ImportError:
         logger.debug("anthropic not available")
+
+    try:
+        from llama_index import core
+
+        instrumentation_classes[BaserunProvider.LLAMA_INDEX] = LLamaIndexInstrumentation
+    except ImportError:
+        logger.debug("llama_index not available")
 
     @classmethod
     def instrument_all(cls, baserun_inst: "_Baserun"):
