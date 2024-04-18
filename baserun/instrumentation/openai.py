@@ -218,6 +218,9 @@ class OpenAIInstrumentation(Instrumentation):
                     return result
 
                 logger.debug(f"Baserun assembled span request {span_request}, submitting")
+                from baserun.baserun import _Baserun
+
+                setattr(_Baserun, "last_completion", span)
                 self.baserun.exporter_queue.put(span_request)
             return result
         except BaseException as e:
@@ -256,6 +259,7 @@ class OpenAIInstrumentation(Instrumentation):
         def wrapper(obj, *args, **kwargs) -> "ChatCompletion":
             result: ChatCompletion = original_method(obj, *args, **kwargs)
             response = kwargs.get("response")
+
             self.parse_response(response, result)
 
             return result
@@ -425,6 +429,9 @@ class OpenAIInstrumentation(Instrumentation):
                         return result
 
                     logger.debug(f"Baserun assembled span request {span_request}, submitting")
+                    from baserun.baserun import _Baserun
+
+                    setattr(_Baserun, "last_completion", span)
                     self.baserun.exporter_queue.put(span_request)
                 # Streaming- will get submitted in `spy_on_process_response_data` after streaming finishes
                 else:
