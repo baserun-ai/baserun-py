@@ -149,7 +149,7 @@ def create_langchain_template(
         template_name = f"{caller}_template"
 
     langchain_template = ChatPromptTemplate(
-        messages=[BaseMessage(role="SYSTEM", content=template_string)],
+        messages=[BaseMessage(type="ai", role="SYSTEM", content=template_string)],
         input_variables=input_variables,
     )
 
