@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, Dict, Optional, Type
 
 from baserun.helpers import BaserunProvider
 from baserun.instrumentation.instrumentation import Instrumentation
-from baserun.instrumentation.llamaindex import LLamaIndexInstrumentation
 from baserun.instrumentation.openai import OpenAIInstrumentation
 
 if TYPE_CHECKING:
@@ -37,7 +36,7 @@ class InstrumentationManager:
         logger.debug("anthropic not available")
 
     try:
-        from llama_index import core
+        from baserun.instrumentation.llamaindex import LLamaIndexInstrumentation
 
         instrumentation_classes[BaserunProvider.LLAMA_INDEX] = LLamaIndexInstrumentation
     except ImportError:
