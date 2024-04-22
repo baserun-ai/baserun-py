@@ -10,7 +10,6 @@ from openai import OpenAI
 from baserun.evals.json import is_valid_json
 from baserun.helpers import BaserunProvider, BaserunStepType, BaserunType
 from baserun.v1.baserun_pb2 import Eval, SubmitEvalRequest
-
 from ..grpc import get_or_create_submission_service
 
 logger = logging.getLogger(__name__)
@@ -19,7 +18,7 @@ logger = logging.getLogger(__name__)
 def get_answer_prompt(choices: List[str]) -> str:
     stringified_choices = " or ".join(f'"{choice}"' for choice in choices)
     return (
-        "First, write out in a step by step manner your reasoning to be sure that your conclusion is correct. "
+        "Before answering, reason in a step-by-step manner as to get the right answer. "
         "Avoid simply stating the correct answer at the outset. Then print only a single choice from "
         f"{stringified_choices} (without quotes or punctuation) on its own line corresponding to the correct answer. "
         f"At the end, repeat just the answer by itself on a new line.\n\nReasoning:"
