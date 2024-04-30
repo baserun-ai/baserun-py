@@ -374,17 +374,17 @@ class OpenAIInstrumentation(Instrumentation):
 
                 span.stream = parsed_request.get("stream", False)
 
-                if max_tokens := parsed_request.get("max_tokens"):
+                if (max_tokens := parsed_request.get("max_tokens")) is not None:
                     span.max_tokens = max_tokens
-                if temperature := parsed_request.get("temperature"):
+                if (temperature := parsed_request.get("temperature")) is not None:
                     span.temperature = temperature
-                if top_p := parsed_request.get("top_p"):
+                if (top_p := parsed_request.get("top_p")) is not None:
                     span.top_p = top_p
-                if top_k := parsed_request.get("top_k"):
+                if (top_k := parsed_request.get("top_k")) is not None:
                     span.top_k = top_k
-                if frequency_penalty := parsed_request.get("frequency_penalty"):
+                if (frequency_penalty := parsed_request.get("frequency_penalty")) is not None:
                     span.frequency_penalty = frequency_penalty
-                if presence_penalty := parsed_request.get("presence_penalty"):
+                if (presence_penalty := parsed_request.get("presence_penalty")) is not None:
                     span.presence_penalty = presence_penalty
                 if n := parsed_request.get("n"):
                     span.n = n

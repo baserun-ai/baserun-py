@@ -59,7 +59,9 @@ def ensure_initialized(uninitialized_return: Any = None, uninitialized_return_fa
                 raise NotInitializedException
             if not self._initialized:
                 val = uninitialized_return_factory() if uninitialized_return_factory else uninitialized_return
-                logger.debug(f"Baserun not initialized. Skipping {func.__name__} call and returning {val}")
+                logger.debug(
+                    f"Baserun not initialized. Skipping {func.__name__ if hasattr('func', '__name__') else str(func)} call and returning {val}"
+                )
                 return val
             return func(self, *args, **kwargs)
 
@@ -276,7 +278,13 @@ class _Baserun:
     def _trace(self, func: T, run_type: Run.RunType, name: Optional[str] = None, metadata: Optional[Dict] = None) -> T:
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
-        run_name = name or func.__name__
+        if name:
+            run_name = name
+        elif hasattr(func, "__name__"):
+            run_name = func.__name__
+        else:
+            run_name = str(func)
+
         if self.current_test_suite:
             suite_id = self.current_test_suite.id
         else:
@@ -299,7 +307,7 @@ class _Baserun:
                 )
                 old_context = self.get_context()
                 with tracer.start_as_current_span(
-                    f"{PARENT_SPAN_NAME}.{func.__name__}",
+                    f"{PARENT_SPAN_NAME}.{func.__name__ if hasattr('func', '__name__') else str(func)}",
                     kind=SpanKind.CLIENT,
                 ):
                     self.propagate_context(old_context)
@@ -332,7 +340,7 @@ class _Baserun:
 
                 old_context = self.get_context()
                 with tracer.start_as_current_span(
-                    f"{PARENT_SPAN_NAME}.{func.__name__}",
+                    f"{PARENT_SPAN_NAME}.{func.__name__ if hasattr('func', '__name__') else str(func)}",
                     kind=SpanKind.CLIENT,
                 ):
                     self.propagate_context(old_context)
@@ -369,7 +377,7 @@ class _Baserun:
                 # Create a parent span so we can attach the run to it, all child spans are part of this run.
                 old_context = self.get_context()
                 with tracer.start_as_current_span(
-                    f"{PARENT_SPAN_NAME}.{func.__name__}",
+                    f"{PARENT_SPAN_NAME}.{func.__name__ if hasattr('func', '__name__') else str(func)}",
                     kind=SpanKind.CLIENT,
                 ):
                     self.propagate_context(old_context)
