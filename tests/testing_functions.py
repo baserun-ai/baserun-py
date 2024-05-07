@@ -356,7 +356,7 @@ def openai_threaded():
 def openai_chat_response_format(prompt="What is the capital of the US?") -> str:
     client = OpenAI()
     completion = client.chat.completions.create(
-        model="gpt-4-1106-preview",
+        model="gpt-4-turbo",
         messages=[
             {"role": "system", "content": "Respond to the following question in JSON"},
             {"role": "user", "content": prompt},
@@ -372,7 +372,7 @@ def openai_chat_response_format(prompt="What is the capital of the US?") -> str:
 def openai_chat_seed(prompt="What is the capital of the US?") -> str:
     client = OpenAI()
     completion = client.chat.completions.create(
-        model="gpt-4-1106-preview",
+        model="gpt-4-turbo",
         messages=[{"role": "user", "content": prompt}],
         seed=1234,
     )
@@ -421,7 +421,7 @@ def use_template(question="What is the capital of the US?", template_name: str =
 
     client = OpenAI()
     completion = client.chat.completions.create(
-        model="gpt-4-1106-preview",
+        model="gpt-4-turbo",
         messages=prompt,
         seed=1234,
     )
@@ -441,7 +441,7 @@ async def use_template_async(question="What is the capital of the US?", template
 
     client = AsyncOpenAI()
     completion = await client.chat.completions.create(
-        model="gpt-4-1106-preview",
+        model="gpt-4-turbo",
         messages=prompt,
         seed=1234,
     )
@@ -470,7 +470,20 @@ def use_sessions(prompt="What is the capital of the US?", user_identifier="examp
     client = OpenAI()
     with baserun.with_session(user_identifier=user_identifier):
         completion = client.chat.completions.create(
-            model="gpt-4-1106-preview",
+            model="gpt-4-turbo",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        content = completion.choices[0].message.content
+        baserun.check_includes("openai_chat.content", content, "Washington")
+        baserun.log("OpenAI Chat Results", payload={"result": content, "input": prompt})
+        return content
+
+
+def use_sessions_untraced(prompt="What is the capital of the US?", user_identifier="example@test.com") -> str:
+    client = OpenAI()
+    with baserun.with_session(user_identifier=user_identifier):
+        completion = client.chat.completions.create(
+            model="gpt-4-turbo",
             messages=[{"role": "user", "content": prompt}],
         )
         content = completion.choices[0].message.content
@@ -485,7 +498,7 @@ async def create_full_trace(question="What is the capital of the US?") -> str:
             client = OpenAI()
 
             completion = client.chat.completions.create(
-                model="gpt-4-1106-preview",
+                model="gpt-4-turbo",
                 messages=[{"role": "user", "content": question}],
             )
             content = completion.choices[0].message.content
@@ -512,7 +525,7 @@ async def use_annotation(question="What is the capital of the US?") -> str:
     client = OpenAI()
 
     completion = client.chat.completions.create(
-        model="gpt-4-1106-preview",
+        model="gpt-4-turbo",
         messages=[{"role": "user", "content": question}],
     )
     content = completion.choices[0].message.content
