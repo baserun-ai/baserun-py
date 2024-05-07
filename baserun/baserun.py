@@ -221,10 +221,30 @@ class _Baserun:
         except Exception as e:
             logger.warning(f"Failed to submit run end to Baserun: {e}")
 
+    @staticmethod
+    def _get_caller_function_name():
+        # noinspection PyBroadException
+        try:
+            prefixes_to_skip = ["openai", "anthropic", "google", "llama_index", "langchain", "baserun"]
+
+            for frame_record in inspect.stack():
+                module = inspect.getmodule(frame_record.frame)
+                if module and hasattr(module, "__file__"):
+                    module_file = module.__file__
+                    # Skip modules from Python's standard library by detecting typical lib path segments
+                    if any(segment in module_file for segment in ["/lib/python", "site-packages", "dist-packages"]):
+                        continue
+                    # Check if module name doesn't start with any prefix to skip
+                    if not any(module.__name__.startswith(prefix) for prefix in prefixes_to_skip):
+                        return frame_record.function
+            return None
+        except BaseException:
+            return None
+
     @ensure_initialized(Run())
     def get_or_create_current_run(
         self,
-        name: str = "Untraced",
+        name: Optional[str] = None,
         suite_id: Optional[str] = None,
         start_timestamp: Optional[datetime] = None,
         completion_timestamp: Optional[datetime] = None,
@@ -234,6 +254,9 @@ class _Baserun:
         force_new: bool = False,
     ) -> Run:
         """Gets the current run or creates one"""
+        if not name:
+            name = self._get_caller_function_name()
+
         if not force_new:
             existing_run = self.current_run()
             if existing_run and not existing_run.completion_timestamp.ToSeconds():

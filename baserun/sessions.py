@@ -49,7 +49,8 @@ def with_session(
         tracer_provider = trace.get_tracer_provider()
         tracer = tracer_provider.get_tracer("baserun")
         old_context = Baserun.get_context()
-        with tracer.start_as_current_span(name=UNTRACED_SPAN_PARENT_NAME):
+        name = Baserun._get_caller_function_name() or UNTRACED_SPAN_PARENT_NAME
+        with tracer.start_as_current_span(name=name):
             Baserun.propagate_context(old_context)
             session = start_session(user_identifier=user_identifier, session_identifier=session_identifier)
             try:
