@@ -1,13 +1,16 @@
-from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
-from llama_index.core.base.response.schema import RESPONSE_TYPE
-
 from baserun import Baserun
+
+try:
+    from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
+    from llama_index.core.base.response.schema import RESPONSE_TYPE
+except ImportError:
+    pass
 
 
 @Baserun.trace
 def llama() -> RESPONSE_TYPE:
     documents = SimpleDirectoryReader("test_data").load_data()
-    index = VectorStoreIndex.from_documents(documents)
+    index = init(VectorStoreIndex.from_documents(documents))
     query_engine = index.as_query_engine()
     return query_engine.query(
         "I have flour, sugar and butter. What am I missing if I want to bake oatmeal cookies from my recipe?"

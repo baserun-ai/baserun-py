@@ -4,6 +4,7 @@ import inspect
 import json
 import os
 import sys
+from time import sleep
 import traceback
 from threading import Thread
 
@@ -14,13 +15,14 @@ from openai.types import CreateEmbeddingResponse
 from openai.types.chat.chat_completion_message import FunctionCall
 
 import baserun
+from baserun.v2 import init
 
 
 @baserun.trace
 def openai_chat(prompt="What is the capital of the US?") -> str:
     client = OpenAI()
     completion = client.chat.completions.create(
-        model="gpt-4o", messages=[{"role": "user", "content": prompt}], temperature=0
+        model="gpt-4o", messages=[{"role": "user", "content": prompt}], temperature=0.3, max_tokens=1234
     )
     content = completion.choices[0].message.content
     baserun.check_includes("openai_chat.content", content, "Washington", metadata={"foo": "bar"})
@@ -80,6 +82,7 @@ async def openai_chat_async(prompt="What is the capital of the US?") -> str:
 @baserun.trace
 def openai_chat_tools(prompt="Say 'hello world'") -> FunctionCall:
     messages = [{"role": "user", "content": prompt}]
+
     client = OpenAI()
     tools = [
         {
@@ -124,6 +127,8 @@ def openai_chat_tools(prompt="Say 'hello world'") -> FunctionCall:
 
 @baserun.trace
 def openai_chat_tools_streaming(prompt="Say 'hello world'") -> FunctionCall:
+    from baserun.v2 import OpenAI
+
     client = OpenAI()
     tools = [
         {
@@ -564,7 +569,7 @@ def use_langchain_tools(question="What is the capital of the US?") -> str:
 
     from baserun.instrumentation.langchain import BaserunCallbackHandler
 
-    chat = ChatOpenAI(callbacks=[BaserunCallbackHandler()])
+    chat = init(ChatOpenAI(callbacks=[BaserunCallbackHandler()]))
     tools = [format_tool_to_openai_tool(t) for t in load_tools(["wikipedia"], llm=chat)]
     messages = [HumanMessage(content=question)]
     response = chat.invoke(messages, tools=tools)
