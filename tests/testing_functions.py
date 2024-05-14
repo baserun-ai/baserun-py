@@ -22,7 +22,7 @@ from baserun.v2 import init
 def openai_chat(prompt="What is the capital of the US?") -> str:
     client = OpenAI()
     completion = client.chat.completions.create(
-        model="gpt-4o", messages=[{"role": "user", "content": prompt}], temperature=0.3, max_tokens=1234
+        model="gpt-4o", messages=[{"role": "user", "content": prompt}], temperature=0
     )
     content = completion.choices[0].message.content
     baserun.check_includes("openai_chat.content", content, "Washington", metadata={"foo": "bar"})
