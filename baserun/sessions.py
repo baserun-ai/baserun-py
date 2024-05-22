@@ -18,7 +18,6 @@ from baserun.v1.baserun_pb2 import (
     Session,
     StartSessionRequest,
 )
-
 from . import Baserun
 from .constants import UNTRACED_SPAN_PARENT_NAME
 from .instrumentation.span_attributes import BASERUN_SESSION_ID, BASERUN_USER_ID

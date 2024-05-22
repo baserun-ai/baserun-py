@@ -93,18 +93,12 @@ def mock_services() -> Generator[Dict[str, Mock], None, None]:
 
 def pytest_sessionstart(session):
     os.environ["LOG_LEVEL"] = "DEBUG"
-    Baserun.init()
+    # Baserun.init()
     Baserun.exporter_queue.put(None)
 
 
 def pytest_runtest_teardown(item, nextitem):
-    while not Baserun.exporter_queue.empty():
-        try:
-            Baserun.exporter_queue.get(block=False)
-        except Empty:
-            break
-
-    Baserun.finish()
+    # Baserun.finish()
     get_templates.clear_cache()
     Baserun.templates = {}
 

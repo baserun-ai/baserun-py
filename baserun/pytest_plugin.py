@@ -19,8 +19,9 @@ def pytest_addoption(parser):
 
 
 def pytest_sessionstart(session):
+    return
     if session.config.getoption("--baserun"):
-        Baserun.init()
+        # Baserun.init()
 
         sys.argv[0] = os.path.basename(sys.argv[0])
         suite = TestSuite(id=str(uuid.uuid4()), name=" ".join(sys.argv))
