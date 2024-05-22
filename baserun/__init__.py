@@ -1,67 +1,39 @@
-import os
+from typing import Optional, TypeVar
 
-from .annotation import Annotation
-from .baserun import Baserun
-from .checks import (
-    check as check,
-    check_equals as check_equals,
-    check_includes as check_includes,
-)
-from .sessions import (
-    start_session as start_session,
-    end_session as end_session,
-    with_session as with_session,
-    astart_session as astart_session,
-    aend_session as aend_session,
-)
-from .templates import (
-    format_prompt as format_prompt,
-    register_template as register_template,
-    aregister_template as aregister_template,
-    get_templates as get_templates,
-    get_template as get_template,
-)
-from .thread_wrapper import baserun_thread_wrapper as thread_wrapper
-from .users import (
-    submit_user as submit_user,
-    asubmit_user as asubmit_user,
-)
+from baserun.mixins import ClientMixin
 
-init = Baserun.init
-start_trace = Baserun.start_trace
-trace = Baserun.trace
-log = Baserun.log
-evals = Baserun.evals
-api_key = os.environ.get("BASERUN_API_KEY")
-annotate = Annotation.exported_annotate
-submit_input_variable = Baserun.submit_input_variable
-finish = Baserun.finish
+T = TypeVar("T")
 
-__all__ = [
-    "Baserun",
-    "api_key",
-    "init",
-    "start_trace",
-    "trace",
-    "annotate",
-    "log",
-    "evals",
-    "thread_wrapper",
-    "with_session",
-    "start_session",
-    "end_session",
-    "astart_session",
-    "aend_session",
-    "format_prompt",
-    "register_template",
-    "get_templates",
-    "get_template",
-    "aregister_template",
-    "submit_user",
-    "asubmit_user",
-    "check",
-    "check_equals",
-    "check_includes",
-    "submit_input_variable",
-    "finish",
-]
+try:
+    from openai import AsyncOpenAI as BaseAsyncOpenAI
+
+    from baserun.wrappers.openai import AsyncOpenAI as WrappedAsyncOpenAI
+    from baserun.wrappers.openai import OpenAI as WrappedOpenAI
+    from baserun.wrappers.openai import (
+        WrappedAsyncOpenAIClient,
+        WrappedOpenAIBaseClient,
+        WrappedSyncOpenAIClient,
+    )
+
+    OpenAI = WrappedOpenAI
+    AsyncOpenAI = WrappedAsyncOpenAI
+
+    def init(client: T, name: Optional[str] = None, api_key: Optional[str] = None, **kwargs) -> WrappedOpenAIBaseClient:
+        if isinstance(client, BaseAsyncOpenAI):
+            return WrappedAsyncOpenAIClient(**kwargs, name=name, api_key=api_key, client=client)
+        return WrappedSyncOpenAIClient(**kwargs, name=name, api_key=api_key, client=client)
+
+except ImportError:
+    # TODO: Handle anthropic and other providers here (in case they've installed any of those alongside openai)
+
+    class BaseOpenAI:
+        pass
+
+    class WrappedSyncOpenAIClient(ClientMixin):  # type: ignore
+        pass
+
+    class WrappedAsyncOpenAIClient(ClientMixin):  # type: ignore
+        pass
+
+    def init(client: T, name: Optional[str] = None, api_key: Optional[str] = None, **kwargs) -> WrappedOpenAIBaseClient:
+        raise ImportError("No supported libraries are installed.")

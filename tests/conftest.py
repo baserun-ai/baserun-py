@@ -1,5 +1,4 @@
 import os
-from queue import Empty
 from typing import Callable, Dict, Generator, Tuple
 from unittest.mock import AsyncMock, Mock, call, create_autospec
 

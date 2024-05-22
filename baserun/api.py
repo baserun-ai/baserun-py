@@ -14,10 +14,10 @@ import httpx
 import tiktoken
 from openai.types.chat import ChatCompletionMessageParam
 
-from baserun.v2.utils import deep_merge
+from baserun.utils import deep_merge
 
 if TYPE_CHECKING:
-    from baserun.v2.wrappers.openai import (
+    from baserun.wrappers.openai import (
         WrappedAsyncStream,
         WrappedChatCompletion,
         WrappedOpenAIBaseClient,
@@ -80,7 +80,10 @@ def start_worker(base_url: str, api_key: str):
         if exporter_thread is None:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            exporter_thread = Thread(target=loop.run_until_complete, args=(worker(exporter_queue, base_url, api_key),))
+            exporter_thread = Thread(
+                target=loop.run_until_complete,
+                args=(worker(exporter_queue, base_url, api_key),),
+            )
             exporter_thread.daemon = True
             exporter_thread.start()
 
@@ -147,12 +150,7 @@ class ApiClient:
             "first_token_timestamp": first_token_timestamp.isoformat() if first_token_timestamp else None,
             "request_id": self.client.request_ids.get(completion.id),
         }
-        try:
-            logger.debug(f"Submitting completion:\n{json.dumps(output, indent=2)}")
-        except Exception as e:
-            import pdb
-
-            pdb.set_trace()
+        logger.debug(f"Submitting completion:\n{json.dumps(output, indent=2)}")
         self._post("completions", output)
 
     def submit_stream(self, stream: Union["WrappedAsyncStream", "WrappedSyncStream"]):
