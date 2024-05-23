@@ -3,12 +3,10 @@ import atexit
 import json
 import logging
 import os
-import signal
-import sys
-from queue import Empty, Queue
-from threading import Lock, Thread
+from multiprocessing import Process, Queue
+from queue import Empty
 from time import sleep
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import httpx
 import tiktoken
@@ -25,11 +23,10 @@ if TYPE_CHECKING:
     )
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
 exporter_queue: Queue = Queue()
-exporter_thread: Union[Thread, None] = None
-thread_lock = Lock()
+tasks: List[asyncio.Task] = []  # Make tasks a global variable
+exporter_process: Union[Process, None] = None
 
 
 def count_prompt_tokens(
@@ -48,11 +45,13 @@ def count_message_tokens(text: str, encoder="cl100k_base"):
 
 async def worker(queue: Queue, base_url: str, api_key: str):
     logger.debug(f"Starting worker with base_url: {base_url}")
+    tasks: List[asyncio.Task] = []  # Create tasks locally
     async with httpx.AsyncClient(http2=True) as client:
         while True:
             try:
-                item: Dict = queue.get(timeout=1)
+                item: Dict = queue.get_nowait()
             except Empty:
+                sleep(1)
                 continue
 
             if item is None:
@@ -62,30 +61,46 @@ async def worker(queue: Queue, base_url: str, api_key: str):
                 endpoint = item.pop("endpoint")
                 data = item.pop("data")
                 logger.debug(f"Submitting {data} to Baserun at {base_url}/api/public/{endpoint}")
-                result = await client.post(
-                    f"{base_url}/api/public/{endpoint}",
-                    headers={"Authorization": f"Bearer {api_key}"},
-                    json=data,
+                tasks.append(
+                    asyncio.create_task(
+                        client.post(
+                            f"{base_url}/api/public/{endpoint}",
+                            headers={"Authorization": f"Bearer {api_key}"},
+                            json=data,
+                        )
+                    )
                 )
-                logger.debug(f"Got response from Baserun: {result} {result.headers}")
             except Exception as e:
                 logger.warning(f"Failed to submit {endpoint} to Baserun: {e}")
-            finally:
-                queue.task_done()
+
+    logger.debug(f"Waiting for {len(tasks)} tasks to finish")
+    await asyncio.gather(*tasks)
+    logger.debug("Exiting worker")
+    loop = asyncio.get_running_loop()
+    loop.stop()
+
+
+def run_worker(queue, base_url, api_key):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.create_task(worker(queue, base_url, api_key))
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        loop.close()
 
 
 def start_worker(base_url: str, api_key: str):
-    global exporter_thread
-    with thread_lock:
-        if exporter_thread is None:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            exporter_thread = Thread(
-                target=loop.run_until_complete,
-                args=(worker(exporter_queue, base_url, api_key),),
-            )
-            exporter_thread.daemon = True
-            exporter_thread.start()
+    global exporter_process
+    if exporter_process is None:
+        exporter_process = Process(
+            target=run_worker,
+            args=(exporter_queue, base_url, api_key),
+        )
+        exporter_process.daemon = False
+        exporter_process.start()
 
 
 class ApiClient:
@@ -98,11 +113,6 @@ class ApiClient:
         self.environment = os.getenv("BASERUN_ENVIRONMENT", os.getenv("ENVIRONMENT", "production"))
         self.client = client
 
-        def signal_function(sig, frame):
-            self.exit_handler(sig, frame)
-
-        signal.signal(signal.SIGINT, signal_function)
-        signal.signal(signal.SIGTERM, signal_function)
         atexit.register(self.exit_handler)
 
         start_worker(
@@ -111,17 +121,18 @@ class ApiClient:
         )
 
     def exit_handler(self, *args) -> None:
-        logger.debug("Baserun exiting")
-        exporter_queue.put(None)
-
-        try_count = 0
-        while not exporter_queue.empty() and try_count < 5:
-            logger.debug("Baserun finishing export of spans")
-            sleep(0.25)
-            try_count += 1
-
-        if len(args) > 1:
-            sys.exit(0)
+        global exporter_process, exporter_queue, tasks  # Add tasks to global variables
+        if exporter_process is not None:
+            # Put None into the queue to signal the worker to stop
+            exporter_queue.put(None)
+            while len(tasks):
+                logger.debug(f"Waiting for {len(tasks)} tasks to finish")
+                sleep(0.25)
+            exporter_process.terminate()
+            exporter_process.join()
+        # Close and join the queue
+        if exporter_queue is not None:
+            exporter_queue.close()
 
     def submit_completion(self, completion: "WrappedChatCompletion"):
         dict_items = completion.model_dump()

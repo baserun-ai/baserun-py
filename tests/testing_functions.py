@@ -360,7 +360,6 @@ def call_function(functions, function_name: str, parsed_args: argparse.Namespace
 if __name__ == "__main__":
     from dotenv import load_dotenv
 
-
     load_dotenv()
     openai.api_key = os.environ.get("OPENAI_API_KEY")
 
@@ -386,4 +385,4 @@ if __name__ == "__main__":
     else:
         call_function(traced_functions, function_name, parsed_args)
 
-    sleep(2)
+    sleep(4)
