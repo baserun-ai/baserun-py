@@ -4,7 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "baserun"
+<<<<<<< Updated upstream
 version = "1.0.0b0"
+=======
+version = "1.0.0b4"
+>>>>>>> Stashed changes
 description = "tools for testing, debugging, and evaluating llm features."
 readme = "README.md"
 license = { file = "LICENSE" }

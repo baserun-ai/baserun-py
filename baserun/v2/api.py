@@ -3,12 +3,18 @@ import atexit
 import json
 import logging
 import os
+<<<<<<< Updated upstream:baserun/v2/api.py
 import signal
 import sys
 from queue import Empty, Queue
 from threading import Lock, Thread
 from time import sleep
 from typing import TYPE_CHECKING, Any, Dict, Optional, Union
+=======
+from multiprocessing import Process, Queue
+from queue import Empty
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+>>>>>>> Stashed changes:baserun/api.py
 
 import httpx
 import tiktoken
@@ -28,8 +34,12 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 exporter_queue: Queue = Queue()
+<<<<<<< Updated upstream:baserun/v2/api.py
 exporter_thread: Union[Thread, None] = None
 thread_lock = Lock()
+=======
+exporter_process: Union[Process, None] = None
+>>>>>>> Stashed changes:baserun/api.py
 
 
 def count_prompt_tokens(
@@ -47,12 +57,18 @@ def count_message_tokens(text: str, encoder="cl100k_base"):
 
 
 async def worker(queue: Queue, base_url: str, api_key: str):
+    tasks: List[asyncio.Task] = []
     logger.debug(f"Starting worker with base_url: {base_url}")
     async with httpx.AsyncClient(http2=True) as client:
         while True:
+            tasks = [task for task in tasks if not task.done()]
             try:
                 item: Dict = queue.get(timeout=1)
             except Empty:
+<<<<<<< Updated upstream:baserun/v2/api.py
+=======
+                await asyncio.sleep(1)
+>>>>>>> Stashed changes:baserun/api.py
                 continue
 
             if item is None:
@@ -62,6 +78,7 @@ async def worker(queue: Queue, base_url: str, api_key: str):
                 endpoint = item.pop("endpoint")
                 data = item.pop("data")
                 logger.debug(f"Submitting {data} to Baserun at {base_url}/api/public/{endpoint}")
+<<<<<<< Updated upstream:baserun/v2/api.py
                 result = await client.post(
                     f"{base_url}/api/public/{endpoint}",
                     headers={"Authorization": f"Bearer {api_key}"},
@@ -72,6 +89,26 @@ async def worker(queue: Queue, base_url: str, api_key: str):
                 logger.warning(f"Failed to submit {endpoint} to Baserun: {e}")
             finally:
                 queue.task_done()
+=======
+                task = asyncio.create_task(
+                    client.post(
+                        f"{base_url}/api/public/{endpoint}",
+                        headers={"Authorization": f"Bearer {api_key}"},
+                        json=data,
+                    )
+                )
+                tasks.append(task)
+            except Exception as e:
+                logger.warning(f"Failed to submit {endpoint} to Baserun: {e}")
+
+    logger.debug(f"Waiting for {len(tasks)} tasks to finish")
+    await asyncio.gather(*tasks, return_exceptions=True)
+    logger.debug("Exiting worker")
+
+
+def run_worker(queue, base_url, api_key):
+    asyncio.run(worker(queue, base_url, api_key))
+>>>>>>> Stashed changes:baserun/api.py
 
 
 def start_worker(base_url: str, api_key: str):
@@ -108,6 +145,7 @@ class ApiClient:
         )
 
     def exit_handler(self, *args) -> None:
+<<<<<<< Updated upstream:baserun/v2/api.py
         logger.debug("Baserun exiting")
         exporter_queue.put(None)
 
@@ -119,6 +157,15 @@ class ApiClient:
 
         if len(args) > 1:
             sys.exit(0)
+=======
+        global exporter_process, exporter_queue
+        if exporter_process is not None:
+            exporter_queue.put(None)
+            exporter_process.join()
+        if exporter_queue is not None:
+            exporter_queue.close()
+            exporter_queue.join_thread()
+>>>>>>> Stashed changes:baserun/api.py
 
     def submit_completion(self, completion: "WrappedChatCompletion"):
         dict_items = completion.model_dump()

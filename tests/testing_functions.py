@@ -6,7 +6,11 @@ import os
 import sys
 from time import sleep
 import traceback
+<<<<<<< Updated upstream
 from threading import Thread
+=======
+from time import sleep
+>>>>>>> Stashed changes
 
 import openai
 import pytest
@@ -704,6 +708,19 @@ def use_contextmanager_multiple_calls():
         )
 
 
+def html_output(prompt="What is the capital of the US?") -> str:
+    client = init(OpenAI(), name="Generate HTML")
+    completion = client.chat.completions.create(
+        name="Generated HTML",
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "Respond to all questions in the form of the HTML for a 1990s website"},
+            {"role": "user", "content": prompt},
+        ],
+    )
+    return completion.choices[0].message.content
+
+
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):
     function_to_call = functions.get(function_name)
     if function_to_call is None:
@@ -758,3 +775,5 @@ if __name__ == "__main__":
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
     else:
         call_function(traced_functions, function_name, parsed_args)
+
+    sleep(4)
