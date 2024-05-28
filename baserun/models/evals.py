@@ -1,12 +1,11 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional, Dict, Any, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 if TYPE_CHECKING:
-    from baserun.v2.mixins import CompletionMixin, ClientMixin
+    from baserun.mixins import ClientMixin, CompletionMixin
 
 
 class CompletionEval(BaseModel):

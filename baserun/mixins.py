@@ -1,13 +1,11 @@
+import json
 from abc import ABC
-from baserun.v2.models.evals import CompletionEval, TraceEval
-from baserun.v2.models.tags import Log, Tag, Transform, Variable
-
+from typing import Any, Dict, List, Optional, overload
 
 from openai.types.chat import ChatCompletionMessageToolCall
 
-
-import json
-from typing import Any, Dict, List, Optional, overload
+from baserun.models.evals import CompletionEval, TraceEval
+from baserun.models.tags import Log, Tag, Transform, Variable
 
 
 class CompletionMixin(ABC):

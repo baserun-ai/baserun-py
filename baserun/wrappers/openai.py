@@ -16,11 +16,11 @@ from openai.types.chat import ChatCompletion, ChatCompletionChunk, ChatCompletio
 from openai.types.chat.chat_completion_chunk import Choice
 from pydantic import BaseModel, ConfigDict, Field
 
-from baserun.v2.api import ApiClient
-from baserun.v2.mixins import ClientMixin, CompletionMixin
-from baserun.v2.models.evals import CompletionEval, TraceEval
-from baserun.v2.models.tags import Tag
-from baserun.v2.utils import copy_type_hints
+from baserun.api import ApiClient
+from baserun.mixins import ClientMixin, CompletionMixin
+from baserun.models.evals import CompletionEval, TraceEval
+from baserun.models.tags import Tag
+from baserun.utils import copy_type_hints
 
 logger = logging.getLogger(__name__)
 

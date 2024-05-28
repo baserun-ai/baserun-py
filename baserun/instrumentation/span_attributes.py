@@ -1,6 +1,0 @@
-BASERUN_RUN = "baserun.run"
-BASERUN_SESSION_ID = "baserun.session_id"
-BASERUN_USER_ID = "baserun.user_id"
-BASERUN_TEMPLATE_VERSION_ID = "baserun.template_version_id"
-BASERUN_TEMPLATE_STRING = "baserun.template_string"
-BASERUN_TEMPLATE_PARAMETERS = "baserun.template_parameters"

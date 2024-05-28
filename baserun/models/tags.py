@@ -1,7 +1,6 @@
 import json
 from datetime import datetime, timezone
-from typing import Dict, Any
-from typing_extensions import Literal
+from typing import Any, Dict
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
