@@ -25,78 +25,20 @@ Create an account at [https://baserun.ai](https://baserun.ai). Then generate an 
 export BASERUN_API_KEY="your_api_key_here"
 ```
 
-Or set `baserun.api_key` to its value:
+## Usage
 
-```python
-baserun.api_key = "br-..."
-```
+In order to have Baserun trace your LLM Requests, all you need to do is import `OpenAI` from `baserun` instead of `openai`.
 
-###  Initialize Baserun
+<CodeGroup>
 
-At some point during your application's startup you need to call `baserun.init()`. This sets up the observability system and enables Baserun. If `init` is not called, Baserun will be disabled.
-
-## 3. Set up your traces
-
-A trace comprises a series of events executed within an your application. Tracing enables Baserun to display an LLM chain’s entire lifecycle, whether synchronous or asynchronous.
-
-To start tracing add the `@baserun.trace` decorator to the function you want to observe (e.g. a request/response handler or your `main` function).
-
-Here is a simple example. In this case, Baserun is initialized at application startup and the `answer_question` function is traced. The LLM call within that function will now be traced.
-
-```python
-import sys
-from openai import OpenAI
-import baserun
+```python python
+from baserun import OpenAI
 
 
-@baserun.trace
-def answer_question(question: str) -> str:
+def example():
     client = OpenAI()
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": question}],
-    )
-    return response.choices[0].message.content
-
-
-if __name__ == "__main__":
-    baserun.init()
-    print(answer_question(sys.argv[-1]))
-```
-
-## 4. (Optional) Set up User Sessions
-
-If your application involves interaction with a user and you wish to associate logs and traces with a particular user, you can use User Sessions. You can do this using `with_sessions`:
-
-```python
-from openai import OpenAI
-import baserun
-
-@baserun.trace
-def use_sessions(prompt="What is the capitol of the US?") -> str:
-    client = OpenAI()
-    with baserun.with_session(user_identifier="example@test.com"):
-        completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-        )
-        content = completion.choices[0].message.content
-        return content
-```
-
-
-## 5. (Optional) Set up your test suite
-
-Use our [pytest](https://docs.pytest.org) plugin and start immediately testing with Baserun. By default all OpenAI and Anthropic requests will be automatically logged.
-
-```python
-# test_module.py
-
-import openai
-
-def test_paris_trip():
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o",
         temperature=0.7,
         messages=[
             {
@@ -105,35 +47,109 @@ def test_paris_trip():
             }
         ],
     )
+    return response.choices[0].message.content
 
-    assert "Eiffel Tower" in response['choices'][0]['message']['content']
+
+if __name__ == "__main__":
+    print(example())
 ```
 
-To run the test and log to baserun:
+### Alternate init method
 
-```bash
-pytest --baserun test_module.py
-...
-========================Baserun========================
-Test results available at: https://baserun.ai/runs/<id>
-=======================================================
+If, for some reason, you don't wish to use Baserun's OpenAI client, you can simply wrap your normal OpenAI client using `init`.
+
+```python python
+from baserun import init
+
+client = init(OpenAI())
 ```
 
-## 6. (Optional) Set up checks
+</CodeGroup>
 
-Baserun supports checks (also more broadly known as "evaluations"). These are assertions that the LLM response you received matches whatever criteria you require. To use a check, you can use `baserun.check` like so:
+## Configuring the trace
+
+When you start a trace by initializing an OpenAI object, there are several _optional_ parameters you can set for that trace:
+
+- `result`: Some end result or output for the trace
+- `user`: A username or user ID to associate with this trace.
+- `session`: A session ID to associate with this trace.
+- `trace_id`: A previously-generated trace ID (e.g. to continue a previous trace)
 
 ```python
-from openai import OpenAI
-import baserun
+from baserun import OpenAI
 
-client = OpenAI()
-completion = client.chat.completions.create(
-    model="gpt-3.5-turbo",
-    messages=[{"role": "user", "content": "What is the capital of the United States?"}],
-)
-content = completion.choices[0].message.content
-baserun.check(name="capital_answer", result="Washington" in content)
+def example():
+    client = OpenAI(result="What are three activities to do in Paris?")
+    client.user = "user123"
+    client.session = "session123"
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0.7,
+        messages=[
+            {
+                "role": "user",
+                "content": "What are three activities to do in Paris?"
+            }
+        ],
+    )
+    client.result = "Done"
+    return response.choices[0].message.content
+```
+
+## Evals
+
+You can perform evals directly on a completion object. The `includes` eval is used here as an example, and checks if a string is included in the completion's output.
+
+```python
+from baserun import OpenAI
+
+def example():
+    client = OpenAI()
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0.7,
+        messages=[
+            {
+                "role": "user",
+                "content": "What are three activities to do in Paris?"
+            }
+        ],
+    )
+    output = response.choices[0].message.content
+    client.eval("include_eiffel_tower").includes("Eiffel Tower")
+    return output
+```
+
+## Annotations
+
+You can add annotations either to the OpenAI object or to the completion. There are several different types of annotations:
+
+- `log`: Any arbitrary logs you want to attach to a trace or completion
+- `feedback`: Any score-based feedback given from users (e.g. thumbs up/down, star rating)
+- `variable`: Any variables used, e.g. while rendering a template
+- `annotate`: Any arbitrary attributes you want to attach to a trace or completion
+
+```python
+from baserun import OpenAI
+
+def example():
+    client = OpenAI()
+    client.log("Gathering user input")
+    city = input()
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0.7,
+        messages=[
+            {
+                "role": "user",
+                "content": f"What are three activities to do in {city}?"
+            }
+        ],
+    )
+    response.variable("city", city)
+    user_score = input()
+    client.feedback("User Score", score=user_score)
 ```
 
 ## Further Documentation
