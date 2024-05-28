@@ -16,9 +16,7 @@
 pip install baserun
 ```
 
-## 2. Set up Baserun in your application
-
-###  Set the Baserun API key
+## 2. Set the Baserun API key
 Create an account at [https://baserun.ai](https://baserun.ai). Then generate an API key for your project in the [settings](https://baserun.ai/settings) tab. Set it as an environment variable:
 
 ```bash
@@ -27,7 +25,7 @@ export BASERUN_API_KEY="your_api_key_here"
 
 ## Usage
 
-In order to have Baserun trace your LLM Requests, all you need to do is import `OpenAI` from `baserun` instead of `openai`.
+In order to have Baserun trace your LLM Requests, all you need to do is import `OpenAI` from `baserun` instead of `openai`. Creating an OpenAI client object automatically starts the trace, and all future LLM requests made with this client object will be captured.
 
 <CodeGroup>
 
@@ -47,7 +45,6 @@ def example():
             }
         ],
     )
-    return response.choices[0].message.content
 
 
 if __name__ == "__main__":
@@ -94,12 +91,11 @@ def example():
         ],
     )
     client.result = "Done"
-    return response.choices[0].message.content
 ```
 
 ## Evals
 
-You can perform evals directly on a completion object. The `includes` eval is used here as an example, and checks if a string is included in the completion's output.
+You can perform evals directly on a completion object. The `includes` eval is used here as an example, and checks if a string is included in the completion's output. The argument passed to `eval()` is a name or label used for your reference.
 
 ```python
 from baserun import OpenAI
@@ -116,9 +112,7 @@ def example():
             }
         ],
     )
-    output = response.choices[0].message.content
     client.eval("include_eiffel_tower").includes("Eiffel Tower")
-    return output
 ```
 
 ## Annotations
