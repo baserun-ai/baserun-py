@@ -35,7 +35,8 @@ from baserun import OpenAI
 
 def example():
     client = OpenAI()
-    response = client.chat.completions.create(
+    completion = client.chat.completions.create(
+        name="Paris Activities",
         model="gpt-4o",
         temperature=0.7,
         messages=[
@@ -67,20 +68,23 @@ client = init(OpenAI())
 
 When you start a trace by initializing an OpenAI object, there are several _optional_ parameters you can set for that trace:
 
+- `name`: A customized name for the trace
 - `result`: Some end result or output for the trace
 - `user`: A username or user ID to associate with this trace.
 - `session`: A session ID to associate with this trace.
-- `trace_id`: A previously-generated trace ID (e.g. to continue a previous trace)
+- `trace_id`: A previously-generated or custom UUID (e.g. to continue a previous trace)
 
 ```python
 from baserun import OpenAI
 
 def example():
     client = OpenAI(result="What are three activities to do in Paris?")
+    client.name = "Example"
     client.user = "user123"
     client.session = "session123"
 
-    response = client.chat.completions.create(
+    completion = client.chat.completions.create(
+        name="Paris Activities",
         model="gpt-4o",
         temperature=0.7,
         messages=[
@@ -102,7 +106,7 @@ from baserun import OpenAI
 
 def example():
     client = OpenAI()
-    response = client.chat.completions.create(
+    completion = client.chat.completions.create(
         model="gpt-4o",
         temperature=0.7,
         messages=[
@@ -115,14 +119,16 @@ def example():
     client.eval("include_eiffel_tower").includes("Eiffel Tower")
 ```
 
-## Annotations
+## Tags
 
-You can add annotations either to the OpenAI object or to the completion. There are several different types of annotations:
+You can add tags either to the traced OpenAI object or to the completion. There are several different types of tags:
 
 - `log`: Any arbitrary logs you want to attach to a trace or completion
 - `feedback`: Any score-based feedback given from users (e.g. thumbs up/down, star rating)
 - `variable`: Any variables used, e.g. while rendering a template
 - `annotate`: Any arbitrary attributes you want to attach to a trace or completion
+
+Each tag type has functions on traced OpenAI objects and completions. Each tag function can accept a `metadata` parameter which is an arbitrary dictionary with any values you might want to capture.
 
 ```python
 from baserun import OpenAI
@@ -131,7 +137,7 @@ def example():
     client = OpenAI()
     client.log("Gathering user input")
     city = input()
-    response = client.chat.completions.create(
+    completion = client.chat.completions.create(
         model="gpt-4o",
         temperature=0.7,
         messages=[
@@ -141,9 +147,9 @@ def example():
             }
         ],
     )
-    response.variable("city", city)
+    completion.variable("city", city)
     user_score = input()
-    client.feedback("User Score", score=user_score)
+    client.feedback("User Score", score=user_score, metadata={"My key": "My value"})
 ```
 
 ## Further Documentation
