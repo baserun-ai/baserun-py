@@ -1,13 +1,13 @@
+import json
 import logging
-import traceback
 from datetime import datetime, timezone
 from functools import cached_property
 from typing import Any, AsyncIterator, Coroutine, Dict, Iterator, List, Optional, Union, cast
 from uuid import uuid4
 
 import httpx
+from openai import APIStatusError, AsyncStream
 from openai import AsyncOpenAI as BaseAsyncOpenAI
-from openai import AsyncStream
 from openai import OpenAI as BaseOpenAI
 from openai._streaming import Stream, extract_stream_chunk_type
 from openai._types import ResponseT
@@ -202,8 +202,15 @@ class WrappedCompletions(Completions):
                 wrapped.submit_to_baserun()
 
             return wrapped
-        except BaseException as e:
-            self._client.error = "\n".join(traceback.format_exception_only(BaseException, value=e)).strip()
+        except APIStatusError as e:
+            self._client.error = json.dumps(
+                {
+                    "exception": f"{e.__module__}.{e.__class__.__name__}",
+                    "code": e.status_code,
+                    "body": e.body,
+                    "request_id": e.request_id,
+                }
+            )
             self._client.submit_to_baserun()
             completion_id = str(uuid4())
             wrapped = WrappedChatCompletion(
@@ -213,8 +220,8 @@ class WrappedCompletions(Completions):
                 name=name,
                 template=template,
                 start_timestamp=start_timestamp,
-                end_timestamp=datetime.now(),
-                first_token_timestamp=datetime.now(),
+                end_timestamp=start_timestamp,
+                first_token_timestamp=start_timestamp,
                 config_params=kwargs,
                 completion_id=completion_id,
                 input_messages=messages,
