@@ -5,14 +5,11 @@ import logging
 import os
 from multiprocessing import Process, Queue
 from queue import Empty
-from time import sleep
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import httpx
-import tiktoken
-from openai.types.chat import ChatCompletionMessageParam
 
-from baserun.utils import deep_merge
+from baserun.utils import count_prompt_tokens, deep_merge
 
 if TYPE_CHECKING:
     from baserun.wrappers.openai import (
@@ -29,54 +26,52 @@ tasks: List[asyncio.Task] = []  # Make tasks a global variable
 exporter_process: Union[Process, None] = None
 
 
-def count_prompt_tokens(
-    messages: list[ChatCompletionMessageParam],
-    encoder="cl100k_base",
+async def post_and_log_response(
+    base_url: str, api_key: str, endpoint: str, data: Dict[str, Any], client: httpx.AsyncClient
 ):
-    """FYI this doesn't count "name" keys correctly"""
-    return sum([count_message_tokens(json.dumps(list(m.values())), encoder=encoder) for m in messages]) + (
-        len(messages) * 3
+    response = await client.post(
+        f"{base_url}/api/public/{endpoint}",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json=data,
     )
-
-
-def count_message_tokens(text: str, encoder="cl100k_base"):
-    return len(tiktoken.get_encoding(encoder).encode(text))
+    if response.status_code != 200:
+        logger.warning(f"Response from {base_url}/api/public/{endpoint}: {response.status_code}")
+        logger.warning(response.json())
 
 
 async def worker(queue: Queue, base_url: str, api_key: str):
+    logger = logging.getLogger(__name__ + ".worker")
     logger.debug(f"Starting worker with base_url: {base_url}")
-    async with httpx.AsyncClient(http2=True) as client:
-        while True:
-            try:
-                item: Dict = queue.get_nowait()
-            except Empty:
-                sleep(1)
-                continue
+    try:
+        async with httpx.AsyncClient(http2=True) as client:
+            while True:
+                try:
+                    item: Dict = queue.get_nowait()
+                except Empty:
+                    await asyncio.sleep(1)
+                    continue
 
-            if item is None:
-                break
+                if item is None:
+                    break
 
-            try:
-                endpoint = item.pop("endpoint")
-                data = item.pop("data")
-                logger.debug(f"Submitting {data} to Baserun at {base_url}/api/public/{endpoint}")
-                tasks.append(
-                    asyncio.create_task(
-                        client.post(
-                            f"{base_url}/api/public/{endpoint}",
-                            headers={"Authorization": f"Bearer {api_key}"},
-                            json=data,
-                        )
-                    )
-                )
-            except Exception as e:
-                logger.warning(f"Failed to submit {endpoint} to Baserun: {e}")
+                try:
+                    endpoint = item.pop("endpoint")
+                    data = item.pop("data")
+                    logger.debug(f"Submitting {data} to Baserun at {base_url}/api/public/{endpoint}")
 
-    logger.debug(f"Waiting for {len(tasks)} tasks to finish")
-    await asyncio.gather(*tasks)
-    logger.debug("Exiting worker")
-    loop = asyncio.get_running_loop()
-    loop.stop()
+                    task = asyncio.create_task(post_and_log_response(base_url, api_key, endpoint, data, client))
+                    task.add_done_callback(lambda t: tasks.remove(t))
+                    task.add_done_callback(lambda t: logger.debug(f"Task {t} finished"))
+                    tasks.append(task)
+                except Exception as e:
+                    logger.warning(f"Failed to submit {endpoint} to Baserun: {e}")
+
+    finally:
+        logger.debug(f"Waiting for {len(tasks)} tasks to finish")
+        await asyncio.gather(*tasks)
+        logger.debug("Exiting worker")
+        loop = asyncio.get_running_loop()
+        loop.stop()
 
 
 def run_worker(queue: Queue, base_url: str, api_key: str):
@@ -108,8 +103,6 @@ def stop_worker():
     # Signal the worker to stop
     if exporter_queue is not None and not getattr(exporter_queue, "_closed"):
         exporter_queue.put(None)
-
-    logger.debug("Baserun Exiting")
 
     if exporter_process is not None and exporter_process.is_alive():
         loop = asyncio.get_event_loop()

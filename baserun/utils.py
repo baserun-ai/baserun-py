@@ -1,4 +1,8 @@
 import functools
+import json
+
+import tiktoken
+from openai.types.chat import ChatCompletionMessageParam
 
 
 def copy_type_hints(superclass):
@@ -48,3 +52,17 @@ def deep_merge(dicts):
             else:
                 result[key] = value
     return result
+
+
+def count_message_tokens(text: str, encoder="cl100k_base"):
+    return len(tiktoken.get_encoding(encoder).encode(text))
+
+
+def count_prompt_tokens(
+    messages: list[ChatCompletionMessageParam],
+    encoder="cl100k_base",
+):
+    """FYI this doesn't count "name" keys correctly"""
+    return sum([count_message_tokens(json.dumps(list(m.values())), encoder=encoder) for m in messages]) + (
+        len(messages) * 3
+    )
