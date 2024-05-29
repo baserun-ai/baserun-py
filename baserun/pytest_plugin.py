@@ -10,7 +10,9 @@ def pytest_addoption(parser):
 
 
 def pytest_runtest_teardown(item, nextitem):
-    api.exporter_queue.empty()
+    while not api.exporter_queue.empty():
+        api.exporter_queue.get_nowait()
+
     for task in api.tasks:
         task.cancel()
     api.tasks = []

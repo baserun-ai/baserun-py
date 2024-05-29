@@ -15,7 +15,6 @@ class CompletionMixin(ABC):
     completion_id: str
     tool_results: List[Dict[str, Any]]
 
-    # TODO: Should this be an ABC? Or have an ABC somewhere (to define tags, evals, etc without pydantic)
     def annotate(self, key: str, value: str, metadata: Optional[Dict[str, Any]] = None):
         self.tags.append(
             Tag(

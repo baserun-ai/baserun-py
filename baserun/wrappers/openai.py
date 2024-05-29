@@ -14,6 +14,7 @@ from openai._types import ResponseT
 from openai.resources.chat import AsyncChat, AsyncCompletions, Chat, Completions
 from openai.types.chat import ChatCompletion, ChatCompletionChunk, ChatCompletionMessageParam
 from openai.types.chat.chat_completion_chunk import Choice
+from openai.types.completion_usage import CompletionUsage
 from pydantic import BaseModel, ConfigDict, Field
 
 from baserun.api import ApiClient
@@ -30,6 +31,7 @@ class WrappedChatCompletion(ChatCompletion, CompletionMixin):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     client: "WrappedOpenAIBaseClient"
     name: str
+    error: Optional[str] = None
     trace_id: str
     completion_id: str
     template: Optional[str]
@@ -51,6 +53,7 @@ class WrappedStreamBase(CompletionMixin, BaseModel):
     client: "WrappedOpenAIBaseClient"
     id: Optional[str] = None
     name: str
+    error: Optional[str] = None
     trace_id: str
     completion_id: str
     template: Optional[str] = None
@@ -71,6 +74,7 @@ class WrappedStreamBase(CompletionMixin, BaseModel):
         BaseModel.__init__(self, **kwargs)
         # Get rid of special kwargs that we take but OpenAI doesn't
         kwargs.pop("name", None)
+        kwargs.pop("error", None)
         kwargs.pop("completion_id", None)
         kwargs.pop("trace_id", None)
         kwargs.pop("template", None)
@@ -143,16 +147,16 @@ class WrappedCompletions(Completions):
         template: Optional[str] = None,
         **kwargs,
     ) -> Union[WrappedChatCompletion, WrappedSyncStream]:
-        try:
-            messages: List[ChatCompletionMessageParam] = kwargs.pop("messages", [])
-            if not name:
-                for message in reversed(messages):
-                    if message.get("content") and message.get("role") == "assistant":
-                        name = str(message["content"])[:20]
-                        break
-            if not name:
-                name = "OpenAI Completion"
+        messages: List[ChatCompletionMessageParam] = kwargs.pop("messages", [])
+        if not name:
+            for message in reversed(messages):
+                if message.get("content") and message.get("role") == "assistant":
+                    name = str(message["content"])[:20]
+                    break
+        if not name:
+            name = "OpenAI Completion"
 
+        try:
             start_timestamp = datetime.now(timezone.utc)
             stream_or_completion = super().create(*args, **kwargs, messages=messages)
             first_token_timestamp = datetime.now(timezone.utc)
@@ -198,10 +202,30 @@ class WrappedCompletions(Completions):
                 wrapped.submit_to_baserun()
 
             return wrapped
-        except Exception as e:
-            # TODO: Probably should assemble a Completion object in an error state and submit that
-            self._client.error = traceback.format_exc()
+        except BaseException as e:
+            self._client.error = "\n".join(traceback.format_exception_only(BaseException, value=e)).strip()
             self._client.submit_to_baserun()
+            completion_id = str(uuid4())
+            wrapped = WrappedChatCompletion(
+                id=f"chatcompl-error-{completion_id}",
+                client=self._client,
+                trace_id=self._client.trace_id,
+                name=name,
+                template=template,
+                start_timestamp=start_timestamp,
+                end_timestamp=datetime.now(),
+                first_token_timestamp=datetime.now(),
+                config_params=kwargs,
+                completion_id=completion_id,
+                input_messages=messages,
+                error=self._client.error,
+                object="chat.completion",
+                choices=[],
+                created=int(datetime.now().timestamp()),
+                usage=CompletionUsage(total_tokens=0, completion_tokens=0, prompt_tokens=0),
+                **kwargs,
+            )
+            wrapped.submit_to_baserun()
             raise e
 
 

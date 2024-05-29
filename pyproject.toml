@@ -4,17 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "baserun"
-version = "1.0.0b5"
+version = "1.0.0b6"
 description = "tools for testing, debugging, and evaluating llm features."
 readme = "README.md"
 license = { file = "LICENSE" }
-authors = [
-    { name = "Erik Peterson", email = "erik@baserun.ai" }
-]
+authors = [{ name = "Erik Peterson", email = "erik@baserun.ai" }]
 requires-python = ">=3.8, <3.12"
-dependencies = [
-    "httpx[http2]>=0.24.0",
-]
+dependencies = ["httpx[http2]>=0.24.0"]
 
 [project.urls]
 Homepage = "https://baserun.ai"
@@ -24,13 +20,13 @@ Repository = "https://github.com/baserun-ai/baserun-py"
 pbaserun = "baserun.pytest_plugin"
 
 [lint]
-extend-select = ["I", "T20"]  # isort, flake8-print
+extend-select = ["I", "T20"] # isort, flake8-print
 target-version = "py38"
 line-length = 120
 extend-exclude = []
 [lint.per-file-ignores]
-"baserun/v1/baserun_pb2.py" = "E501"  # Line too long
-"tests/*" = "T201"  # `print` found
+"baserun/v1/baserun_pb2.py" = "E501" # Line too long
+"tests/*" = "T201"                   # `print` found
 
 [tool.ruff]
 line-length = 120
