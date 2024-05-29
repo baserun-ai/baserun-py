@@ -1,9 +1,10 @@
 import json
 from abc import ABC
-from typing import Any, Dict, List, Optional, overload
+from typing import Any, Dict, List, Optional, Type, overload
 
 from openai.types.chat import ChatCompletionMessageToolCall
 
+from baserun.integrations.integration import Integration
 from baserun.models.evals import CompletionEval, TraceEval
 from baserun.models.tags import Log, Tag, Transform, Variable
 
@@ -110,6 +111,7 @@ class ClientMixin(ABC):
     evals: List["TraceEval"]
     trace_id: str
     result: Optional[str]
+    integrations: List[Integration]
 
     def annotate(self, key: str, value: str, metadata: Optional[Dict[str, Any]] = None):
         self.tags.append(
@@ -175,6 +177,11 @@ class ClientMixin(ABC):
             )
         )
         self.submit_to_baserun()
+
+    def integrate(self, integration_class: Type[Integration]):
+        integration = integration_class(client=self)
+        integration.instrument()
+        self.integrations.append(integration)
 
     def transform(self, *args, **kwargs):
         transform_input = kwargs.pop("input", None)

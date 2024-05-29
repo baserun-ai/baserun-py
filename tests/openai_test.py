@@ -1,11 +1,9 @@
-from queue import Empty
 from typing import Dict
 
 import pytest
 from openai import NotFoundError
 
-from baserun import api
-from baserun.api import exporter_queue
+from tests.conftest import get_queued_objects
 from tests.testing_functions import (
     create_full_trace,
     openai_chat,
@@ -19,22 +17,6 @@ from tests.testing_functions import (
     use_template,
     use_template_async,
 )
-
-
-@pytest.fixture(autouse=True)
-def disable_exporter_thread():
-    # This will stop start_worker from starting worker threads
-    api.exporter_thread = "Dummy"
-
-
-def get_queued_objects():
-    queued_objects = []
-    while not exporter_queue.empty():
-        try:
-            queued_objects.append(exporter_queue.get_nowait())
-        except Empty:
-            break
-    return queued_objects
 
 
 def basic_completion_asserts(data: Dict):
