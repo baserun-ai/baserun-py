@@ -1,4 +1,5 @@
-from baserun import Baserun
+from baserun import OpenAI
+from tests.conftest import get_queued_objects
 
 try:
     from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
@@ -7,27 +8,36 @@ except ImportError:
     pass
 
 
-@Baserun.trace
 def llama() -> RESPONSE_TYPE:
-    documents = SimpleDirectoryReader("test_data").load_data()
-    index = init(VectorStoreIndex.from_documents(documents))
+    OpenAI()
+    documents = SimpleDirectoryReader("tests/test_data").load_data()
+    index = VectorStoreIndex.from_documents(documents)
     query_engine = index.as_query_engine()
     return query_engine.query(
         "I have flour, sugar and butter. What am I missing if I want to bake oatmeal cookies from my recipe?"
     )
 
 
-def test_llama_simple(mock_services):
-    response = llama()
+def test_llama_simple():
+    llama()
 
-    submit_log_calls = mock_services["submission_service"].SubmitLog.method_calls
-    assert len(submit_log_calls) == 2
-    assert submit_log_calls[0].args[0].log.name == "Query for nodes retrieval"
-    assert submit_log_calls[1].args[0].log.name == "Selected nodes"
-    spans = list(sr.span for sr in Baserun.exporter_queue.queue)
-    # documents embeddings + query embeddings + completion. using this small test data should be 1 of each
-    assert len(spans) == 3
-    assert spans[0].request_type == "embeddings"
-    assert spans[1].request_type == "embeddings"
-    assert spans[2].request_type == "chat"
-    assert spans[2].completions[0].content == response.response
+    queued_requests = get_queued_objects()
+
+    assert len(queued_requests) == 2
+
+    llama_request = queued_requests[-1]
+    assert llama_request["endpoint"] == "traces"
+
+    tags = llama_request["data"]["tags"]
+    assert len(tags) == 2
+
+    query = tags[0]
+    assert query["key"] == "Query for nodes retrieval"
+    assert (
+        "I have flour, sugar and butter. What am I missing if I want to bake oatmeal cookies from my recipe?"
+        in query["value"]
+    )
+
+    selected_nodes = tags[1]
+    assert selected_nodes["key"] == "Selected nodes"
+    assert "test_data/oatmeal_cookies" in selected_nodes["value"]

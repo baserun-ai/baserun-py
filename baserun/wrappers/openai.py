@@ -17,6 +17,7 @@ from openai.types.chat.chat_completion_chunk import Choice
 from pydantic import BaseModel, ConfigDict, Field
 
 from baserun.api import ApiClient
+from baserun.integrations.integration import Integration
 from baserun.mixins import ClientMixin, CompletionMixin
 from baserun.models.evals import CompletionEval, TraceEval
 from baserun.models.tags import Tag
@@ -282,6 +283,7 @@ class WrappedAsyncChat(AsyncChat):
 class WrappedOpenAIBaseClient(ClientMixin):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     chat: WrappedChat | WrappedAsyncChat
+    integrations: List[Integration]
 
     def __init__(
         self,
@@ -309,6 +311,14 @@ class WrappedOpenAIBaseClient(ClientMixin):
         self.api_client = api_client or ApiClient(self, api_key=api_key)
         self.metadata = metadata or {}
         self.request_ids: Dict[str, str] = {}
+        self.integrations = []
+
+        try:
+            from baserun.integrations.llamaindex import LLamaIndexInstrumentation
+
+            self.integrate(LLamaIndexInstrumentation)
+        except ImportError:
+            pass
 
     @property
     def result(self):
