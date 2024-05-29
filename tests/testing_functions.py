@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import inspect
 import json
+import logging
 import os
 import sys
 import traceback
@@ -12,7 +13,7 @@ from openai import AsyncOpenAI, NotFoundError, OpenAI
 from openai.types import CreateEmbeddingResponse
 from openai.types.chat.chat_completion_message import FunctionCall
 
-from baserun import init
+from baserun import api, init
 
 
 def openai_chat(prompt="What is the capital of the US?") -> str:
@@ -206,7 +207,7 @@ def openai_chat_error(prompt="What is the capital of the US?"):
         )
     except NotFoundError as e:
         client.eval("openai_chat_async_streaming.content").includes(e.message, "does not exist")
-        raise e
+        return f"Errored with {e} successfully"
     finally:
         openai.api_type = original_api_type
 
@@ -369,6 +370,8 @@ if __name__ == "__main__":
 
     parsed_args = parser.parse_args()
 
+    logging.basicConfig(level=logging.DEBUG)
+
     # Resolve the string function name to the function object
     function_name = parsed_args.function_to_call
     global_variables = {f: globals().get(f) for f in globals()}
@@ -386,3 +389,6 @@ if __name__ == "__main__":
         call_function(traced_functions, function_name, parsed_args)
 
     sleep(4)
+    api.stop_worker()
+
+    sleep(1)

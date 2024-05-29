@@ -45,7 +45,6 @@ def count_message_tokens(text: str, encoder="cl100k_base"):
 
 async def worker(queue: Queue, base_url: str, api_key: str):
     logger.debug(f"Starting worker with base_url: {base_url}")
-    tasks: List[asyncio.Task] = []  # Create tasks locally
     async with httpx.AsyncClient(http2=True) as client:
         while True:
             try:
@@ -80,7 +79,7 @@ async def worker(queue: Queue, base_url: str, api_key: str):
     loop.stop()
 
 
-def run_worker(queue, base_url, api_key):
+def run_worker(queue: Queue, base_url: str, api_key: str):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.create_task(worker(queue, base_url, api_key))
@@ -103,6 +102,30 @@ def start_worker(base_url: str, api_key: str):
         exporter_process.start()
 
 
+def stop_worker():
+    global exporter_process, exporter_queue, tasks
+
+    # Signal the worker to stop
+    if exporter_queue is not None and not getattr(exporter_queue, "_closed"):
+        exporter_queue.put(None)
+
+    logger.debug("Baserun Exiting")
+
+    if exporter_process is not None and exporter_process.is_alive():
+        loop = asyncio.get_event_loop()
+        if tasks:
+            loop.run_until_complete(asyncio.gather(*tasks))
+
+        # Terminate the process
+        exporter_process.terminate()
+        exporter_process.join()
+
+    # Close and join the queue
+    if exporter_queue is not None and not getattr(exporter_queue, "_closed"):
+        exporter_queue.close()
+        exporter_queue.join_thread()
+
+
 class ApiClient:
     def __init__(
         self,
@@ -121,18 +144,7 @@ class ApiClient:
         )
 
     def exit_handler(self, *args) -> None:
-        global exporter_process, exporter_queue, tasks  # Add tasks to global variables
-        if exporter_process is not None:
-            # Put None into the queue to signal the worker to stop
-            exporter_queue.put(None)
-            while len(tasks):
-                logger.debug(f"Waiting for {len(tasks)} tasks to finish")
-                sleep(0.25)
-            exporter_process.terminate()
-            exporter_process.join()
-        # Close and join the queue
-        if exporter_queue is not None:
-            exporter_queue.close()
+        stop_worker()
 
     def submit_completion(self, completion: "WrappedChatCompletion"):
         dict_items = completion.model_dump()
