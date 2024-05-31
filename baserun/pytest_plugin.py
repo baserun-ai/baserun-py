@@ -21,3 +21,7 @@ def pytest_runtest_teardown(item, nextitem):
 def pytest_sessionstart(session):
     # This will stop start_worker from starting worker threads
     api.exporter_thread = "Dummy"
+
+
+def pytest_sessionfinish(session, exitstatus):
+    api.exporter_queue.close()

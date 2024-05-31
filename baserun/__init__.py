@@ -1,39 +1,94 @@
-from typing import Optional, TypeVar
+from typing import TYPE_CHECKING, Optional, TypeVar, Union
 
 from baserun.mixins import ClientMixin
 
+if TYPE_CHECKING:
+    try:
+        import openai
+    except ImportError:
+        pass
+
+    try:
+        import anthropic
+    except ImportError:
+        pass
+
 T = TypeVar("T")
 
-try:
-    from openai import AsyncOpenAI as BaseAsyncOpenAI
 
-    from baserun.wrappers.openai import AsyncOpenAI as WrappedAsyncOpenAI
-    from baserun.wrappers.openai import OpenAI as WrappedOpenAI
-    from baserun.wrappers.openai import (
-        WrappedAsyncOpenAIClient,
-        WrappedOpenAIBaseClient,
-        WrappedSyncOpenAIClient,
-    )
+def is_openai_installed() -> bool:
+    try:
+        import openai  # noqa: F401
 
-    OpenAI = WrappedOpenAI
-    AsyncOpenAI = WrappedAsyncOpenAI
+        return True
+    except ImportError:
+        return False
 
-    def init(client: T, name: Optional[str] = None, api_key: Optional[str] = None, **kwargs) -> WrappedOpenAIBaseClient:
+
+def is_anthropic_installed() -> bool:
+    try:
+        import anthropic  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+class BaseOpenAI:
+    pass
+
+
+class WrappedSyncOpenAIClient(ClientMixin):  # type: ignore
+    pass
+
+
+class WrappedAsyncOpenAIClient(ClientMixin):  # type: ignore
+    pass
+
+
+OpenAI: Union["openai.OpenAI", None] = None
+AsyncOpenAI: Union["openai.AsyncOpenAI", None] = None
+Anthropic: Union["anthropic.Anthropic", None] = None
+AsyncAnthropic: Union["anthropic.AsyncAnthropic", None] = None
+
+
+def init(client: T, name: Optional[str] = None, api_key: Optional[str] = None, **kwargs) -> ClientMixin | T:
+    if is_openai_installed():
+        from openai import AsyncOpenAI as BaseAsyncOpenAI
+        from openai import OpenAI as BaseOpenAI
+
+        from baserun.wrappers.openai import AsyncOpenAI as WrappedAsyncOpenAI
+        from baserun.wrappers.openai import OpenAI as WrappedOpenAI
+        from baserun.wrappers.openai import (
+            WrappedAsyncOpenAIClient,
+            WrappedSyncOpenAIClient,
+        )
+
+        OpenAI = WrappedOpenAI  # noqa: F841
+        AsyncOpenAI = WrappedAsyncOpenAI  # noqa: F841
+
         if isinstance(client, BaseAsyncOpenAI):
             return WrappedAsyncOpenAIClient(**kwargs, name=name, api_key=api_key, client=client)
-        return WrappedSyncOpenAIClient(**kwargs, name=name, api_key=api_key, client=client)
+        elif isinstance(client, BaseOpenAI):
+            return WrappedSyncOpenAIClient(**kwargs, name=name, api_key=api_key, client=client)
 
-except ImportError:
-    # TODO: Handle anthropic and other providers here (in case they've installed any of those alongside openai)
+    if is_anthropic_installed():
+        from anthropic import Anthropic as BaseAnthropic
+        from anthropic import AsyncAnthropic as BaseAsyncAnthropic
 
-    class BaseOpenAI:
-        pass
+        from baserun.wrappers.anthropic import Anthropic as WrappedAnthropic
+        from baserun.wrappers.anthropic import AsyncAnthropic as WrappedAsyncAnthropic
+        from baserun.wrappers.anthropic import (
+            WrappedAsyncAnthropicClient,
+            WrappedSyncAnthropicClient,
+        )
 
-    class WrappedSyncOpenAIClient(ClientMixin):  # type: ignore
-        pass
+        Anthropic = WrappedAnthropic  # noqa: F841
+        AsyncAnthropic = WrappedAsyncAnthropic  # noqa: F841
 
-    class WrappedAsyncOpenAIClient(ClientMixin):  # type: ignore
-        pass
+        if isinstance(client, BaseAnthropic):
+            return WrappedSyncAnthropicClient(**kwargs, name=name, api_key=api_key, client=client)
+        elif isinstance(client, BaseAsyncAnthropic):
+            return WrappedAsyncAnthropicClient(**kwargs, name=name, api_key=api_key, client=client)
 
-    def init(client: T, name: Optional[str] = None, api_key: Optional[str] = None, **kwargs) -> WrappedOpenAIBaseClient:
-        raise ImportError("No supported libraries are installed.")
+    return client

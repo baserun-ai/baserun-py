@@ -123,6 +123,7 @@ def openai_chat_tools(prompt="Say 'hello world'") -> FunctionCall:
         {"role": "tool", "content": "wow", "tool_call_id": assistant_message.get("tool_calls")[0].get("id")}
     )
     client.chat.completions.create(
+        name="openai_chat_tools tool response",
         model="gpt-4o",
         messages=messages,
         tools=tools,
@@ -215,7 +216,7 @@ def openai_chat_error(prompt="What is the capital of the US?"):
 def openai_chat_response_format(prompt="What is the capital of the US?") -> str:
     client = init(OpenAI())
     completion = client.chat.completions.create(
-        model="gpt-4-turbo",
+        model="gpt-4o",
         messages=[
             {"role": "system", "content": "Respond to the following question in JSON"},
             {"role": "user", "content": prompt},
@@ -230,7 +231,7 @@ def openai_chat_response_format(prompt="What is the capital of the US?") -> str:
 def openai_chat_seed(prompt="What is the capital of the US?") -> str:
     client = init(OpenAI())
     completion = client.chat.completions.create(
-        model="gpt-4-turbo",
+        model="gpt-4o",
         messages=[{"role": "user", "content": prompt}],
         seed=1234,
     )
@@ -256,32 +257,36 @@ TEMPLATES = {
 }
 
 
-def use_template(question="What is the capital of the US?", template_name: str = "Question & Answer"):
-    unformatted_messages = TEMPLATES.get(template_name)
-    prompt = [
-        {"role": message["role"], "content": message["content"].format(question=question)}
-        for message in unformatted_messages
-    ]
+def use_template(
+    template="Answer this question in the form of a limerick: {question}", question="What is the capital of the US?"
+) -> str:
+    prompt = [{"role": "user", "content": template.format(question=question)}]
 
     client = init(OpenAI(), name="use_template")
     completion = client.chat.completions.create(
-        model="gpt-4-turbo", messages=prompt, template=template_name, name="use_template completion"
+        model="gpt-4o",
+        messages=prompt,
+        template=template,
+        variables={"question": question},
+        name="use_template completion",
     )
     content = completion.choices[0].message.content
     completion.eval("openai_chat.content").includes("Washington")
     return content
 
 
-async def use_template_async(question="What is the capital of the US?", template_name: str = "Question & Answer"):
-    unformatted_messages = TEMPLATES.get(template_name)
-    prompt = [
-        {"role": message["role"], "content": message["content"].format(question=question)}
-        for message in unformatted_messages
-    ]
+async def use_template_async(
+    template="Answer this question in the form of a limerick: {question}", question="What is the capital of the US?"
+) -> str:
+    prompt = [{"role": "user", "content": template.format(question=question)}]
 
-    client = init(AsyncOpenAI(), name="use_template_async")
+    client = init(AsyncOpenAI(), name="use_template async")
     completion = await client.chat.completions.create(
-        model="gpt-4-turbo", messages=prompt, template=template_name, name="use_template_async completion"
+        model="gpt-4o",
+        messages=prompt,
+        template=template,
+        variables={"question": question},
+        name="use_template async completion",
     )
     content = completion.choices[0].message.content
     completion.eval("openai_chat.content").includes("Washington")
@@ -294,7 +299,7 @@ def use_sessions(
     client = init(OpenAI(), user=user_identifier, session=session_identifier, name="use_sessions")
     completion = client.chat.completions.create(
         name="use_sessions completion",
-        model="gpt-4-turbo",
+        model="gpt-4o",
         messages=[{"role": "user", "content": prompt}],
     )
     return completion.choices[0].message.content
@@ -321,7 +326,7 @@ def create_full_trace(question="What is the capital of the US?") -> str:
     completion.eval("Contains answer").includes("Washington")
     completion.log(name="Extracted content", message=content)
     completion.submit_to_baserun()
-    client.result = content
+    client.output = content
     client.feedback("content", 0.9, metadata={"comment": "This is a great answer"})
     client.eval("Contains answer").includes(expected="Washington")
     return content

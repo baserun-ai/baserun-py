@@ -15,12 +15,36 @@ class CompletionMixin(ABC):
     completion_id: str
     tool_results: List[Dict[str, Any]]
 
-    def annotate(self, key: str, value: str, metadata: Optional[Dict[str, Any]] = None):
+    def _clean_kwargs(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            k: v
+            for k, v in kwargs.items()
+            if k
+            not in [
+                "name",
+                "error",
+                "completion_id",
+                "trace_id",
+                "template",
+                "config_params",
+                "start_timestamp",
+                "end_timestamp",
+                "first_token_timestamp",
+                "tool_results",
+                "tags",
+                "evals",
+                "input_messages",
+            ]
+        }
+
+    def tag(
+        self, key: str, value: str, metadata: Optional[Dict[str, Any]] = None, tag_type: Optional[str] = "annotation"
+    ):
         self.tags.append(
             Tag(
                 target_type="completion",
                 target_id=self.completion_id,
-                tag_type="annotation",
+                tag_type=tag_type,
                 key=key,
                 value=value,
                 metadata=metadata or {},
@@ -109,15 +133,17 @@ class ClientMixin(ABC):
     tags: List[Tag]
     evals: List["TraceEval"]
     trace_id: str
-    result: Optional[str]
+    output: Optional[str]
     integrations: List[Integration]
 
-    def annotate(self, key: str, value: str, metadata: Optional[Dict[str, Any]] = None):
+    def tag(
+        self, key: str, value: str, metadata: Optional[Dict[str, Any]] = None, tag_type: Optional[str] = "annotation"
+    ):
         self.tags.append(
             Tag(
                 target_type="trace",
                 target_id=self.trace_id,
-                tag_type="annotation",
+                tag_type=tag_type,
                 key=key,
                 value=value,
                 metadata=metadata or {},

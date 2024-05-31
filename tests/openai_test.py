@@ -1,7 +1,6 @@
 from typing import Dict
 
 import pytest
-from openai import NotFoundError
 
 from tests.conftest import get_queued_objects
 from tests.testing_functions import (
@@ -139,27 +138,28 @@ async def test_chat_completion_async_streaming():
 
 def test_chat_completion_error():
     """Tests when a call to OpenAI fails (rate limit, service unavailable, etc)"""
-    with pytest.raises(NotFoundError):
-        openai_chat_error()
+    error_response = openai_chat_error()
+
+    assert "404" in error_response
 
     queued_requests = get_queued_objects()
-    assert len(queued_requests) == 2
+    assert len(queued_requests) == 3
     traces_request = queued_requests[0]
     assert traces_request.get("endpoint") == "traces"
     data = traces_request.get("data")
-    assert "Traceback" in data.get("error")
+    assert "404" in data.get("error")
 
 
 def test_template_sync():
-    template_name = "Question & Answer"
-    use_template(template_name=template_name)
+    template = "Answer this question in the form of a limerick: {question}"
+    use_template(template=template)
 
     queued_requests = get_queued_objects()
     assert len(queued_requests) == 2
     completions_request = queued_requests[0]
     data = completions_request.get("data")
 
-    assert data.get("template") == template_name
+    assert data.get("template") == template
     assert data.get("name") == "use_template completion"
     basic_completion_asserts(data)
 
@@ -170,20 +170,20 @@ def test_template_sync():
 
 @pytest.mark.asyncio
 async def test_template_async():
-    template_name = "Question & Answer"
-    await use_template_async(template_name=template_name)
+    template = "Answer this question in the form of a limerick: {question}"
+    await use_template_async(template=template)
 
     queued_requests = get_queued_objects()
     assert len(queued_requests) == 2
     completions_request = queued_requests[0]
     data = completions_request.get("data")
 
-    assert data.get("template") == template_name
-    assert data.get("name") == "use_template_async completion"
+    assert data.get("template") == template
+    assert data.get("name") == "use_template async completion"
     basic_completion_asserts(data)
 
     trace_data = data.get("trace")
-    assert trace_data.get("name") == "use_template_async"
+    assert trace_data.get("name") == "use_template async"
     basic_trace_asserts(trace_data)
 
 
@@ -212,13 +212,16 @@ def test_chat_tools():
 
     queued_requests = get_queued_objects()
     assert len(queued_requests) == 4
-    completions_request = queued_requests[0]
+    completions_request = queued_requests[-2]
     assert completions_request.get("endpoint") == "completions"
     data = completions_request.get("data")
     basic_completion_asserts(data)
 
     assert data.get("name") == "openai_chat_tools completion"
-    assert len(data.get("tool_results")) == 1
+
+    tool_results = data.get("tool_results")
+    assert len(tool_results) == 1
+
     choices = data.get("choices")
     tool_call = choices[0].get("message").get("tool_calls")[0]
     assert tool_call.get("function").get("name") == "say"

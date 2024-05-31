@@ -81,7 +81,7 @@ class TraceEval(BaseModel):
 
     def not_includes(self, expected: str, actual: Optional[str] = None) -> bool:
         if not actual:
-            actual = self.target.result or ""
+            actual = self.target.output or ""
 
         result = actual not in expected
         self.score = 1 if result else 0
@@ -89,7 +89,7 @@ class TraceEval(BaseModel):
         return result
 
     def includes(self, expected: str, actual: Optional[str] = None) -> bool:
-        result = expected in (actual or self.target.result or "")
+        result = expected in (actual or self.target.output or "")
         self.score = 1 if result else 0
         self.target.submit_to_baserun()
         return result

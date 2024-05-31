@@ -127,7 +127,7 @@ class WrappedSyncStream(WrappedStreamBase, Stream[ChatCompletionChunk]):
     def __stream__(self) -> Iterator[ChatCompletionChunk]:
         stream = super().__stream__()
         for item in stream:
-            # TODO? Support n > 1
+            # Assemble deltas here instead of in api
             self.captured_choices.append(item.choices[0])
             self.id = item.id
             yield item
@@ -333,7 +333,7 @@ class WrappedOpenAIBaseClient(ClientMixin):
         self.evals: List[TraceEval] = []
         self.client = client
         self.trace_id = trace_id or str(uuid4())
-        self._result = None
+        self._output = None
         self.error: Union[str, None] = None
         self.user = user
         self.session = session
@@ -352,12 +352,12 @@ class WrappedOpenAIBaseClient(ClientMixin):
             pass
 
     @property
-    def result(self):
-        return self._result
+    def output(self):
+        return self._output
 
-    @result.setter
-    def result(self, value):
-        self._result = value
+    @output.setter
+    def output(self, value):
+        self._output = value
         self.submit_to_baserun()
 
     def submit_to_baserun(self):
