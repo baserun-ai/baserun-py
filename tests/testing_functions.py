@@ -342,6 +342,18 @@ def use_input_variables():
     return completion.choices[0].message.content
 
 
+def langchain_unwrapped_openai(prompt="What is the capital of the US?") -> str:
+    """Requires Langchain, install using `pip install -qU langchain-openai`"""
+    from langchain_core.messages import HumanMessage
+    from langchain_openai import ChatOpenAI
+
+    from baserun.integrations.langchain import BaserunCallbackManager
+
+    model = ChatOpenAI(model="gpt-4o", callback_manager=BaserunCallbackManager())
+    result = model.invoke([HumanMessage(content=prompt)])
+    return result.content
+
+
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):
     function_to_call = functions.get(function_name)
     if function_to_call is None:

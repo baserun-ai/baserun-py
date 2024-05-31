@@ -203,7 +203,7 @@ class ApiClient:
             "request_id": self.client.request_ids.get(completion.id),
         }
         logger.debug(f"Submitting completion:\n{json.dumps(data, indent=2)}")
-        self._post("completions", data)
+        post("completions", data)
 
     def submit_stream(self, stream: Union["WrappedAsyncStream", "WrappedSyncStream"]):
         if not stream.id:
@@ -258,16 +258,13 @@ class ApiClient:
             "trace": self._trace_data(),
         }
         logger.debug(f"Submitting streamed completion:\n{json.dumps(data, indent=2)}")
-        self._post("completions", data)
+        post("completions", data)
 
     def submit_trace(self):
         data = self._trace_data()
 
         logger.debug(f"Submitting trace:\n{json.dumps(data, indent=2)}")
-        self._post("traces", data)
-
-    def _post(self, endpoint: str, data: Dict[str, Any]):
-        exporter_queue.put({"endpoint": endpoint, "data": data})
+        post("traces", data)
 
     def _trace_data(self) -> Dict[str, Any]:
         return {
@@ -284,3 +281,7 @@ class ApiClient:
             "end_user_session_identifier": self.client.session,
             "metadata": self.client.metadata,
         }
+
+
+def post(endpoint: str, data: Dict[str, Any]):
+    exporter_queue.put({"endpoint": endpoint, "data": data})
