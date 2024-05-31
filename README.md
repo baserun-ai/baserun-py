@@ -13,7 +13,7 @@
 ## 1. Install Baserun
 
 ```bash
-pip install baserun==1.0.0b7
+pip install baserun==1.0.0b8
 ```
 
 ## 2. Set the Baserun API key
@@ -126,7 +126,7 @@ You can add tags either to the traced OpenAI object or to the completion. There 
 - `log`: Any arbitrary logs you want to attach to a trace or completion
 - `feedback`: Any score-based feedback given from users (e.g. thumbs up/down, star rating)
 - `variable`: Any variables used, e.g. while rendering a template
-- `annotate`: Any arbitrary attributes you want to attach to a trace or completion
+- `tag`: Any arbitrary attributes you want to attach to a trace or completion
 
 Each tag type has functions on traced OpenAI objects and completions. Each tag function can accept a `metadata` parameter which is an arbitrary dictionary with any values you might want to capture.
 

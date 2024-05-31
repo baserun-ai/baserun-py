@@ -1,5 +1,6 @@
 import os
 from queue import Empty
+from time import sleep
 
 import openai
 import pytest
@@ -28,9 +29,11 @@ def pytest_runtest_teardown(item, nextitem):
 
 def get_queued_objects():
     queued_objects = []
+    sleep(0.1)
     while not exporter_queue.empty():
         try:
             queued_objects.append(exporter_queue.get_nowait())
         except Empty:
             break
+
     return queued_objects

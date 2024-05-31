@@ -1,86 +1,111 @@
-from typing import Iterable, Sequence
-from uuid import uuid4
+import json
+from typing import Dict, Iterable
 
+import anthropic
 import pytest
 from anthropic import Anthropic, AsyncAnthropic, MessageStream
-from anthropic.types import Message as AnthropicMessage
 from anthropic.types import MessageParam
 
-import baserun
-from baserun.helpers import BaserunProvider
-from baserun.v1.baserun_pb2 import Message, SubmitInputVariableRequest
-from tests.conftest import get_mock_objects
+from baserun import init
+from tests.conftest import get_queued_objects
 
 
-# asserts in mock_services makes it so that we need a trace
-@baserun.trace
+def basic_completion_asserts(data: Dict):
+    assert len(data.get("completion_id")) == 36
+    assert data.get("id").startswith("msg_")
+
+    choices = data.get("choices")
+    assert len(choices) == 1
+
+    usage = data.get("usage")
+    assert usage.get("completion_tokens") > 0
+    assert usage.get("prompt_tokens") >= 11
+    assert usage.get("total_tokens") > 12
+
+
+def basic_trace_asserts(trace_data: Dict):
+    assert len(trace_data.get("id")) == 36
+    assert trace_data.get("environment") == "production"
+    assert trace_data.get("start_timestamp") is not None
+    assert trace_data.get("end_timestamp") is None
+
+
 def create(
     messages: Iterable[MessageParam],
     max_tokens: int = 50,
-    model: str = "claude-3-sonnet-20240229",
+    model: str = "claude-3-haiku-20240307",
     **kwargs,
 ):
-    anthropic = Anthropic()
-    return anthropic.messages.create(max_tokens=max_tokens, messages=messages, model=model, **kwargs)
+    anthropic = init(Anthropic(), name="anthropic sync")
+    return anthropic.messages.create(
+        max_tokens=max_tokens, messages=messages, model=model, name="anthropic completion", **kwargs
+    )
 
 
-@baserun.trace
 async def acreate(
     messages: Iterable[MessageParam],
     max_tokens: int = 50,
-    model: str = "claude-3-sonnet-20240229",
+    model: str = "claude-3-haiku-20240307",
     **kwargs,
 ):
-    anthropic = AsyncAnthropic()
-    return await anthropic.messages.create(max_tokens=max_tokens, messages=messages, model=model, **kwargs)
+    anthropic = init(AsyncAnthropic(), name="anthropic async")
+    return await anthropic.messages.create(
+        max_tokens=max_tokens, messages=messages, model=model, name="anthropic async completion", **kwargs
+    )
 
 
-@baserun.trace
 def stream(
     messages: Iterable[MessageParam],
     max_tokens: int = 50,
-    model: str = "claude-3-sonnet-20240229",
+    model: str = "claude-3-haiku-20240307",
     **kwargs,
 ):
-    anthropic = Anthropic()
-    return anthropic.messages.stream(max_tokens=max_tokens, messages=messages, model=model, **kwargs)
+    anthropic = init(Anthropic(), name="anthropic sync")
+    return anthropic.messages.stream(
+        max_tokens=max_tokens, messages=messages, model=model, name="anthropic stream", **kwargs
+    )
 
 
-@baserun.trace
 def astream(
     messages: Iterable[MessageParam],
     max_tokens: int = 50,
-    model: str = "claude-3-sonnet-20240229",
+    model: str = "claude-3-haiku-20240307",
     **kwargs,
 ):
-    anthropic = AsyncAnthropic()
-    return anthropic.messages.stream(max_tokens=max_tokens, messages=messages, model=model, **kwargs)
+    anthropic = init(AsyncAnthropic(), name="anthropic async")
+    return anthropic.messages.stream(
+        max_tokens=max_tokens, messages=messages, model=model, name="anthropic async stream", **kwargs
+    )
 
 
-def assert_completions_match_message(completions: Sequence[Message], message: AnthropicMessage):
-    assert len(completions) == 1
-    text = "".join(x.text for x in message.content if x.type == "text")
-    assert completions[0].content == text
-    assert completions[0].finish_reason == message.stop_reason
-    assert completions[0].role == message.role
-
-
-def test_claude_basic(mock_services):
+def test_claude_basic():
     response = create([{"role": "user", "content": "tell me a story"}])
+    content = response.content[0].text
+    assert len(content) > 0
 
-    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+    queued_requests = get_queued_objects()
+    completions_request = queued_requests[0]
+    assert completions_request.get("endpoint") == "completions"
+    data = completions_request.get("data")
 
-    assert span.vendor == BaserunProvider.ANTHROPIC
-    assert span.model == "claude-3-sonnet-20240229"
-    assert span.stream is False
-    assert span.request_type == "chat"
-    assert len(span.prompt_messages) == 1
-    assert span.prompt_messages[0].content == "tell me a story"
-    assert span.prompt_messages[0].role == "user"
-    assert_completions_match_message(span.completions, response)
+    assert data.get("name") == "anthropic completion"
+    assert len(data.get("tags")) == 0
+    assert len(data.get("evals")) == 0
+    assert len(data.get("tool_results")) == 0
+    assert len(data.get("input_messages")) == 1
+
+    choices = data.get("choices")
+    assert content == choices[0].get("message").get("content")
+    basic_completion_asserts(data)
+
+    trace_data = data.get("trace")
+    assert trace_data.get("name") == "anthropic sync"
+    assert len(trace_data.get("tags")) == 0
+    assert len(trace_data.get("evals")) == 0
+    basic_trace_asserts(trace_data)
 
 
-def test_claude_multiple_messages(mock_services):
+def test_claude_multiple_messages():
     response = create(
         [
             {"role": "user", "content": "hi"},
@@ -89,23 +114,32 @@ def test_claude_multiple_messages(mock_services):
         ]
     )
 
-    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+    content = response.content[0].text
+    assert len(content) > 0
 
-    assert span.vendor == BaserunProvider.ANTHROPIC
-    assert span.model == "claude-3-sonnet-20240229"
-    assert span.stream is False
-    assert span.request_type == "chat"
-    assert len(span.prompt_messages) == 3
-    assert span.prompt_messages[0].content == "hi"
-    assert span.prompt_messages[0].role == "user"
-    assert span.prompt_messages[1].content == "hello"
-    assert span.prompt_messages[1].role == "assistant"
-    assert span.prompt_messages[2].content == "how do you do?"
-    assert span.prompt_messages[2].role == "user"
-    assert_completions_match_message(span.completions, response)
+    queued_requests = get_queued_objects()
+    completions_request = queued_requests[0]
+    assert completions_request.get("endpoint") == "completions"
+    data = completions_request.get("data")
+
+    assert data.get("name") == "anthropic completion"
+    assert len(data.get("tags")) == 0
+    assert len(data.get("evals")) == 0
+    assert len(data.get("tool_results")) == 0
+    assert len(data.get("input_messages")) == 3
+
+    choices = data.get("choices")
+    assert content == choices[0].get("message").get("content")
+    basic_completion_asserts(data)
+
+    trace_data = data.get("trace")
+    assert trace_data.get("name") == "anthropic sync"
+    assert len(trace_data.get("tags")) == 0
+    assert len(trace_data.get("evals")) == 0
+    basic_trace_asserts(trace_data)
 
 
-def test_claude_with_config(mock_services):
+def test_claude_with_config():
     config = {
         "max_tokens": 123,
         "model": "claude-3-opus-20240229",
@@ -116,24 +150,17 @@ def test_claude_with_config(mock_services):
     }
     response = create([{"role": "user", "content": "tell me a story"}], **config)
 
-    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+    queued_requests = get_queued_objects()
+    assert len(queued_requests) == 1
+    completions_request = queued_requests[0]
 
-    assert span.vendor == BaserunProvider.ANTHROPIC
-    assert span.model == config["model"]
-    assert span.stream is False
-    assert span.request_type == "chat"
-    assert len(span.prompt_messages) == 1
-    assert span.prompt_messages[0].content == "tell me a story"
-    assert span.prompt_messages[0].role == "user"
-    assert_completions_match_message(span.completions, response)
-    assert span.stop == config["stop_sequences"]
-    assert span.max_tokens == config["max_tokens"]
-    assert span.temperature == config["temperature"]
-    assert span.top_p == config["top_p"]
-    assert span.top_k == config["top_k"]
+    data = completions_request.get("data")
+    config_params = data.get("config_params")
+    assert config == config_params
+    assert response.config_params == config_params
 
 
-def test_claude_multimodal(mock_services):
+def test_claude_multimodal():
     image_block = {
         "type": "image",
         "source": {
@@ -143,165 +170,203 @@ def test_claude_multimodal(mock_services):
         },
     }
 
-    response = create(
-        [{"role": "user", "content": [image_block, {"type": "text", "text": "what does this picture depict?"}]}]
-    )
+    create([{"role": "user", "content": [image_block, {"type": "text", "text": "what does this picture depict?"}]}])
 
-    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+    queued_requests = get_queued_objects()
+    assert len(queued_requests) == 1
+    completions_request = queued_requests[0]
+    assert completions_request.get("endpoint") == "completions"
+    data = completions_request.get("data")
 
-    assert span.vendor == BaserunProvider.ANTHROPIC
-    assert span.model == "claude-3-sonnet-20240229"
-    assert span.stream is False
-    assert span.request_type == "chat"
-    assert len(span.prompt_messages) == 1
-    assert span.prompt_messages[0].content == "what does this picture depict?"
-    assert span.prompt_messages[0].role == "user"
-    assert_completions_match_message(span.completions, response)
+    assert data.get("name") == "anthropic completion"
+    assert len(data.get("tags")) == 0
+    assert len(data.get("evals")) == 0
+    assert len(data.get("tool_results")) == 0
+    assert len(data.get("input_messages")) == 1
+
+    image_content = json.loads(data.get("input_messages")[0].get("content"))[0]
+    assert image_content == image_block
 
 
-def test_claude_create_streaming(mock_services):
+def test_claude_create_sync_streaming_arg():
     response = create([{"role": "user", "content": "tell me a story"}], stream=True)
+    content = ""
 
-    for _ in response:
-        ...
+    for item in response:
+        if isinstance(item, anthropic.types.ContentBlockDeltaEvent):
+            content += item.delta.text
 
-    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+    queued_requests = get_queued_objects()
+    completions_request = queued_requests[0]
+    assert completions_request.get("endpoint") == "completions"
+    data = completions_request.get("data")
 
-    assert span.vendor == BaserunProvider.ANTHROPIC
-    assert span.model == "claude-3-sonnet-20240229"
-    assert span.stream is True
-    assert span.request_type == "chat"
-    assert len(span.prompt_messages) == 1
-    assert span.prompt_messages[0].content == "tell me a story"
-    assert span.prompt_messages[0].role == "user"
-    assert len(span.completions) == 1
+    assert data.get("name") == "anthropic completion"
+    assert len(data.get("tags")) == 0
+    assert len(data.get("evals")) == 0
+    assert len(data.get("tool_results")) == 0
+    assert len(data.get("input_messages")) == 1
 
+    choices = data.get("choices")
+    assert content == choices[0].get("content")[0].get("text")
+    basic_completion_asserts(data)
 
-def test_claude_stream(mock_services):
-    response = stream([{"role": "user", "content": "tell me a story"}])
-
-    with response as s:
-        msg = s.get_final_message()
-
-    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
-
-    assert span.vendor == BaserunProvider.ANTHROPIC
-    assert span.model == "claude-3-sonnet-20240229"
-    assert span.stream is True
-    assert span.request_type == "chat"
-    assert len(span.prompt_messages) == 1
-    assert span.prompt_messages[0].content == "tell me a story"
-    assert span.prompt_messages[0].role == "user"
-    assert_completions_match_message(span.completions, msg)
+    trace_data = data.get("trace")
+    assert trace_data.get("name") == "anthropic sync"
+    assert len(trace_data.get("tags")) == 0
+    assert len(trace_data.get("evals")) == 0
+    basic_trace_asserts(trace_data)
 
 
-def test_claude_stream_custom_event_handler(mock_services):
+def test_claude_stream_sync_method():
+    content = ""
+
+    with stream([{"role": "user", "content": "tell me a story"}]) as response:
+        for item in response:
+            if isinstance(item, anthropic.types.ContentBlockDeltaEvent):
+                content += item.delta.text
+
+    queued_requests = get_queued_objects()
+    completions_request = queued_requests[0]
+    assert completions_request.get("endpoint") == "completions"
+    data = completions_request.get("data")
+
+    assert data.get("name") == "anthropic stream"
+    assert len(data.get("tags")) == 0
+    assert len(data.get("evals")) == 0
+    assert len(data.get("tool_results")) == 0
+    assert len(data.get("input_messages")) == 1
+
+    choices = data.get("choices")
+    assert content == choices[0].get("content")[0].get("text")
+    basic_completion_asserts(data)
+
+    trace_data = data.get("trace")
+    assert trace_data.get("name") == "anthropic sync"
+    assert len(trace_data.get("tags")) == 0
+    assert len(trace_data.get("evals")) == 0
+    basic_trace_asserts(trace_data)
+
+
+def test_claude_stream_custom_event_handler():
     class AAA(MessageStream):
         def on_end(self) -> None:
-            print("hehe")
+            print("ended")
 
-    response = stream([{"role": "user", "content": "tell me a story"}], event_handler=AAA)
+    content = ""
 
-    with response as s:
-        msg = s.get_final_message()
+    with stream([{"role": "user", "content": "tell me a story"}], event_handler=AAA) as response:
+        for item in response:
+            if isinstance(item, anthropic.types.ContentBlockDeltaEvent):
+                content += item.delta.text
 
-    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+    queued_requests = get_queued_objects()
+    completions_request = queued_requests[0]
+    assert completions_request.get("endpoint") == "completions"
+    data = completions_request.get("data")
 
-    assert span.vendor == BaserunProvider.ANTHROPIC
-    assert span.model == "claude-3-sonnet-20240229"
-    assert span.stream is True
-    assert span.request_type == "chat"
-    assert len(span.prompt_messages) == 1
-    assert span.prompt_messages[0].content == "tell me a story"
-    assert span.prompt_messages[0].role == "user"
-    assert_completions_match_message(span.completions, msg)
+    assert data.get("name") == "anthropic stream"
+    assert len(data.get("tags")) == 0
+    assert len(data.get("evals")) == 0
+    assert len(data.get("tool_results")) == 0
+    assert len(data.get("input_messages")) == 1
+
+    choices = data.get("choices")
+    assert content == choices[0].get("content")[0].get("text")
+    basic_completion_asserts(data)
+
+    trace_data = data.get("trace")
+    assert trace_data.get("name") == "anthropic sync"
+    assert len(trace_data.get("tags")) == 0
+    assert len(trace_data.get("evals")) == 0
+    basic_trace_asserts(trace_data)
 
 
 @pytest.mark.asyncio
-async def test_claude_async(mock_services):
+async def test_claude_create_async():
     response = await acreate([{"role": "user", "content": "tell me a story"}])
+    content = response.content[0].text
+    assert len(content) > 0
 
-    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+    queued_requests = get_queued_objects()
+    completions_request = queued_requests[0]
+    assert completions_request.get("endpoint") == "completions"
+    data = completions_request.get("data")
 
-    assert span.vendor == BaserunProvider.ANTHROPIC
-    assert span.model == "claude-3-sonnet-20240229"
-    assert span.stream is False
-    assert span.request_type == "chat"
-    assert len(span.prompt_messages) == 1
-    assert span.prompt_messages[0].content == "tell me a story"
-    assert span.prompt_messages[0].role == "user"
-    assert_completions_match_message(span.completions, response)
+    assert data.get("name") == "anthropic async completion"
+    assert len(data.get("tags")) == 0
+    assert len(data.get("evals")) == 0
+    assert len(data.get("tool_results")) == 0
+    assert len(data.get("input_messages")) == 1
+
+    choices = data.get("choices")
+    assert content == choices[0].get("message").get("content")
+    basic_completion_asserts(data)
+
+    trace_data = data.get("trace")
+    assert trace_data.get("name") == "anthropic async"
+    assert len(trace_data.get("tags")) == 0
+    assert len(trace_data.get("evals")) == 0
+    basic_trace_asserts(trace_data)
 
 
 @pytest.mark.asyncio
-async def test_claude_create_streaming_async(mock_services):
+async def test_claude_create_async_streaming():
     response = await acreate([{"role": "user", "content": "tell me a story"}], stream=True)
+    content = ""
 
-    async for _ in response:
-        ...
+    async for item in response:
+        if isinstance(item, anthropic.types.ContentBlockDeltaEvent):
+            content += item.delta.text
 
-    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+    queued_requests = get_queued_objects()
+    completions_request = queued_requests[0]
+    assert completions_request.get("endpoint") == "completions"
+    data = completions_request.get("data")
 
-    assert span.vendor == BaserunProvider.ANTHROPIC
-    assert span.model == "claude-3-sonnet-20240229"
-    assert span.stream is True
-    assert span.request_type == "chat"
-    assert len(span.prompt_messages) == 1
-    assert span.prompt_messages[0].content == "tell me a story"
-    assert span.prompt_messages[0].role == "user"
-    assert len(span.completions) == 1
+    assert data.get("name") == "anthropic async completion"
+    assert len(data.get("tags")) == 0
+    assert len(data.get("evals")) == 0
+    assert len(data.get("tool_results")) == 0
+    assert len(data.get("input_messages")) == 1
+
+    choices = data.get("choices")
+    assert content == choices[0].get("content")[0].get("text")
+    basic_completion_asserts(data)
+
+    trace_data = data.get("trace")
+    assert trace_data.get("name") == "anthropic async"
+    assert len(trace_data.get("tags")) == 0
+    assert len(trace_data.get("evals")) == 0
+    basic_trace_asserts(trace_data)
 
 
 @pytest.mark.asyncio
-async def test_claude_stream_async(mock_services):
-    response = astream([{"role": "user", "content": "tell me a story"}])
+async def test_claude_async_stream():
+    content = ""
 
-    async with response as s:
-        msg = await s.get_final_message()
+    async with astream([{"role": "user", "content": "tell me a story"}]) as response:
+        async for item in response:
+            if isinstance(item, anthropic.types.ContentBlockDeltaEvent):
+                content += item.delta.text
 
-    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
+    queued_requests = get_queued_objects()
+    completions_request = queued_requests[0]
+    assert completions_request.get("endpoint") == "completions"
+    data = completions_request.get("data")
 
-    assert span.vendor == BaserunProvider.ANTHROPIC
-    assert span.model == "claude-3-sonnet-20240229"
-    assert span.stream is True
-    assert span.request_type == "chat"
-    assert len(span.prompt_messages) == 1
-    assert span.prompt_messages[0].content == "tell me a story"
-    assert span.prompt_messages[0].role == "user"
-    assert_completions_match_message(span.completions, msg)
+    assert data.get("name") == "anthropic async stream"
+    assert len(data.get("tags")) == 0
+    assert len(data.get("evals")) == 0
+    assert len(data.get("tool_results")) == 0
+    assert len(data.get("input_messages")) == 1
 
+    choices = data.get("choices")
+    assert content == choices[0].get("content")[0].get("text")
+    basic_completion_asserts(data)
 
-def test_claude_template(mock_services):
-    template_id = str(uuid4())
-    template_name = str(uuid4())
-    mock_services["submission_service"].SubmitTemplateVersion.return_value.template_version.template.id = template_id
-
-    template = baserun.register_template(
-        [{"role": "user", "content": "answer this question: {question}"}], template_name=template_name
-    )
-    prompt = baserun.format_prompt(
-        template_name=template_name,
-        template_messages=[{"role": "user", "content": "answer this question: {question}"}],
-        parameters={"question": "how to copy output of a command in a terminal on macos?"},
-    )
-    response = create(prompt)
-
-    mock_submit_variable = mock_services["submission_service"].SubmitInputVariable.future
-    mock_submit_variable.assert_called()
-    assert len(mock_submit_variable.call_args_list) == 1
-    submit_variable_request: SubmitInputVariableRequest = mock_submit_variable.call_args_list[0].args[0]
-    assert submit_variable_request.input_variable.key == "question"
-    assert submit_variable_request.input_variable.value == "how to copy output of a command in a terminal on macos?"
-    assert submit_variable_request.input_variable.template_id == template.id
-
-    started_run, span, submitted_run, ended_run = get_mock_objects(mock_services)
-
-    assert span.vendor == BaserunProvider.ANTHROPIC
-    assert span.model == "claude-3-sonnet-20240229"
-    assert span.stream is False
-    assert span.request_type == "chat"
-    assert len(span.prompt_messages) == 1
-    assert span.prompt_messages[0].content == prompt[0]["content"]
-    assert span.prompt_messages[0].role == "user"
-    assert_completions_match_message(span.completions, response)
-    assert span.template_id == template.id
+    trace_data = data.get("trace")
+    assert trace_data.get("name") == "anthropic async"
+    assert len(trace_data.get("tags")) == 0
+    assert len(trace_data.get("evals")) == 0
+    basic_trace_asserts(trace_data)
