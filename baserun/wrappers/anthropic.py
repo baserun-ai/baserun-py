@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import datetime, timezone
 from types import TracebackType
@@ -15,6 +16,14 @@ from baserun.mixins import ClientMixin, CompletionMixin
 from baserun.models.evals import CompletionEval, TraceEval
 from baserun.models.tags import Tag
 from baserun.utils import copy_type_hints
+from baserun.wrappers.generic import (
+    GenericChoice,
+    GenericClient,
+    GenericCompletion,
+    GenericCompletionMessage,
+    GenericInputMessage,
+    GenericUsage,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +47,50 @@ class WrappedMessage(anthropic.types.Message, CompletionMixin):
     tags: List[Tag] = Field(default_factory=list)
     evals: List[CompletionEval] = Field(default_factory=list)
 
+    def genericize(self):
+        choices = []
+        for content in self.content:
+            message = GenericCompletionMessage(role="assistant", content=content.text)
+            choices.append(GenericChoice(message=message))
+
+        input_messages = []
+        for message in self.input_messages:
+            content = message.get("content", None)
+            generic_content = content
+            if isinstance(content, Iterator):
+                generic_content = json.dumps([c for c in content])
+
+            input_messages.append(GenericInputMessage(role=message.get("role"), content=generic_content))
+
+        usage = GenericUsage(
+            completion_tokens=self.usage.output_tokens,
+            prompt_tokens=self.usage.input_tokens,
+            total_tokens=self.usage.output_tokens + self.usage.input_tokens,
+        )
+
+        return GenericCompletion(
+            id=self.id,
+            name=self.name,
+            error=self.error,
+            trace_id=self.trace_id,
+            completion_id=self.completion_id,
+            template=self.template,
+            start_timestamp=self.start_timestamp,
+            first_token_timestamp=self.first_token_timestamp,
+            end_timestamp=self.end_timestamp,
+            client=self.client.genericize(),
+            choices=choices,
+            usage=usage,
+            request_id=self.client.request_ids.get(self.id),
+            config_params=self.config_params,
+            tool_results=self.tool_results,
+            tags=self.tags,
+            evals=self.evals,
+            input_messages=input_messages,
+        )
+
     def submit_to_baserun(self):
-        self.client.api_client.submit_completion(self)
+        self.client.api_client.submit_completion(self.genericize())
 
 
 class WrappedStreamBase(CompletionMixin, BaseModel):
@@ -67,10 +118,49 @@ class WrappedStreamBase(CompletionMixin, BaseModel):
         CompletionMixin.__init__(self)
         BaseModel.__init__(self, **kwargs)
 
+    def genericize(self):
+        usage = GenericUsage(
+            completion_tokens=0,
+            prompt_tokens=0,
+            total_tokens=0,
+        )
+
+        choices = []
+        for message in self.captured_messages:
+            usage.completion_tokens += message.usage.output_tokens
+            usage.prompt_tokens += message.usage.input_tokens
+            for content in message.content:
+                choices.append(GenericChoice(message=GenericCompletionMessage(content=content.text, role="assistant")))
+
+        usage.total_tokens = usage.completion_tokens + usage.prompt_tokens
+
+        return GenericCompletion(
+            id=self.id,
+            name=self.name,
+            error=self.error,
+            trace_id=self.trace_id,
+            completion_id=self.completion_id,
+            template=self.template,
+            start_timestamp=self.start_timestamp,
+            first_token_timestamp=self.first_token_timestamp,
+            end_timestamp=self.end_timestamp,
+            client=self._client.genericize(),
+            choices=choices,
+            usage=usage,
+            request_id=self.client.request_ids.get(self.id),
+            tool_results=self.tool_results,
+            tags=self.tags,
+            evals=self.evals,
+            input_messages=self.input_messages,
+        )
+
     def submit_to_baserun(self):
+        if not self.id:
+            return
+
         if not self.end_timestamp:
             self.end_timestamp = datetime.now(timezone.utc)
-        self._client.api_client.submit_stream(self)
+        self.client.api_client.submit_stream(self.genericize())
 
 
 class WrappedAsyncStream(WrappedStreamBase, anthropic.AsyncStream, Generic[T]):
@@ -434,7 +524,7 @@ class WrappedAnthropicBaseClient(ClientMixin):
         self.session = session
         self.start_timestamp = datetime.now(timezone.utc)
         self.end_timestamp: Union[datetime, None] = None
-        self.api_client = api_client or ApiClient(self, api_key=api_key)
+        self.api_client = api_client or ApiClient(api_key=api_key)
         self.metadata = metadata or {}
         self.request_ids: Dict[str, str] = {}
         self.integrations = []
@@ -455,9 +545,25 @@ class WrappedAnthropicBaseClient(ClientMixin):
         self._output = value
         self.submit_to_baserun()
 
+    def genericize(self):
+        return GenericClient(
+            name=self.name,
+            user=self.user,
+            session=self.session,
+            trace_id=self.trace_id,
+            start_timestamp=self.start_timestamp,
+            end_timestamp=self.end_timestamp,
+            tags=self.tags,
+            evals=self.evals,
+            metadata=self.metadata,
+            api_client=self.api_client,
+            integrations=[],
+            error=self.error,
+        )
+
     def submit_to_baserun(self):
         if self.api_client:
-            self.api_client.submit_trace()
+            self.api_client.submit_trace(self.genericize())
 
 
 class WrappedSyncAnthropicClient(WrappedAnthropicBaseClient, anthropic.Anthropic):

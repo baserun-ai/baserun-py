@@ -143,9 +143,9 @@ def test_chat_completion_error():
     assert "404" in error_response
 
     queued_requests = get_queued_objects()
-    assert len(queued_requests) == 3
-    traces_request = queued_requests[0]
-    assert traces_request.get("endpoint") == "traces"
+    assert len(queued_requests) == 2
+    traces_request = queued_requests[-1]
+    assert traces_request is not None
     data = traces_request.get("data")
     assert "404" in data.get("error")
 

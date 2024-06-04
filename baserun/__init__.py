@@ -1,15 +1,15 @@
-from typing import TYPE_CHECKING, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Optional, Type, TypeVar, Union
 
 from baserun.mixins import ClientMixin
 
 if TYPE_CHECKING:
     try:
-        import openai
+        from baserun.wrappers import openai
     except ImportError:
         pass
 
     try:
-        import anthropic
+        from baserun.wrappers import anthropic
     except ImportError:
         pass
 
@@ -46,10 +46,30 @@ class WrappedAsyncOpenAIClient(ClientMixin):  # type: ignore
     pass
 
 
-OpenAI: Union["openai.OpenAI", None] = None
-AsyncOpenAI: Union["openai.AsyncOpenAI", None] = None
-Anthropic: Union["anthropic.Anthropic", None] = None
-AsyncAnthropic: Union["anthropic.AsyncAnthropic", None] = None
+OpenAI: Union[Type["openai.OpenAI"], None] = None
+AsyncOpenAI: Union[Type["openai.AsyncOpenAI"], None] = None
+Anthropic: Union[Type["anthropic.Anthropic"], None] = None
+AsyncAnthropic: Union[Type["anthropic.AsyncAnthropic"], None] = None
+
+
+def setup_globals():
+    if is_openai_installed():
+        from baserun.wrappers.openai import AsyncOpenAI as WrappedAsyncOpenAI
+        from baserun.wrappers.openai import OpenAI as WrappedOpenAI
+
+        global OpenAI
+        global AsyncOpenAI
+        OpenAI = WrappedOpenAI
+
+    if is_anthropic_installed():
+        from baserun.wrappers.anthropic import Anthropic as WrappedAnthropic
+        from baserun.wrappers.anthropic import AsyncAnthropic as WrappedAsyncAnthropic
+
+        global Anthropic
+        global AsyncAnthropic
+        Anthropic = WrappedAnthropic
+        AsyncAnthropic = WrappedAsyncAnthropic
+        AsyncOpenAI = WrappedAsyncOpenAI
 
 
 def init(client: T, name: Optional[str] = None, api_key: Optional[str] = None, **kwargs) -> ClientMixin | T:
@@ -57,15 +77,10 @@ def init(client: T, name: Optional[str] = None, api_key: Optional[str] = None, *
         from openai import AsyncOpenAI as BaseAsyncOpenAI
         from openai import OpenAI as BaseOpenAI
 
-        from baserun.wrappers.openai import AsyncOpenAI as WrappedAsyncOpenAI
-        from baserun.wrappers.openai import OpenAI as WrappedOpenAI
         from baserun.wrappers.openai import (
             WrappedAsyncOpenAIClient,
             WrappedSyncOpenAIClient,
         )
-
-        OpenAI = WrappedOpenAI  # noqa: F841
-        AsyncOpenAI = WrappedAsyncOpenAI  # noqa: F841
 
         if isinstance(client, BaseAsyncOpenAI):
             return WrappedAsyncOpenAIClient(**kwargs, name=name, api_key=api_key, client=client)
@@ -83,12 +98,18 @@ def init(client: T, name: Optional[str] = None, api_key: Optional[str] = None, *
             WrappedSyncAnthropicClient,
         )
 
-        Anthropic = WrappedAnthropic  # noqa: F841
-        AsyncAnthropic = WrappedAsyncAnthropic  # noqa: F841
+        global Anthropic
+        global AsyncAnthropic
+        Anthropic = WrappedAnthropic
+        AsyncAnthropic = WrappedAsyncAnthropic
 
         if isinstance(client, BaseAnthropic):
             return WrappedSyncAnthropicClient(**kwargs, name=name, api_key=api_key, client=client)
         elif isinstance(client, BaseAsyncAnthropic):
             return WrappedAsyncAnthropicClient(**kwargs, name=name, api_key=api_key, client=client)
 
+    setup_globals()
     return client
+
+
+setup_globals()

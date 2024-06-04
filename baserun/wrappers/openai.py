@@ -22,7 +22,8 @@ from baserun.integrations.integration import Integration
 from baserun.mixins import ClientMixin, CompletionMixin
 from baserun.models.evals import CompletionEval, TraceEval
 from baserun.models.tags import Tag
-from baserun.utils import copy_type_hints
+from baserun.utils import copy_type_hints, count_prompt_tokens, deep_merge
+from baserun.wrappers.generic import GenericChoice, GenericClient, GenericCompletion, GenericUsage
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +45,38 @@ class WrappedChatCompletion(ChatCompletion, CompletionMixin):
     tags: List[Tag] = Field(default_factory=list)
     evals: List[CompletionEval] = Field(default_factory=list)
 
+    def genericize(self):
+        choices = [GenericChoice(**c.model_dump()) for c in self.choices]
+
+        usage = GenericUsage(
+            completion_tokens=self.usage.completion_tokens,
+            prompt_tokens=self.usage.prompt_tokens,
+            total_tokens=self.usage.total_tokens,
+        )
+
+        return GenericCompletion(
+            id=self.id,
+            name=self.name,
+            error=self.error,
+            trace_id=self.trace_id,
+            completion_id=self.completion_id,
+            template=self.template,
+            start_timestamp=self.start_timestamp,
+            first_token_timestamp=self.first_token_timestamp,
+            end_timestamp=self.end_timestamp,
+            client=self.client.genericize(),
+            choices=choices,
+            usage=usage,
+            request_id=self.client.request_ids.get(self.id),
+            config_params=self.config_params,
+            tool_results=self.tool_results,
+            tags=self.tags,
+            evals=self.evals,
+            input_messages=self.input_messages,
+        )
+
     def submit_to_baserun(self):
-        self.client.api_client.submit_completion(self)
+        self.client.api_client.submit_completion(self.genericize())
 
 
 class WrappedStreamBase(CompletionMixin, BaseModel):
@@ -93,10 +124,45 @@ class WrappedStreamBase(CompletionMixin, BaseModel):
             **kwargs,
         )
 
+    def genericize(self):
+        merged_choice = deep_merge([c.model_dump() for c in self.captured_choices])
+        merged_choice.pop("delta", None)
+        merged_delta = deep_merge([c.delta.model_dump() for c in self.captured_choices])
+        merged_choice["message"] = merged_delta or {"content": ""}
+
+        usage = GenericUsage(
+            completion_tokens=len(self.captured_choices) + 1,
+            prompt_tokens=count_prompt_tokens(self.input_messages),
+            total_tokens=count_prompt_tokens(self.input_messages) + len(self.captured_choices) + 1,
+        )
+
+        return GenericCompletion(
+            id=self.id,
+            name=self.name,
+            error=self.error,
+            trace_id=self.trace_id,
+            completion_id=self.completion_id,
+            template=self.template,
+            start_timestamp=self.start_timestamp,
+            first_token_timestamp=self.first_token_timestamp,
+            end_timestamp=self.end_timestamp,
+            client=self._client.genericize(),
+            choices=[merged_choice],
+            usage=usage,
+            request_id=self.client.request_ids.get(self.id),
+            tool_results=self.tool_results,
+            tags=self.tags,
+            evals=self.evals,
+            input_messages=self.input_messages,
+        )
+
     def submit_to_baserun(self):
+        if not self.id:
+            return
+
         if not self.end_timestamp:
             self.end_timestamp = datetime.now(timezone.utc)
-        self._client.api_client.submit_stream(self)
+        self.client.api_client.submit_stream(self.genericize())
 
 
 class WrappedAsyncStream(WrappedStreamBase, AsyncStream[ChatCompletionChunk]):
@@ -164,6 +230,7 @@ class WrappedCompletions(Completions):
 
             if isinstance(stream_or_completion, ChatCompletion):
                 wrapped = WrappedChatCompletion(
+                    **stream_or_completion.model_dump(),
                     client=self._client,
                     trace_id=self._client.trace_id,
                     name=name,
@@ -174,7 +241,6 @@ class WrappedCompletions(Completions):
                     config_params=kwargs,
                     completion_id=str(uuid4()),
                     input_messages=messages,
-                    **stream_or_completion.model_dump(),
                 )
 
             elif isinstance(stream_or_completion, Stream):
@@ -211,7 +277,6 @@ class WrappedCompletions(Completions):
                     "request_id": e.request_id,
                 }
             )
-            self._client.submit_to_baserun()
             completion_id = str(uuid4())
             wrapped = WrappedChatCompletion(
                 id=f"chatcompl-error-{completion_id}",
@@ -315,6 +380,7 @@ class WrappedOpenAIBaseClient(ClientMixin):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     chat: WrappedChat | WrappedAsyncChat
     integrations: List[Integration]
+    metadata: Dict[str, Any]
 
     def __init__(
         self,
@@ -339,10 +405,13 @@ class WrappedOpenAIBaseClient(ClientMixin):
         self.session = session
         self.start_timestamp = datetime.now(timezone.utc)
         self.end_timestamp: Union[datetime, None] = None
-        self.api_client = api_client or ApiClient(self, api_key=api_key)
         self.metadata = metadata or {}
         self.request_ids: Dict[str, str] = {}
         self.integrations = []
+
+        self.api_client = api_client
+        if not self.api_client:
+            self.api_client = ApiClient(api_key=api_key)
 
         try:
             from baserun.integrations.llamaindex import LLamaIndexInstrumentation
@@ -360,9 +429,25 @@ class WrappedOpenAIBaseClient(ClientMixin):
         self._output = value
         self.submit_to_baserun()
 
+    def genericize(self):
+        return GenericClient(
+            name=self.name,
+            user=self.user,
+            session=self.session,
+            trace_id=self.trace_id,
+            start_timestamp=self.start_timestamp,
+            end_timestamp=self.end_timestamp,
+            tags=self.tags,
+            evals=self.evals,
+            metadata=self.metadata,
+            api_client=self.api_client,
+            integrations=[],
+            error=self.error,
+        )
+
     def submit_to_baserun(self):
         if self.api_client:
-            self.api_client.submit_trace()
+            self.api_client.submit_trace(self.genericize())
 
 
 class WrappedSyncOpenAIClient(WrappedOpenAIBaseClient, BaseOpenAI):
@@ -377,10 +462,11 @@ class WrappedSyncOpenAIClient(WrappedOpenAIBaseClient, BaseOpenAI):
         session: Optional[str] = None,
         user: Optional[str] = None,
         trace_id: Optional[str] = None,
+        api_client: Optional[ApiClient] = None,
+        api_key: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         **kwargs,
     ):
-        api_client = kwargs.pop("api_client", None)
-        api_key = kwargs.pop("api_key", None)
         WrappedOpenAIBaseClient.__init__(
             self,
             client,
@@ -392,7 +478,10 @@ class WrappedSyncOpenAIClient(WrappedOpenAIBaseClient, BaseOpenAI):
             trace_id=trace_id,
             api_client=api_client,
             api_key=api_key,
+            metadata=metadata or {},
         )
+        self.metadata = self.metadata
+        self.name = self.name
         BaseOpenAI.__init__(self, *args, **kwargs)
         self.chat = WrappedChat(self)
 
@@ -431,10 +520,11 @@ class WrappedAsyncOpenAIClient(WrappedOpenAIBaseClient, BaseAsyncOpenAI):
         session: Optional[str] = None,
         user: Optional[str] = None,
         trace_id: Optional[str] = None,
+        api_client: Optional[ApiClient] = None,
+        api_key: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         **kwargs,
     ):
-        api_client = kwargs.pop("api_client", None)
-        api_key = kwargs.pop("api_key", None)
         WrappedOpenAIBaseClient.__init__(
             self,
             client,
@@ -446,6 +536,7 @@ class WrappedAsyncOpenAIClient(WrappedOpenAIBaseClient, BaseAsyncOpenAI):
             trace_id=trace_id,
             api_client=api_client,
             api_key=api_key,
+            metadata=metadata or {},
         )
         BaseAsyncOpenAI.__init__(self, *args, **kwargs)
         self.chat = WrappedAsyncChat(self)

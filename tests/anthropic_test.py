@@ -208,7 +208,8 @@ def test_claude_create_sync_streaming_arg():
     assert len(data.get("input_messages")) == 1
 
     choices = data.get("choices")
-    assert content == choices[0].get("content")[0].get("text")
+
+    assert content == choices[0].get("message").get("content")
     basic_completion_asserts(data)
 
     trace_data = data.get("trace")
@@ -238,7 +239,7 @@ def test_claude_stream_sync_method():
     assert len(data.get("input_messages")) == 1
 
     choices = data.get("choices")
-    assert content == choices[0].get("content")[0].get("text")
+    assert content == choices[0].get("message").get("content")
     basic_completion_asserts(data)
 
     trace_data = data.get("trace")
@@ -272,7 +273,7 @@ def test_claude_stream_custom_event_handler():
     assert len(data.get("input_messages")) == 1
 
     choices = data.get("choices")
-    assert content == choices[0].get("content")[0].get("text")
+    assert content == choices[0].get("message").get("content")
     basic_completion_asserts(data)
 
     trace_data = data.get("trace")
@@ -331,7 +332,7 @@ async def test_claude_create_async_streaming():
     assert len(data.get("input_messages")) == 1
 
     choices = data.get("choices")
-    assert content == choices[0].get("content")[0].get("text")
+    assert content == choices[0].get("message").get("content")
     basic_completion_asserts(data)
 
     trace_data = data.get("trace")
@@ -362,7 +363,7 @@ async def test_claude_async_stream():
     assert len(data.get("input_messages")) == 1
 
     choices = data.get("choices")
-    assert content == choices[0].get("content")[0].get("text")
+    assert content == choices[0].get("message").get("content")
     basic_completion_asserts(data)
 
     trace_data = data.get("trace")
