@@ -1,6 +1,7 @@
+import abc
 import json
 from abc import ABC
-from typing import Any, Dict, List, Optional, Type, overload
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, overload
 
 from openai.types.chat import ChatCompletionMessageToolCall
 
@@ -8,8 +9,17 @@ from baserun.integrations.integration import Integration
 from baserun.models.evals import CompletionEval, TraceEval
 from baserun.models.tags import Log, Tag, Transform, Variable
 
+if TYPE_CHECKING:
+    from baserun.wrappers.generic import GenericClient, GenericCompletion
+
 
 class CompletionMixin(ABC):
+    """
+    Provides logic that is common to all wrapped completion objects.
+    FYI the reason this isn't a pydantic model is each library's "Completion" type is super different, and
+    if you have a "base" completion type you will get hella type conflicts.
+    """
+
     tags: List[Tag]
     evals: List[CompletionEval]
     completion_id: str
@@ -36,6 +46,9 @@ class CompletionMixin(ABC):
                 "input_messages",
             ]
         }
+
+    @abc.abstractmethod
+    def genericize(self) -> "GenericCompletion": ...
 
     def tag(
         self, key: str, value: str, metadata: Optional[Dict[str, Any]] = None, tag_type: Optional[str] = "annotation"
@@ -130,11 +143,20 @@ class CompletionMixin(ABC):
 
 
 class ClientMixin(ABC):
+    """
+    Provides logic that is common to all wrapped client / trace objects.
+    FYI the reason this isn't a pydantic model is each library's "Client" type is super different, and
+    if you have a "base" client type you will get hella type conflicts.
+    """
+
     tags: List[Tag]
     evals: List["TraceEval"]
     trace_id: str
     output: Optional[str]
     integrations: List[Integration]
+
+    @abc.abstractmethod
+    def genericize(self) -> "GenericClient": ...
 
     def tag(
         self, key: str, value: str, metadata: Optional[Dict[str, Any]] = None, tag_type: Optional[str] = "annotation"

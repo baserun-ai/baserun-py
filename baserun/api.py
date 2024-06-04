@@ -6,27 +6,12 @@ import os
 from datetime import datetime
 from multiprocessing import Process, Queue
 from queue import Empty
-from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import httpx
 
-from baserun.utils import count_prompt_tokens, deep_merge
-
 if TYPE_CHECKING:
-    try:
-        from baserun.wrappers.openai import (
-            WrappedAsyncStream,
-            WrappedChatCompletion,
-            WrappedOpenAIBaseClient,
-            WrappedSyncStream,
-        )
-    except ImportError:
-        pass
-
-    try:
-        from baserun.wrappers.anthropic import WrappedAnthropicBaseClient, WrappedMessage
-    except ImportError:
-        pass
+    from baserun.wrappers.generic import GenericClient, GenericCompletion
 
 logger = logging.getLogger(__name__)
 
@@ -131,12 +116,10 @@ def stop_worker():
 class ApiClient:
     def __init__(
         self,
-        client: Union["WrappedOpenAIBaseClient", "WrappedAnthropicBaseClient"],
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
     ):
         self.environment = os.getenv("BASERUN_ENVIRONMENT", os.getenv("ENVIRONMENT", "production"))
-        self.client = client
 
         atexit.register(self.exit_handler)
 
@@ -148,138 +131,70 @@ class ApiClient:
     def exit_handler(self, *args) -> None:
         stop_worker()
 
-    def submit_completion(self, completion: Union["WrappedChatCompletion", "WrappedMessage"]):
-        dict_items = completion.model_dump()
-        dict_items.pop("client", None)
+    def submit_completion(self, completion: "GenericCompletion"):
+        data = self._completion_data(completion)
+        logger.debug(f"Submitting completion:\n{json.dumps(data, indent=2)}")
+        post("completions", data)
 
-        choices = dict_items.pop("choices", [])
-        contents = dict_items.pop("content", None)
-        if not choices and contents:
-            for content in contents:
-                choices.append({"message": {"content": content.get("text", ""), "role": "assistant"}})
+    def submit_stream(self, stream: "GenericCompletion"):
+        if not stream.id:
+            return
 
-        usage = dict_items.pop("usage", {})
-        if usage:
-            completion_tokens = usage.get("completion_tokens", usage.get("output_tokens", 0))
-            prompt_tokens = usage.get("prompt_tokens", usage.get("input_tokens", 0))
-            dict_items["usage"] = {
-                "completion_tokens": completion_tokens,
-                "prompt_tokens": prompt_tokens,
-                "total_tokens": usage.get("total_tokens", completion_tokens + prompt_tokens),
-            }
+        data = self._completion_data(stream)
+        logger.debug(f"Submitting streamed completion:\n{json.dumps(data, indent=2)}")
+        post("completions", data)
 
-        start_timestamp = dict_items.pop("start_timestamp", datetime.now())
-        first_token_timestamp = dict_items.pop("first_token_timestamp", datetime.now())
-        end_timestamp = dict_items.pop("end_timestamp", datetime.now())
+    def submit_trace(self, client: "GenericClient"):
+        data = self._trace_data(client)
 
-        input_messages = []
-        for message in dict_items.pop("input_messages", []):
-            message_dict = {**message}
-            if "tool_calls" in message:
-                tool_calls = message.pop("tool_calls", [])
-                message_dict["tool_calls"] = [*tool_calls]
+        logger.debug(f"Submitting trace:\n{json.dumps(data, indent=2)}")
+        post("traces", data)
 
-            content = message.get("content", None)
-            if isinstance(content, Iterator):
-                message_dict["content"] = json.dumps([c for c in content])
+    def _completion_data(self, completion: "GenericCompletion") -> Dict[str, Any]:
+        start_timestamp = completion.start_timestamp or datetime.now()
+        first_token_timestamp = completion.first_token_timestamp or datetime.now()
+        end_timestamp = completion.end_timestamp or datetime.now()
 
-            input_messages.append(message_dict)
+        config_params = completion.config_params or {}
+        config_params.pop("event_handler", None)
 
-        data = {
-            **dict_items,
-            "choices": choices,
+        return {
+            "id": completion.id,
+            "completion_id": completion.completion_id,
+            "choices": [choice.model_dump() for choice in completion.choices],
+            "usage": completion.usage.model_dump() if completion.usage else {},
+            "model": config_params.get("model"),
             "name": completion.name,
             "trace_id": completion.trace_id,
             "tool_results": completion.tool_results,
             "evals": [e.model_dump() for e in completion.evals if e.score is not None],
             "tags": [tag.model_dump() for tag in completion.tags],
-            "config_params": dict_items.pop("config_params", {}),
-            "environment": self.environment,
-            "input_messages": input_messages,
-            "trace": self._trace_data(),
+            "input_messages": [m.model_dump() for m in completion.input_messages],
+            "request_id": completion.request_id,
             "start_timestamp": start_timestamp.isoformat(),
             "end_timestamp": end_timestamp.isoformat() if end_timestamp else None,
             "first_token_timestamp": first_token_timestamp.isoformat() if first_token_timestamp else None,
-            "request_id": self.client.request_ids.get(completion.id),
-        }
-        logger.debug(f"Submitting completion:\n{json.dumps(data, indent=2)}")
-        post("completions", data)
-
-    def submit_stream(self, stream: Union["WrappedAsyncStream", "WrappedSyncStream"]):
-        if not stream.id:
-            return
-
-        choices = []
-        usage = {
-            "completion_tokens": 0,
-            "prompt_tokens": 0,
-            "total_tokens": 0,
-        }
-        if hasattr(stream, "captured_choices"):
-            merged_choice = deep_merge([c.model_dump() for c in stream.captured_choices])
-            merged_choice.pop("delta", None)
-            merged_delta = deep_merge([c.delta.model_dump() for c in stream.captured_choices])
-            merged_choice["message"] = merged_delta
-            choices.append(merged_choice)
-            usage = {
-                "completion_tokens": len(stream.captured_choices) + 1,
-                "prompt_tokens": count_prompt_tokens(stream.input_messages),
-                "total_tokens": count_prompt_tokens(stream.input_messages) + len(stream.captured_choices) + 1,
-            }
-        elif hasattr(stream, "captured_messages"):
-            for message in stream.captured_messages:
-                usage["completion_tokens"] += message.usage.output_tokens
-                usage["prompt_tokens"] += message.usage.input_tokens
-                choices.append(message.model_dump())
-
-        usage["total_tokens"] = usage["completion_tokens"] + usage["prompt_tokens"]
-
-        config_params = stream.config_params or {}
-        config_params.pop("event_handler", None)
-
-        data = {
-            "id": stream.id,
-            "name": stream.name,
-            "completion_id": stream.completion_id,
-            "model": config_params.get("model"),
-            "trace_id": stream.trace_id,
-            "tags": [tag.model_dump() for tag in stream.tags],
-            "tool_results": stream.tool_results,
-            "evals": [e.model_dump() for e in stream.evals if e.score is not None],
-            "input_messages": stream.input_messages,
-            "choices": choices,
-            "usage": usage,
             "config_params": config_params,
-            "start_timestamp": stream.start_timestamp.isoformat(),
-            "end_timestamp": stream.end_timestamp.isoformat() if stream.end_timestamp else None,
-            "first_token_timestamp": stream.first_token_timestamp.isoformat() if stream.first_token_timestamp else None,
-            "request_id": self.client.request_ids.get(stream.id),
             "environment": self.environment,
-            "trace": self._trace_data(),
+            "error": completion.error,
+            "trace": self._trace_data(completion.client.genericize()),
+            "template": completion.template,
         }
-        logger.debug(f"Submitting streamed completion:\n{json.dumps(data, indent=2)}")
-        post("completions", data)
 
-    def submit_trace(self):
-        data = self._trace_data()
-
-        logger.debug(f"Submitting trace:\n{json.dumps(data, indent=2)}")
-        post("traces", data)
-
-    def _trace_data(self) -> Dict[str, Any]:
+    def _trace_data(self, client: "GenericClient") -> Dict[str, Any]:
         return {
-            "id": self.client.trace_id,
-            "name": self.client.name,
-            "tags": [tag.model_dump() for tag in self.client.tags],
-            "evals": [e.model_dump() for e in self.client.evals if e.score is not None],
+            "id": client.trace_id,
+            "name": client.name,
+            "tags": [tag.model_dump() for tag in client.tags],
+            "evals": [e.model_dump() for e in client.evals if e.score is not None],
             "environment": self.environment,
-            "output": self.client.output,
-            "start_timestamp": self.client.start_timestamp.isoformat(),
-            "end_timestamp": self.client.end_timestamp.isoformat() if self.client.end_timestamp else None,
-            "error": self.client.error,
-            "end_user_identifier": self.client.user,
-            "end_user_session_identifier": self.client.session,
-            "metadata": self.client.metadata,
+            "output": client._output,
+            "start_timestamp": client.start_timestamp.isoformat(),
+            "end_timestamp": client.end_timestamp.isoformat() if client.end_timestamp else None,
+            "error": client.error,
+            "end_user_identifier": client.user,
+            "end_user_session_identifier": client.session,
+            "metadata": client.metadata,
         }
 
 
