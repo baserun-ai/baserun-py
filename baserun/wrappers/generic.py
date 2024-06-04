@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, TypeVar
 from pydantic import BaseModel, ConfigDict, Field
 
 from baserun.api import ApiClient
+from baserun.integrations.integration import Integration
 from baserun.mixins import ClientMixin, CompletionMixin
 from baserun.models.evals import CompletionEval, TraceEval
 from baserun.models.tags import Tag
@@ -46,8 +47,8 @@ class GenericCompletion(CompletionMixin, BaseModel):
     error: Optional[str] = None
     trace_id: str
     completion_id: str
-    template: Optional[str]
-    start_timestamp: datetime
+    template: Optional[str] = None
+    start_timestamp: Optional[datetime] = None
     first_token_timestamp: Optional[datetime] = None
     end_timestamp: Optional[datetime] = None
     usage: Optional[GenericUsage] = None
@@ -76,12 +77,13 @@ class GenericClient(ClientMixin, BaseModel):
     trace_id: str
     _output: Optional[str] = None
     error: Optional[str] = None
-    user: Optional[str]
-    session: Optional[str]
-    start_timestamp: datetime
-    end_timestamp: Optional[datetime]
+    user: Optional[str] = None
+    session: Optional[str] = None
+    start_timestamp: Optional[datetime] = None
+    end_timestamp: Optional[datetime] = None
     api_client: Optional[ApiClient] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    integrations: List[Integration] = Field(default_factory=list)
 
     @property
     def output(self):
@@ -96,4 +98,4 @@ class GenericClient(ClientMixin, BaseModel):
         return self
 
     def submit_to_baserun(self):
-        self.api_client.submit_trace()
+        self.api_client.submit_trace(self)

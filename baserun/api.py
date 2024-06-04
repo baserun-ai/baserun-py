@@ -3,9 +3,9 @@ import atexit
 import json
 import logging
 import os
+from collections import defaultdict
 from datetime import datetime
 from multiprocessing import Process, Queue
-from queue import Empty
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import httpx
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 exporter_queue: Queue = Queue()
-tasks: List[asyncio.Task] = []  # Make tasks a global variable
+tasks: List[asyncio.Task] = []
 exporter_process: Union[Process, None] = None
 
 
@@ -28,41 +28,43 @@ async def post_and_log_response(
         headers={"Authorization": f"Bearer {api_key}"},
         json=data,
     )
-    if response.status_code != 200:
+    if response.status_code < 200 or response.status_code >= 300:
         logger.warning(f"Response from {base_url}/api/public/{endpoint}: {response.status_code}")
-        logger.warning(response.json())
+        logger.debug("Text: " + response.text)
+        logger.debug("Data: " + json.dumps(data, indent=2))
 
 
 async def worker(queue: Queue, base_url: str, api_key: str):
     logger = logging.getLogger(__name__ + ".worker")
     logger.debug(f"Starting worker with base_url: {base_url}")
+    requests_in_progress: Dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+    tasks = []
+
     try:
         async with httpx.AsyncClient(http2=True) as client:
             while True:
-                try:
-                    item: Dict = queue.get_nowait()
-                except Empty:
-                    await asyncio.sleep(1)
-                    continue
+                item: Dict = await queue.get()
 
                 if item is None:
                     break
 
-                try:
-                    endpoint = item.pop("endpoint")
-                    data = item.pop("data")
-                    logger.debug(f"Submitting {data} to Baserun at {base_url}/api/public/{endpoint}")
+                id = item.get("completion_id", item.get("trace_id"))
+                endpoint = item.pop("endpoint")
+                data = item.pop("data")
 
-                    task = asyncio.create_task(post_and_log_response(base_url, api_key, endpoint, data, client))
-                    task.add_done_callback(lambda t: tasks.remove(t))
-                    task.add_done_callback(lambda t: logger.debug(f"Task {t} finished"))
-                    tasks.append(task)
-                except Exception as e:
-                    logger.warning(f"Failed to submit {endpoint} to Baserun: {e}")
+                async with requests_in_progress[id]:
+                    logger.debug(f"Submitting {data} to Baserun at {base_url}/api/public/{endpoint}")
+                    try:
+                        task = asyncio.create_task(post_and_log_response(base_url, api_key, endpoint, data, client))
+                        tasks.append(task)
+                        task.add_done_callback(lambda t: tasks.remove(t))
+                        task.add_done_callback(lambda t: logger.debug(f"Task {t} finished"))
+                    except Exception as e:
+                        logger.warning(f"Failed to submit {endpoint}/{id} to Baserun: {e}")
 
     finally:
         logger.debug(f"Waiting for {len(tasks)} tasks to finish")
-        await asyncio.gather(*tasks)
+        await asyncio.gather(*tasks, return_exceptions=True)
         logger.debug("Exiting worker")
         loop = asyncio.get_running_loop()
         loop.stop()
@@ -162,7 +164,7 @@ class ApiClient:
             "id": completion.id,
             "completion_id": completion.completion_id,
             "choices": [choice.model_dump() for choice in completion.choices],
-            "usage": completion.usage.model_dump() if completion.usage else {},
+            "usage": completion.usage.model_dump() if completion.usage else None,
             "model": config_params.get("model"),
             "name": completion.name,
             "trace_id": completion.trace_id,
@@ -189,7 +191,7 @@ class ApiClient:
             "evals": [e.model_dump() for e in client.evals if e.score is not None],
             "environment": self.environment,
             "output": client._output,
-            "start_timestamp": client.start_timestamp.isoformat(),
+            "start_timestamp": client.start_timestamp.isoformat() if client.start_timestamp else None,
             "end_timestamp": client.end_timestamp.isoformat() if client.end_timestamp else None,
             "error": client.error,
             "end_user_identifier": client.user,

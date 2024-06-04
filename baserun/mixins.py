@@ -50,20 +50,18 @@ class CompletionMixin(ABC):
     @abc.abstractmethod
     def genericize(self) -> "GenericCompletion": ...
 
-    def tag(
-        self, key: str, value: str, metadata: Optional[Dict[str, Any]] = None, tag_type: Optional[str] = "annotation"
-    ):
-        self.tags.append(
-            Tag(
-                target_type="completion",
-                target_id=self.completion_id,
-                tag_type=tag_type,
-                key=key,
-                value=value,
-                metadata=metadata or {},
-            )
+    def tag(self, key: str, value: str, metadata: Optional[Dict[str, Any]] = None, tag_type: Optional[str] = "custom"):
+        new_tag = Tag(
+            target_type="completion",
+            target_id=self.completion_id,
+            tag_type=tag_type,
+            key=key,
+            value=value,
+            metadata=metadata or {},
         )
+        self.tags.append(new_tag)
         self.submit_to_baserun()
+        return new_tag
 
     def eval(self, name: str, score: Optional[int] = None, metadata: Optional[Dict[str, Any]] = None) -> CompletionEval:
         evaluator = CompletionEval(target=self, name=name, metadata=metadata or {}, score=score)
@@ -72,17 +70,18 @@ class CompletionMixin(ABC):
 
     def feedback(self, name: str, score: Any, metadata: Optional[Dict[str, Any]] = None):
         value = json.dumps(score)
-        self.tags.append(
-            Tag(
-                target_type="completion",
-                target_id=self.completion_id,
-                tag_type="feedback",
-                key=name,
-                value=value,
-                metadata=metadata or {},
-            )
+
+        new_tag = Tag(
+            target_type="completion",
+            target_id=self.completion_id,
+            tag_type="feedback",
+            key=name,
+            value=value,
+            metadata=metadata or {},
         )
+        self.tags.append(new_tag)
         self.submit_to_baserun()
+        return new_tag
 
     @overload
     def log(self, message: str, name: str):
@@ -107,15 +106,14 @@ class CompletionMixin(ABC):
             name = metadata
             metadata = {}
 
-        self.tags.append(
-            Log(
-                target_type="completion",
-                target_id=self.completion_id,
-                key=name or "log",
-                value=message,
-                metadata=metadata or {},
-            )
+        new_tag = Log(
+            target_type="completion",
+            target_id=self.completion_id,
+            key=name or "log",
+            value=message,
+            metadata=metadata or {},
         )
+        self.tags.append(new_tag)
         self.submit_to_baserun()
 
     def tool_result(self, tool_call: ChatCompletionMessageToolCall, result: Any):
@@ -158,19 +156,18 @@ class ClientMixin(ABC):
     @abc.abstractmethod
     def genericize(self) -> "GenericClient": ...
 
-    def tag(
-        self, key: str, value: str, metadata: Optional[Dict[str, Any]] = None, tag_type: Optional[str] = "annotation"
-    ):
-        self.tags.append(
-            Tag(
-                target_type="trace",
-                target_id=self.trace_id,
-                tag_type=tag_type,
-                key=key,
-                value=value,
-                metadata=metadata or {},
-            )
+    def tag(self, key: str, value: str, metadata: Optional[Dict[str, Any]] = None, tag_type: Optional[str] = "custom"):
+        new_tag = Tag(
+            target_type="trace",
+            target_id=self.trace_id,
+            tag_type=tag_type,
+            key=key,
+            value=value,
+            metadata=metadata or {},
         )
+        self.tags.append(new_tag)
+        self.submit_to_baserun()
+        return new_tag
 
     def eval(self, name: str, score: Optional[int] = None, metadata: Optional[Dict[str, Any]] = None) -> "TraceEval":
         evaluator = TraceEval(target=self, name=name, metadata=metadata or {}, score=score)
@@ -179,17 +176,18 @@ class ClientMixin(ABC):
 
     def feedback(self, name: str, score: Any, metadata: Optional[Dict[str, Any]] = None):
         value = json.dumps(score)
-        self.tags.append(
-            Tag(
-                target_type="trace",
-                target_id=self.trace_id,
-                tag_type="feedback",
-                key=name,
-                value=value,
-                metadata=metadata or {},
-            )
+
+        new_tag = Tag(
+            target_type="trace",
+            target_id=self.trace_id,
+            tag_type="feedback",
+            key=name,
+            value=value,
+            metadata=metadata or {},
         )
+        self.tags.append(new_tag)
         self.submit_to_baserun()
+        return new_tag
 
     @overload
     def log(self, message: str, name: str):
@@ -214,16 +212,16 @@ class ClientMixin(ABC):
             name = metadata
             metadata = {}
 
-        self.tags.append(
-            Log(
-                target_type="trace",
-                target_id=self.trace_id,
-                key=name or "log",
-                value=message,
-                metadata=metadata or {},
-            )
+        new_tag = Log(
+            target_type="trace",
+            target_id=self.trace_id,
+            key=name or "log",
+            value=message,
+            metadata=metadata or {},
         )
+        self.tags.append(new_tag)
         self.submit_to_baserun()
+        return new_tag
 
     def integrate(self, integration_class: Type[Integration]):
         integration = integration_class(client=self)
@@ -233,29 +231,29 @@ class ClientMixin(ABC):
     def transform(self, *args, **kwargs):
         transform_input = kwargs.pop("input", None)
         transform_output = kwargs.pop("output", None)
-        self.tags.append(
-            Transform(
-                key=args[0],
-                target_type="trace",
-                target_id=self.trace_id,
-                input=transform_input if isinstance(transform_input, str) else json.dumps(transform_input),
-                output=transform_output if isinstance(transform_output, str) else json.dumps(transform_output),
-                **kwargs,
-            )
+        new_tag = Transform(
+            key=args[0],
+            target_type="trace",
+            target_id=self.trace_id,
+            input=transform_input if isinstance(transform_input, str) else json.dumps(transform_input),
+            output=transform_output if isinstance(transform_output, str) else json.dumps(transform_output),
+            **kwargs,
         )
+        self.tags.append(new_tag)
         self.submit_to_baserun()
+        return new_tag
 
     def variable(self, key: str, value: Any, metadata: Optional[Dict[str, Any]] = None):
-        self.tags.append(
-            Variable(
-                name=key,
-                value=value if isinstance(value, str) else json.dumps(value),
-                target_type="trace",
-                target_id=self.trace_id,
-                metadata=metadata or {},
-            )
+        new_tag = Variable(
+            name=key,
+            value=value if isinstance(value, str) else json.dumps(value),
+            target_type="trace",
+            target_id=self.trace_id,
+            metadata=metadata or {},
         )
+        self.tags.append(new_tag)
         self.submit_to_baserun()
+        return new_tag
 
     def submit_to_baserun(self):
         pass

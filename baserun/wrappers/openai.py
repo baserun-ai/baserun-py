@@ -154,6 +154,7 @@ class WrappedStreamBase(CompletionMixin, BaseModel):
             tags=self.tags,
             evals=self.evals,
             input_messages=self.input_messages,
+            config_params=self.config_params,
         )
 
     def submit_to_baserun(self):
