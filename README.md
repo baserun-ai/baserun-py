@@ -13,7 +13,7 @@
 ## 1. Install Baserun
 
 ```bash
-pip install baserun==1.0.0b8
+pip install baserun==1.0.0b9
 ```
 
 ## 2. Set the Baserun API key
@@ -126,7 +126,7 @@ You can add tags either to the traced OpenAI object or to the completion. There 
 - `log`: Any arbitrary logs you want to attach to a trace or completion
 - `feedback`: Any score-based feedback given from users (e.g. thumbs up/down, star rating)
 - `variable`: Any variables used, e.g. while rendering a template
-- `tag`: Any arbitrary attributes you want to attach to a trace or completion
+- `custom`: Any arbitrary attributes you want to attach to a trace or completion
 
 Each tag type has functions on traced OpenAI objects and completions. Each tag function can accept a `metadata` parameter which is an arbitrary dictionary with any values you might want to capture.
 
@@ -150,6 +150,29 @@ def example():
     completion.variable("city", city)
     user_score = input()
     client.feedback("User Score", score=user_score, metadata={"My key": "My value"})
+```
+
+## Adding tags to a completed trace or completion
+
+After a trace has been completed you may wish to add additional tags to a trace or completion. For example, you might have user feedback that is gathered well after the fact. To add these tags, you need to store the `trace_id`, and, if the tag is for a completion, the `completion_id`. You can then use the `tag`, `log`, or `feedback` functions to submit those tags.
+
+```python
+from baserun import OpenAI, log, feedback
+
+client = OpenAI(name="trace to be resumed")
+completion = client.chat.completions.create(
+    name="completion to be resumed",
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "What are three activities to do in Paris?"}],
+)
+
+# Store these values
+trace_id = client.trace_id
+completion_id = completion.completion_id
+
+# A few moments later...
+log("Tagging resumed", trace_id=trace_id, completion_id=completion_id)
+feedback("User satisfaction", 0.9, trace_id=trace_id, completion_id=completion_id)
 ```
 
 ## Further Documentation

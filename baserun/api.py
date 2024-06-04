@@ -6,7 +6,6 @@ import os
 from collections import defaultdict
 from datetime import datetime
 from multiprocessing import Process, Queue
-from queue import Empty
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import httpx
@@ -38,15 +37,13 @@ async def post_and_log_response(
 async def worker(queue: Queue, base_url: str, api_key: str):
     logger = logging.getLogger(__name__ + ".worker")
     logger.debug(f"Starting worker with base_url: {base_url}")
-    requests_in_progress: Dict[str, bool] = defaultdict(bool)
+    requests_in_progress: Dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+    tasks = []
+
     try:
         async with httpx.AsyncClient(http2=True) as client:
             while True:
-                try:
-                    item: Dict = queue.get_nowait()
-                except Empty:
-                    await asyncio.sleep(1)
-                    continue
+                item: Dict = await queue.get()
 
                 if item is None:
                     break
@@ -55,25 +52,19 @@ async def worker(queue: Queue, base_url: str, api_key: str):
                 endpoint = item.pop("endpoint")
                 data = item.pop("data")
 
-                while requests_in_progress[id]:
-                    logger.debug(f"Waiting for requests for {endpoint}/{id} to finish")
-                    await asyncio.sleep(0.1)
-
-                logger.debug(f"Submitting {data} to Baserun at {base_url}/api/public/{endpoint}")
-                requests_in_progress[id] = True
-                try:
-                    task = asyncio.create_task(post_and_log_response(base_url, api_key, endpoint, data, client))
-                    task.add_done_callback(lambda t: tasks.remove(t))
-                    task.add_done_callback(lambda t: logger.debug(f"Task {t} finished"))
-                    tasks.append(task)
-                except Exception as e:
-                    logger.warning(f"Failed to submit {endpoint}/{id} to Baserun: {e}")
-                finally:
-                    requests_in_progress[id] = False
+                async with requests_in_progress[id]:
+                    logger.debug(f"Submitting {data} to Baserun at {base_url}/api/public/{endpoint}")
+                    try:
+                        task = asyncio.create_task(post_and_log_response(base_url, api_key, endpoint, data, client))
+                        tasks.append(task)
+                        task.add_done_callback(lambda t: tasks.remove(t))
+                        task.add_done_callback(lambda t: logger.debug(f"Task {t} finished"))
+                    except Exception as e:
+                        logger.warning(f"Failed to submit {endpoint}/{id} to Baserun: {e}")
 
     finally:
         logger.debug(f"Waiting for {len(tasks)} tasks to finish")
-        await asyncio.gather(*tasks)
+        await asyncio.gather(*tasks, return_exceptions=True)
         logger.debug("Exiting worker")
         loop = asyncio.get_running_loop()
         loop.stop()

@@ -155,7 +155,7 @@ def log(
     )
 
 
-def submit_variable(
+def variable(
     key: str,
     value: str,
     trace_id: str,
