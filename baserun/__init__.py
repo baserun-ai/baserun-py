@@ -1,6 +1,9 @@
-from typing import TYPE_CHECKING, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Optional, Type, TypeVar, Union
 
+from baserun.api import ApiClient
 from baserun.mixins import ClientMixin
+from baserun.models.tags import Tag
+from baserun.wrappers.generic import GenericClient, GenericCompletion
 
 if TYPE_CHECKING:
     try:
@@ -110,6 +113,66 @@ def init(client: T, name: Optional[str] = None, api_key: Optional[str] = None, *
 
     setup_globals()
     return client
+
+
+def tag(
+    key: str,
+    value: str,
+    trace_id: str,
+    completion_id: Optional[str] = None,
+    metadata: Optional[dict] = None,
+    tag_type: Optional[str] = "custom",
+) -> Tag:
+    api_client = ApiClient()
+    generic_client = GenericClient(trace_id=trace_id, name="resumed", integrations=[], api_client=api_client)
+
+    if completion_id:
+        generic_completion = GenericCompletion(
+            name="resumed",
+            client=generic_client,
+            completion_id=completion_id,
+            trace_id=trace_id,
+        )
+        return generic_completion.tag(key, value, metadata=metadata, tag_type=tag_type)
+    else:
+        return generic_client.tag(key, value, metadata=metadata, tag_type=tag_type)
+
+
+def log(
+    message: str,
+    trace_id: str,
+    name: Optional[str] = None,
+    metadata: Optional[dict] = None,
+    completion_id: Optional[str] = None,
+) -> Tag:
+    return tag(
+        key=name or "log",
+        value=message,
+        trace_id=trace_id,
+        completion_id=completion_id,
+        metadata=metadata,
+        tag_type="log",
+    )
+
+
+def submit_variable(
+    key: str,
+    value: str,
+    trace_id: str,
+    completion_id: Optional[str] = None,
+    metadata: Optional[dict] = None,
+) -> Tag:
+    return tag(key, value, trace_id, completion_id, metadata, tag_type="variable")
+
+
+def feedback(
+    name: str,
+    score: Any,
+    trace_id: str,
+    completion_id: Optional[str] = None,
+    metadata: Optional[dict] = None,
+) -> Tag:
+    return tag(name, score, trace_id, completion_id, metadata, tag_type="feedback")
 
 
 setup_globals()

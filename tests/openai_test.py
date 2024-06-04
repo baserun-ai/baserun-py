@@ -13,6 +13,8 @@ from tests.testing_functions import (
     openai_chat_tools,
     openai_embeddings,
     use_sessions,
+    use_tag_function_client,
+    use_tag_function_completion,
     use_template,
     use_template_async,
 )
@@ -317,6 +319,28 @@ def test_evals():
     assert trace_eval.get("score") == 1
     assert trace_eval.get("metadata") == {}
     assert len(trace_evals) == 1
+
+
+def test_tag_function_client():
+    tag = use_tag_function_client()
+
+    queued_requests = get_queued_objects()
+    assert len(queued_requests) == 2
+
+    resumed_tag_request = queued_requests[-1]
+    resumed_tag = resumed_tag_request.get("data").get("tags")[0]
+    assert resumed_tag.get("target_id") == tag.target_id
+
+
+def test_tag_function_completion():
+    tag = use_tag_function_completion()
+
+    queued_requests = get_queued_objects()
+    assert len(queued_requests) == 2
+
+    resumed_tag_request = queued_requests[-1]
+    resumed_tag = resumed_tag_request.get("data").get("tags")[0]
+    assert resumed_tag.get("target_id") == tag.target_id
 
 
 def test_embeddings():

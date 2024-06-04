@@ -13,7 +13,7 @@ from openai import AsyncOpenAI, NotFoundError, OpenAI
 from openai.types import CreateEmbeddingResponse
 from openai.types.chat.chat_completion_message import FunctionCall
 
-from baserun import api, init
+from baserun import api, init, log, tag
 
 
 def openai_chat(prompt="What is the capital of the US?") -> str:
@@ -352,6 +352,46 @@ def langchain_unwrapped_openai(prompt="What is the capital of the US?") -> str:
     model = ChatOpenAI(model="gpt-4o", callback_manager=BaserunCallbackManager())
     result = model.invoke([HumanMessage(content=prompt)])
     return result.content
+
+
+def use_tag_function_client():
+    client = init(OpenAI(), name="trace to be resumed")
+    client.submit_to_baserun()
+
+    submitted_tag = tag("some_key", "some_value", trace_id=client.trace_id)
+    return submitted_tag
+
+
+def use_tag_function_completion():
+    client = init(OpenAI(), name="trace to be resumed")
+    completion = client.chat.completions.create(
+        name="completion to be resumed",
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "What is the capital of the US?"}],
+    )
+
+    submitted_tag = tag("some_key", "some_value", trace_id=client.trace_id, completion_id=completion.completion_id)
+    return submitted_tag
+
+
+def use_log_function_client():
+    client = init(OpenAI(), name="trace to be resumed")
+    client.submit_to_baserun()
+
+    submitted_tag = log("some_value", trace_id=client.trace_id)
+    return submitted_tag
+
+
+def use_log_function_completion():
+    client = init(OpenAI(), name="trace to be resumed")
+    completion = client.chat.completions.create(
+        name="completion to be resumed",
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "What is the capital of the US?"}],
+    )
+
+    submitted_tag = log("some_value", trace_id=client.trace_id, completion_id=completion.completion_id)
+    return submitted_tag
 
 
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):
