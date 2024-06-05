@@ -192,7 +192,7 @@ class ApiClient:
             "tags": [tag.model_dump() for tag in client.tags],
             "evals": [e.model_dump() for e in client.evals if e.score is not None],
             "environment": self.environment,
-            "output": client._output,
+            "output": client.output,
             "start_timestamp": client.start_timestamp.isoformat() if client.start_timestamp else None,
             "end_timestamp": client.end_timestamp.isoformat() if client.end_timestamp else None,
             "error": client.error,

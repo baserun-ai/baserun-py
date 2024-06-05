@@ -85,7 +85,7 @@ class GenericClient(ClientMixin, BaseModel):
     tags: List[Tag] = Field(default_factory=list)
     evals: List[TraceEval] = Field(default_factory=list)
     trace_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    _output: Optional[str] = None
+    output: Optional[str] = None
     error: Optional[str] = None
     user: Optional[str] = None
     session: Optional[str] = None
@@ -94,15 +94,6 @@ class GenericClient(ClientMixin, BaseModel):
     api_client: Optional[ApiClient] = Field(default_factory=ApiClient)
     metadata: Dict[str, Any] = Field(default_factory=dict)
     integrations: List[Integration] = Field(default_factory=list)
-
-    @property
-    def output(self):
-        return self._output
-
-    @output.setter
-    def output(self, value):
-        self._output = value
-        self.submit_to_baserun()
 
     def genericize(self):
         return self

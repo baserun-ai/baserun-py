@@ -518,7 +518,7 @@ class WrappedAnthropicBaseClient(ClientMixin):
         self.evals: List[TraceEval] = []
         self.client = client
         self.trace_id = trace_id or str(uuid4())
-        self._output = None
+        self.output = None
         self.error: Union[str, None] = None
         self.user = user
         self.session = session
@@ -536,15 +536,6 @@ class WrappedAnthropicBaseClient(ClientMixin):
         except ImportError:
             pass
 
-    @property
-    def output(self):
-        return self._output
-
-    @output.setter
-    def output(self, value):
-        self._output = value
-        self.submit_to_baserun()
-
     def genericize(self):
         return GenericClient(
             name=self.name,
@@ -558,6 +549,7 @@ class WrappedAnthropicBaseClient(ClientMixin):
             metadata=self.metadata,
             api_client=self.api_client,
             integrations=[],
+            output=self.output,
             error=self.error,
         )
 
