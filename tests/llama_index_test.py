@@ -1,4 +1,4 @@
-from baserun import OpenAI
+from baserun.integrations.llamaindex import LLamaIndexInstrumentation
 from tests.conftest import get_queued_objects
 
 try:
@@ -9,7 +9,7 @@ except ImportError:
 
 
 def llama() -> RESPONSE_TYPE:
-    OpenAI()
+    LLamaIndexInstrumentation.start()
     documents = SimpleDirectoryReader("tests/test_data").load_data()
     index = VectorStoreIndex.from_documents(documents)
     query_engine = index.as_query_engine()

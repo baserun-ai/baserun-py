@@ -2,6 +2,7 @@ import json
 from typing import (
     Any,
     Callable,
+    Optional,
     Union,
 )
 
@@ -12,6 +13,7 @@ from llama_index.core.instrumentation.events.retrieval import RetrievalEndEvent,
 
 from baserun.integrations.integration import Integration
 from baserun.mixins import ClientMixin
+from baserun.wrappers.generic import GenericClient
 
 
 class BaserunLlamaEventHandler(BaseEventHandler):
@@ -48,7 +50,10 @@ class BaserunLlamaEventHandler(BaseEventHandler):
 
 
 class LLamaIndexInstrumentation(Integration):
-    def __init__(self, client: ClientMixin) -> None:
+    def __init__(self, client: Optional[ClientMixin] = None) -> None:
+        if not client:
+            client = GenericClient(name="llama")
+
         super().__init__(client=client)
         self.event_handler = BaserunLlamaEventHandler(log_func=client.log)
         dispatcher = instrument.get_dispatcher()
@@ -59,3 +64,9 @@ class LLamaIndexInstrumentation(Integration):
 
     def uninstrument(self) -> None:
         self.event_handler.disable()
+
+    @classmethod
+    def start(cls, client: Optional[ClientMixin] = None) -> "LLamaIndexInstrumentation":
+        instrumentation = cls(client=client)
+        instrumentation.instrument()
+        return instrumentation
