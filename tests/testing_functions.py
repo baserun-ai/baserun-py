@@ -14,6 +14,13 @@ from openai.types import CreateEmbeddingResponse
 from openai.types.chat.chat_completion_message import FunctionCall
 
 from baserun import api, init, log, tag
+from baserun.wrappers.generic import (
+    GenericChoice,
+    GenericClient,
+    GenericCompletion,
+    GenericCompletionMessage,
+    GenericInputMessage,
+)
 
 
 def openai_chat(prompt="What is the capital of the US?") -> str:
@@ -392,6 +399,19 @@ def use_log_function_completion():
 
     submitted_tag = log("some_value", trace_id=client.trace_id, completion_id=completion.completion_id)
     return submitted_tag
+
+
+def use_generic_completion():
+    client = GenericClient(name="My Traced Client")
+    completion = GenericCompletion(
+        model="my custom model",
+        name="My Completion",
+        input_messages=[GenericInputMessage(content="What is the capital of the US?", role="user")],
+        choices=[GenericChoice(message=GenericCompletionMessage(content="Washington"))],
+        client=client,
+        trace_id=client.trace_id,
+    )
+    completion.submit_to_baserun()
 
 
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):

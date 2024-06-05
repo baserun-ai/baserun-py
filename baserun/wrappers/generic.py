@@ -45,8 +45,9 @@ class GenericCompletion(CompletionMixin, BaseModel):
     client: "GenericClient"
     name: str
     error: Optional[str] = None
-    trace_id: str
-    completion_id: str
+    model: Optional[str] = None
+    trace_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    completion_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     template: Optional[str] = None
     start_timestamp: Optional[datetime] = None
     first_token_timestamp: Optional[datetime] = None
@@ -67,6 +68,15 @@ class GenericCompletion(CompletionMixin, BaseModel):
     def submit_to_baserun(self):
         self.client.api_client.submit_completion(self)
 
+    @property
+    def messages(self):
+        return [c.message for c in self.choices]
+
+    @messages.setter
+    def messages(self, value):
+        self.choices = [GenericChoice(message=m, index=i) for m, i in enumerate(value)]
+        self.submit_to_baserun()
+
 
 class GenericClient(ClientMixin, BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -74,14 +84,14 @@ class GenericClient(ClientMixin, BaseModel):
     name: str
     tags: List[Tag] = Field(default_factory=list)
     evals: List[TraceEval] = Field(default_factory=list)
-    trace_id: str
+    trace_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     _output: Optional[str] = None
     error: Optional[str] = None
     user: Optional[str] = None
     session: Optional[str] = None
-    start_timestamp: Optional[datetime] = None
+    start_timestamp: Optional[datetime] = Field(default_factory=datetime.now)
     end_timestamp: Optional[datetime] = None
-    api_client: Optional[ApiClient] = None
+    api_client: Optional[ApiClient] = Field(default_factory=ApiClient)
     metadata: Dict[str, Any] = Field(default_factory=dict)
     integrations: List[Integration] = Field(default_factory=list)
 
