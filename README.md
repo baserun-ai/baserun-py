@@ -152,7 +152,7 @@ def example():
     client.feedback("User Score", score=user_score, metadata={"My key": "My value"})
 ```
 
-## Adding tags to a completed trace or completion
+### Adding tags to a completed trace or completion
 
 After a trace has been completed you may wish to add additional tags to a trace or completion. For example, you might have user feedback that is gathered well after the fact. To add these tags, you need to store the `trace_id`, and, if the tag is for a completion, the `completion_id`. You can then use the `tag`, `log`, or `feedback` functions to submit those tags.
 
@@ -173,6 +173,25 @@ completion_id = completion.completion_id
 # A few moments later...
 log("Tagging resumed", trace_id=trace_id, completion_id=completion_id)
 feedback("User satisfaction", 0.9, trace_id=trace_id, completion_id=completion_id)
+```
+
+## Unsupported models
+Baserun ships with support for OpenAI and Anthropic. If you use another provider or library, you can still use Baserun by manually creating "generic" objects. Notably, generic completions _must be submitted_ explicitly using `submit_to_baserun`. Here's what that looks like:
+
+```python
+question = "What is the capital of the US?"
+response = call_my_custom_model(question)
+
+client = GenericClient(name="My Traced Client")
+completion = GenericCompletion(
+    model="my custom model",
+    name="My Completion",
+    input_messages=[GenericInputMessage(content=question, role="user")],
+    choices=[GenericChoice(message=GenericCompletionMessage(content=response))],
+    client=client,
+    trace_id=client.trace_id,
+)
+completion.submit_to_baserun()
 ```
 
 ## Further Documentation
