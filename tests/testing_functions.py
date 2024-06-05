@@ -469,6 +469,7 @@ def use_ragas_with_llama_index():
     answer = query_engine.query(
         "I have flour, sugar and butter. What am I missing if I want to bake oatmeal cookies from my recipe?"
     )
+    trace_client.output = answer.response
 
     data_samples = {
         "question": [question],
