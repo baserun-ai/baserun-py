@@ -13,7 +13,7 @@
 ## 1. Install Baserun
 
 ```bash
-pip install baserun==1.0.0b9
+pip install baserun==1.0.0b11
 ```
 
 ## 2. Set the Baserun API key

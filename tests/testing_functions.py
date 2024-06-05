@@ -14,6 +14,7 @@ from openai.types import CreateEmbeddingResponse
 from openai.types.chat.chat_completion_message import FunctionCall
 
 from baserun import api, init, log, tag
+from baserun.integrations.llamaindex import LLamaIndexInstrumentation
 from baserun.wrappers.generic import (
     GenericChoice,
     GenericClient,
@@ -412,6 +413,82 @@ def use_generic_completion():
         trace_id=client.trace_id,
     )
     completion.submit_to_baserun()
+
+
+def use_ragas():
+    from datasets import Dataset
+    from ragas import evaluate
+    from ragas.metrics import answer_correctness, faithfulness
+
+    question = "When was the first super bowl?"
+
+    from baserun import OpenAI
+
+    client = OpenAI(name="Using Ragas")
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        name="use_ragas completion",
+        messages=[{"role": "user", "content": question}],
+    )
+
+    answer = completion.choices[0].message.content
+
+    data_samples = {
+        "question": [question],
+        "answer": [answer],
+        "contexts": [
+            [
+                "The First AFL–NFL World Championship Game was an American football game played on January 15, 1967, at the Los Angeles Memorial Coliseum in Los Angeles,"
+            ],
+        ],
+        "ground_truth": [
+            "The first Super Bowl was held on January 15, 1967",
+        ],
+    }
+
+    dataset = Dataset.from_dict(data_samples)
+
+    score = evaluate(dataset, metrics=[faithfulness, answer_correctness])
+    completion.eval_many(score.scores.data.to_pydict())
+
+    return score
+
+
+def use_ragas_with_llama_index():
+    from datasets import Dataset
+    from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
+    from ragas import evaluate
+    from ragas.metrics import answer_correctness, faithfulness
+
+    question = "When was the first super bowl?"
+
+    trace_client = LLamaIndexInstrumentation.start().client
+    documents = SimpleDirectoryReader("tests/test_data").load_data()
+    index = VectorStoreIndex.from_documents(documents)
+    query_engine = index.as_query_engine()
+    answer = query_engine.query(
+        "I have flour, sugar and butter. What am I missing if I want to bake oatmeal cookies from my recipe?"
+    )
+
+    data_samples = {
+        "question": [question],
+        "answer": [answer.response],
+        "contexts": [
+            [
+                "Common ingredients for oatmeal cookies include oats, flour, sugar, butter, eggs, baking soda, cinnamon, and raisins."
+            ],
+        ],
+        "ground_truth": [
+            "You are missing eggs, vanilla, cinnamon, salt, and oats.",
+        ],
+    }
+
+    dataset = Dataset.from_dict(data_samples)
+
+    score = evaluate(dataset, metrics=[faithfulness, answer_correctness])
+    trace_client.eval_many(score.scores.data.to_pydict())
+
+    return score
 
 
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):

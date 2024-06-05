@@ -1,7 +1,7 @@
 import abc
 import json
 from abc import ABC
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, overload
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Type, overload
 
 from openai.types.chat import ChatCompletionMessageToolCall
 
@@ -63,9 +63,31 @@ class CompletionMixin(ABC):
         self.submit_to_baserun()
         return new_tag
 
-    def eval(self, name: str, score: Optional[int] = None, metadata: Optional[Dict[str, Any]] = None) -> CompletionEval:
+    def eval_many(
+        self, score_dict: Dict[str, Iterable[float]], metadata: Optional[Dict[str, Any]] = None
+    ) -> List[CompletionEval]:
+        """Submit multiple evals at once from scores in a dictionary. (This is compatible with Ragas)"""
+        submitted_evals = []
+        for name, scores in score_dict.items():
+            for score in scores:
+                submitted_evals.append(self.eval(name, score=score, skip_submit=True, metadata=metadata))
+
+        self.submit_to_baserun()
+        # Notably, return only the evals added here, and not _all_ evals
+        return submitted_evals
+
+    def eval(
+        self,
+        name: str,
+        score: Optional[float] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        skip_submit: bool = False,
+    ) -> CompletionEval:
         evaluator = CompletionEval(target=self, name=name, metadata=metadata or {}, score=score)
         self.evals.append(evaluator)
+
+        if score is not None and not skip_submit:
+            self.submit_to_baserun()
         return evaluator
 
     def feedback(self, name: str, score: Any, metadata: Optional[Dict[str, Any]] = None):
@@ -169,9 +191,27 @@ class ClientMixin(ABC):
         self.submit_to_baserun()
         return new_tag
 
-    def eval(self, name: str, score: Optional[int] = None, metadata: Optional[Dict[str, Any]] = None) -> "TraceEval":
+    def eval_many(
+        self, score_dict: Dict[str, Iterable[float]], metadata: Optional[Dict[str, Any]] = None
+    ) -> List[TraceEval]:
+        """Submit multiple evals at once from scores in a dictionary. (This is compatible with Ragas)"""
+        submitted_evals = []
+        for name, scores in score_dict.items():
+            for score in scores:
+                submitted_evals.append(self.eval(name, score=score, skip_submit=True, metadata=metadata))
+
+        self.submit_to_baserun()
+        # Notably, return only the evals added here, and not _all_ evals
+        return submitted_evals
+
+    def eval(
+        self, name: str, score: Optional[float] = None, metadata: Optional[Dict[str, Any]] = None, skip_submit=False
+    ) -> "TraceEval":
         evaluator = TraceEval(target=self, name=name, metadata=metadata or {}, score=score)
         self.evals.append(evaluator)
+
+        if score is not None and not skip_submit:
+            self.submit_to_baserun()
         return evaluator
 
     def feedback(self, name: str, score: Any, metadata: Optional[Dict[str, Any]] = None):

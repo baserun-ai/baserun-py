@@ -568,12 +568,12 @@ class WrappedAsyncOpenAIClient(WrappedOpenAIBaseClient, BaseAsyncOpenAI):
 
 
 class OpenAI(WrappedSyncOpenAIClient):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, name: Optional[str] = None, **kwargs):
         client = BaseOpenAI(*args, **kwargs)
-        super().__init__(*args, **kwargs, client=client)
+        super().__init__(*args, **kwargs, client=client, name=name)
 
 
 class AsyncOpenAI(WrappedAsyncOpenAIClient):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, name: Optional[str] = None, **kwargs):
         client = BaseAsyncOpenAI(*args, **kwargs)
-        super().__init__(*args, **kwargs, client=client)
+        super().__init__(*args, **kwargs, client=client, name=name)
