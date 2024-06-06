@@ -1,7 +1,10 @@
-from typing import TYPE_CHECKING, Any, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Type, TypeVar, Union
+
+from datasets import Dataset, DatasetInfo
 
 from baserun.api import ApiClient
 from baserun.mixins import ClientMixin
+from baserun.models.dataset import DatasetMetadata
 from baserun.models.tags import Tag
 from baserun.wrappers.generic import GenericClient, GenericCompletion
 
@@ -75,7 +78,7 @@ def setup_globals():
         AsyncOpenAI = WrappedAsyncOpenAI
 
 
-def init(client: T, name: Optional[str] = None, api_key: Optional[str] = None, **kwargs) -> ClientMixin | T:
+def init(client: T, name: Optional[str] = None, baserun_api_key: Optional[str] = None, **kwargs) -> ClientMixin | T:
     if is_openai_installed():
         from openai import AsyncOpenAI as BaseAsyncOpenAI
         from openai import OpenAI as BaseOpenAI
@@ -86,9 +89,9 @@ def init(client: T, name: Optional[str] = None, api_key: Optional[str] = None, *
         )
 
         if isinstance(client, BaseAsyncOpenAI):
-            return WrappedAsyncOpenAIClient(**kwargs, name=name, api_key=api_key, client=client)
+            return WrappedAsyncOpenAIClient(**kwargs, name=name, baserun_api_key=baserun_api_key, client=client)
         elif isinstance(client, BaseOpenAI):
-            return WrappedSyncOpenAIClient(**kwargs, name=name, api_key=api_key, client=client)
+            return WrappedSyncOpenAIClient(**kwargs, name=name, baserun_api_key=baserun_api_key, client=client)
 
     if is_anthropic_installed():
         from anthropic import Anthropic as BaseAnthropic
@@ -107,9 +110,9 @@ def init(client: T, name: Optional[str] = None, api_key: Optional[str] = None, *
         AsyncAnthropic = WrappedAsyncAnthropic
 
         if isinstance(client, BaseAnthropic):
-            return WrappedSyncAnthropicClient(**kwargs, name=name, api_key=api_key, client=client)
+            return WrappedSyncAnthropicClient(**kwargs, name=name, baserun_api_key=baserun_api_key, client=client)
         elif isinstance(client, BaseAsyncAnthropic):
-            return WrappedAsyncAnthropicClient(**kwargs, name=name, api_key=api_key, client=client)
+            return WrappedAsyncAnthropicClient(**kwargs, name=name, baserun_api_key=baserun_api_key, client=client)
 
     setup_globals()
     return client
@@ -173,6 +176,36 @@ def feedback(
     metadata: Optional[dict] = None,
 ) -> Tag:
     return tag(name, score, trace_id, completion_id, metadata, tag_type="feedback")
+
+
+def submit_dataset(dataset: Any, name: str, api_key: Optional[str] = None):
+    api_client = ApiClient(api_key=api_key)
+    api_client.submit_dataset(dataset, name)
+
+
+async def list_datasets(api_key: Optional[str] = None) -> List[DatasetMetadata]:
+    api_client = ApiClient(api_key=api_key)
+    return await api_client.list_datasets()
+
+
+async def get_dataset(
+    id: Optional[str] = None, name: Optional[str] = None, version: Optional[str] = None, api_key: Optional[str] = None
+) -> Union[Dataset, None]:
+    if not id and not name:
+        raise ValueError("Either id or name must be provided")
+
+    api_client = ApiClient(api_key=api_key)
+    raw_dataset = await api_client.get_dataset(id=id or name or "", version=version)
+    if not raw_dataset:
+        return None
+
+    dataset = Dataset.from_list(
+        raw_dataset.get("object", []),
+        info=DatasetInfo(
+            dataset_name=raw_dataset.get("name"),
+        ),
+    )
+    return dataset
 
 
 setup_globals()

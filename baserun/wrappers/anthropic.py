@@ -510,7 +510,7 @@ class WrappedAnthropicBaseClient(ClientMixin):
         session: Optional[str] = None,
         trace_id: Optional[str] = None,
         api_client: Optional[ApiClient] = None,
-        api_key: Optional[str] = None,
+        baserun_api_key: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ):
         self.name = name or "Unnamed"
@@ -524,7 +524,7 @@ class WrappedAnthropicBaseClient(ClientMixin):
         self.session = session
         self.start_timestamp = datetime.now(timezone.utc)
         self.end_timestamp: Union[datetime, None] = None
-        self.api_client = api_client or ApiClient(api_key=api_key)
+        self.api_client = api_client or ApiClient(api_key=baserun_api_key)
         self.metadata = metadata or {}
         self.request_ids: Dict[str, str] = {}
         self.integrations = []
@@ -570,10 +570,10 @@ class WrappedSyncAnthropicClient(WrappedAnthropicBaseClient, anthropic.Anthropic
         session: Optional[str] = None,
         user: Optional[str] = None,
         trace_id: Optional[str] = None,
+        baserun_baserun_api_key: Optional[str] = None,
+        api_client: Optional[ApiClient] = None,
         **kwargs,
     ):
-        api_client = kwargs.pop("api_client", None)
-        api_key = kwargs.pop("api_key", None)
         WrappedAnthropicBaseClient.__init__(
             self,
             client,
@@ -584,7 +584,7 @@ class WrappedSyncAnthropicClient(WrappedAnthropicBaseClient, anthropic.Anthropic
             session=session,
             trace_id=trace_id,
             api_client=api_client,
-            api_key=api_key,
+            baserun_api_key=baserun_baserun_api_key,
         )
         anthropic.Anthropic.__init__(self, *args, **kwargs)
         self.messages = WrappedSyncMessages(self)
@@ -605,7 +605,7 @@ class WrappedAsyncAnthropicClient(WrappedAnthropicBaseClient, anthropic.AsyncAnt
         **kwargs,
     ):
         api_client = kwargs.pop("api_client", None)
-        api_key = kwargs.pop("api_key", None)
+        baserun_api_key = kwargs.pop("baserun_api_key", None)
         WrappedAnthropicBaseClient.__init__(
             self,
             client,
@@ -616,7 +616,7 @@ class WrappedAsyncAnthropicClient(WrappedAnthropicBaseClient, anthropic.AsyncAnt
             session=session,
             trace_id=trace_id,
             api_client=api_client,
-            api_key=api_key,
+            baserun_api_key=baserun_api_key,
         )
         anthropic.AsyncAnthropic.__init__(self, *args, **kwargs)
         self.messages = WrappedAsyncMessages(self)

@@ -194,6 +194,36 @@ completion = GenericCompletion(
 completion.submit_to_baserun()
 ```
 
+## Datasets
+
+Baserun has built-in support for the `datasets` library by HuggingFace. You can use the `Dataset` class to submit datasets. See the [HuggingFace documentation](https://huggingface.co/docs/datasets/index) to learn more about the `datasets` library.
+
+Once you have loaded your dataset, you can submit it to Baserun by using the `submit_dataset` function.
+
+```python
+from datasets import Dataset
+from baserun import submit_dataset
+
+
+data_samples = {
+    "question": ["When was the first super bowl?"],
+    "answer": ["The first Super Bowl was held on January 15, 1967. It took place at the Los Angeles Memorial Coliseum in Los Angeles, California."],
+    "contexts": [
+        [
+            "The First AFL–NFL World Championship Game was an American football game played on January 15, 1967, at the Los Angeles Memorial Coliseum in Los Angeles,"
+        ],
+    ],
+    "ground_truth": [
+        "The first Super Bowl was held on January 15, 1967",
+    ],
+}
+
+dataset = Dataset.from_dict(data_samples)
+submit_dataset(dataset, "questions")
+```
+
+_Functionality to use datasets for tests and evals is coming soon._
+
 ## Further Documentation
 For a deeper dive on all capabilities and more advanced usage, please refer to our [Documentation](https://docs.baserun.ai).
 
