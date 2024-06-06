@@ -137,6 +137,7 @@ class CompletionMixin(ABC):
         )
         self.tags.append(new_tag)
         self.submit_to_baserun()
+        return new_tag
 
     def tool_result(self, tool_call: ChatCompletionMessageToolCall, result: Any):
         self.tool_results.append({"tool_call": tool_call.model_dump(), "result": result})
@@ -146,17 +147,17 @@ class CompletionMixin(ABC):
         self.tags.append(Transform(name=args[0], target_type="trace", target_id=self.completion_id, **kwargs))
         self.submit_to_baserun()
 
-    def variable(self, key: str, value: Any, metadata: Optional[Dict[str, Any]] = None):
-        self.tags.append(
-            Variable(
-                name=key,
-                value=value if isinstance(value, str) else json.dumps(value),
-                target_type="completion",
-                target_id=self.completion_id,
-                metadata=metadata or {},
-            )
+    def variable(self, key: str, value: Any, metadata: Optional[Dict[str, Any]] = None) -> Tag:
+        new_tag = Variable(
+            name=key,
+            value=value if isinstance(value, str) else json.dumps(value),
+            target_type="completion",
+            target_id=self.completion_id,
+            metadata=metadata or {},
         )
+        self.tags.append(new_tag)
         self.submit_to_baserun()
+        return new_tag
 
     def submit_to_baserun(self):
         pass

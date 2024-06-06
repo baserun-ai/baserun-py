@@ -392,7 +392,7 @@ class WrappedOpenAIBaseClient(ClientMixin):
         session: Optional[str] = None,
         trace_id: Optional[str] = None,
         api_client: Optional[ApiClient] = None,
-        api_key: Optional[str] = None,
+        baserun_api_key: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ):
         self.name = name or ".".join([v for v in [client.organization, client.__class__.__name__] if v])
@@ -412,7 +412,7 @@ class WrappedOpenAIBaseClient(ClientMixin):
 
         self.api_client = api_client
         if not self.api_client:
-            self.api_client = ApiClient(api_key=api_key)
+            self.api_client = ApiClient(api_key=baserun_api_key)
 
         try:
             from baserun.integrations.llamaindex import LLamaIndexInstrumentation
@@ -456,7 +456,7 @@ class WrappedSyncOpenAIClient(WrappedOpenAIBaseClient, BaseOpenAI):
         user: Optional[str] = None,
         trace_id: Optional[str] = None,
         api_client: Optional[ApiClient] = None,
-        api_key: Optional[str] = None,
+        baserun_api_key: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         **kwargs,
     ):
@@ -470,7 +470,7 @@ class WrappedSyncOpenAIClient(WrappedOpenAIBaseClient, BaseOpenAI):
             session=session,
             trace_id=trace_id,
             api_client=api_client,
-            api_key=api_key,
+            baserun_api_key=baserun_api_key,
             metadata=metadata or {},
         )
         self.metadata = self.metadata
@@ -514,7 +514,7 @@ class WrappedAsyncOpenAIClient(WrappedOpenAIBaseClient, BaseAsyncOpenAI):
         user: Optional[str] = None,
         trace_id: Optional[str] = None,
         api_client: Optional[ApiClient] = None,
-        api_key: Optional[str] = None,
+        baserun_api_key: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         **kwargs,
     ):
@@ -528,7 +528,7 @@ class WrappedAsyncOpenAIClient(WrappedOpenAIBaseClient, BaseAsyncOpenAI):
             session=session,
             trace_id=trace_id,
             api_client=api_client,
-            api_key=api_key,
+            baserun_api_key=baserun_api_key,
             metadata=metadata or {},
         )
         BaseAsyncOpenAI.__init__(self, *args, **kwargs)

@@ -7,14 +7,16 @@ import os
 import sys
 import traceback
 from time import sleep
+from typing import List
 
 import openai
 from openai import AsyncOpenAI, NotFoundError, OpenAI
 from openai.types import CreateEmbeddingResponse
 from openai.types.chat.chat_completion_message import FunctionCall
 
-from baserun import api, init, log, tag
+from baserun import api, get_dataset, init, list_datasets, log, submit_dataset, tag
 from baserun.integrations.llamaindex import LLamaIndexInstrumentation
+from baserun.models.dataset import DatasetMetadata
 from baserun.wrappers.generic import (
     GenericChoice,
     GenericClient,
@@ -490,6 +492,38 @@ def use_ragas_with_llama_index():
     trace_client.eval_many(score.scores.data.to_pydict())
 
     return score
+
+
+async def use_list_datasets() -> List[DatasetMetadata]:
+    datasets = await list_datasets()
+    return datasets
+
+
+async def use_get_dataset() -> Dataset:
+    dataset = Dataset.from_dict(
+        {
+            "question": ["When was the first super bowl?"],
+            "answer": [
+                "The first Super Bowl was held on January 15, 1967. It took place at the Los Angeles Memorial Coliseum in Los Angeles, California."
+            ],
+            "contexts": [
+                [
+                    "The First AFL–NFL World Championship Game was an American football game played on January 15, 1967, at the Los Angeles Memorial Coliseum in Los Angeles,"
+                ],
+            ],
+            "ground_truth": [
+                "The first Super Bowl was held on January 15, 1967",
+            ],
+        }
+    )
+
+    submit_dataset(dataset, "questions")
+
+    # Wait for dataset to be posted and persisted
+    await asyncio.sleep(2)
+
+    retrieved_dataset = await get_dataset(name="questions")
+    return retrieved_dataset
 
 
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):

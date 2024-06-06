@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import httpx
 
+from baserun.models.dataset import DatasetMetadata, DatasetVersionMetadata
+
 if TYPE_CHECKING:
     from baserun.wrappers.generic import GenericClient, GenericCompletion
 
@@ -34,6 +36,21 @@ async def post_and_log_response(
     if response.status_code < 200 or response.status_code >= 300:
         logger.debug("Text: " + response.text)
         logger.debug("Data: " + json.dumps(data, indent=2))
+
+
+async def get_and_log_response(base_url: str, api_key: str, endpoint: str, client: httpx.AsyncClient) -> Dict[str, Any]:
+    logger = logging.getLogger(__name__ + ".poster")
+    logger.debug(f"Getting from {base_url}/api/public/{endpoint}")
+    response = await client.get(
+        f"{base_url}/api/public/{endpoint}",
+        headers={"Authorization": f"Bearer {api_key}"},
+    )
+    logger.debug(f"Response from {base_url}/api/public/{endpoint}: {response.status_code}")
+    if response.status_code < 200 or response.status_code >= 300:
+        logger.debug("Text: " + response.text)
+        raise Exception("Failed to fetch data")
+
+    return response.json()
 
 
 async def worker(queue: Queue, base_url: str, api_key: str):
@@ -103,9 +120,13 @@ def stop_worker():
         exporter_queue.put(None)
 
     if exporter_process is not None and exporter_process.is_alive():
-        loop = asyncio.get_event_loop()
-        if tasks:
-            loop.run_until_complete(asyncio.gather(*tasks))
+        try:
+            loop = asyncio.get_event_loop()
+            if tasks:
+                loop.run_until_complete(asyncio.gather(*tasks))
+        except RuntimeError:
+            # If there's no running loop (i.e. it's already been stopped), just ignore this exception
+            pass
 
         # Terminate the process
         exporter_process.terminate()
@@ -124,21 +145,57 @@ class ApiClient:
         base_url: Optional[str] = None,
     ):
         self.environment = os.getenv("BASERUN_ENVIRONMENT", os.getenv("ENVIRONMENT", "production"))
+        self.base_url = base_url or os.getenv("BASERUN_API_URL") or "https://app.baserun.ai"
+        self.api_key = api_key or os.getenv("BASERUN_API_KEY") or ""
 
         atexit.register(self.exit_handler)
 
-        start_worker(
-            base_url or os.getenv("BASERUN_API_URL") or "https://app.baserun.ai",
-            api_key or os.getenv("BASERUN_API_KEY") or "",
-        )
+        start_worker(self.base_url, self.api_key)
 
     def exit_handler(self, *args) -> None:
         stop_worker()
+
+    async def list_datasets(self) -> List[DatasetMetadata]:
+        data = await get_and_log_response(self.base_url, self.api_key, "datasets", httpx.AsyncClient())
+        datasets = data.get("datasets", [])
+        metadata = []
+        if isinstance(datasets, list):
+            for dataset in datasets:
+                versions = [
+                    DatasetVersionMetadata(id=version.get("id"), creation_timestamp=version.get("creationTimestamp"))
+                    for version in dataset.get("versions", [])
+                ]
+                metadata.append(
+                    DatasetMetadata(
+                        id=dataset.get("id", ""),
+                        name=dataset.get("name", ""),
+                        length=dataset.get("length", 0),
+                        features=dataset.get("schema", []),
+                        creation_timestamp=dataset.get("creation_timestamp", None),
+                        created_by=dataset.get("created_by_clerk_user_id", ""),
+                        versions=versions,
+                    )
+                )
+
+        return metadata
+
+    async def get_dataset(self, id: str, version: Optional[str] = None) -> Dict[str, Any]:
+        data = await get_and_log_response(
+            self.base_url,
+            self.api_key,
+            f"datasets/{id}?version={version}" if version else f"datasets/{id}",
+            httpx.AsyncClient(),
+        )
+        return data.get("dataset", {})
 
     def submit_completion(self, completion: "GenericCompletion"):
         data = self._completion_data(completion)
         logger.debug(f"Submitting completion:\n{json.dumps(data, indent=2)}")
         post("completions", data)
+
+    def submit_dataset(self, dataset: Dataset, name: str, version: Optional[str] = None):
+        data = {"name": name, "data": dataset.to_list(), "version": version}
+        post("datasets", data)
 
     def submit_stream(self, stream: "GenericCompletion"):
         if not stream.id:
