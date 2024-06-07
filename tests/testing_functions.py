@@ -10,6 +10,7 @@ from time import sleep
 from typing import List
 
 import openai
+from datasets import Dataset
 from openai import AsyncOpenAI, NotFoundError, OpenAI
 from openai.types import CreateEmbeddingResponse
 from openai.types.chat.chat_completion_message import FunctionCall
@@ -524,6 +525,18 @@ async def use_get_dataset() -> Dataset:
 
     retrieved_dataset = await get_dataset(name="questions")
     return retrieved_dataset
+
+
+def compile_completions_dataset() -> Dataset:
+    dataset = Dataset.from_list([])
+    client = init(OpenAI(), name="openai_chat")
+    completion = client.chat.completions.create(
+        name="openai_chat completion",
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "What is the capital of the U.S.?"}],
+    )
+    dataset = completion.add_to_dataset(dataset)
+    return json.dumps(dataset.to_list(), indent=2)
 
 
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):

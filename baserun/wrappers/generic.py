@@ -65,6 +65,15 @@ class GenericCompletion(CompletionMixin, BaseModel):
     def genericize(self):
         return self
 
+    def model_dump(self, *args, **kwargs):
+        dumped = super().model_dump()
+        dumped["start_timestamp"] = dumped.pop("start_timestamp").isoformat()
+        if dumped["first_token_timestamp"]:
+            dumped["first_token_timestamp"] = dumped.pop("first_token_timestamp").isoformat()
+        if dumped["end_timestamp"]:
+            dumped["end_timestamp"] = dumped.pop("end_timestamp").isoformat()
+        return dumped
+
     def submit_to_baserun(self):
         self.client.api_client.submit_completion(self)
 
@@ -97,6 +106,15 @@ class GenericClient(ClientMixin, BaseModel):
 
     def genericize(self):
         return self
+
+    def model_dump(self, *args, **kwargs):
+        dumped = super().model_dump()
+        dumped.pop("api_client", None)
+        dumped.pop("integrations", None)
+        dumped["start_timestamp"] = dumped.pop("start_timestamp").isoformat()
+        if dumped["end_timestamp"]:
+            dumped["end_timestamp"] = dumped.pop("end_timestamp").isoformat()
+        return dumped
 
     def submit_to_baserun(self):
         self.api_client.submit_trace(self)

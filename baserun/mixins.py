@@ -3,6 +3,7 @@ import json
 from abc import ABC
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Type, overload
 
+from datasets import Dataset
 from openai.types.chat import ChatCompletionMessageToolCall
 
 from baserun.integrations.integration import Integration
@@ -24,6 +25,7 @@ class CompletionMixin(ABC):
     evals: List[CompletionEval]
     completion_id: str
     tool_results: List[Dict[str, Any]]
+    client: "GenericClient"
 
     def _clean_kwargs(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         return {
@@ -49,6 +51,24 @@ class CompletionMixin(ABC):
 
     @abc.abstractmethod
     def genericize(self) -> "GenericCompletion": ...
+
+    def add_to_dataset(self, dataset: Dataset) -> Dataset:
+        completion_data = self.genericize().model_dump()
+        completion_data.pop("start_timestamp", None)
+        completion_data.pop("first_token_timestamp", None)
+        completion_data.pop("end_timestamp", None)
+        completion_data.pop("usage", None)
+        completion_data.pop("tool_results", None)
+        completion_data.pop("trace_id", None)
+        for choice in completion_data["choices"]:
+            choice.pop("finish_reason", None)
+            choice.pop("logprobs", None)
+
+        client_data = self.client.genericize().model_dump()
+        client_data.pop("start_timestamp", None)
+        client_data.pop("end_timestamp", None)
+        completion_data["client"] = client_data
+        return dataset.add_item({"completion": completion_data})
 
     def tag(self, key: str, value: str, metadata: Optional[Dict[str, Any]] = None, tag_type: Optional[str] = "custom"):
         new_tag = Tag(
