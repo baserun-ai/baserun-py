@@ -540,37 +540,35 @@ def compile_completions_dataset() -> Dataset:
 async def use_dataset_for_rag_eval() -> Dataset:
     from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 
-    dataset = Dataset.from_dict(
-        {
-            "retrievals": [
-                {
-                    "vars": {
-                        "query": "When was the first super bowl?",
-                        "context": {
-                            "The First AFL–NFL World Championship Game was an American football game played on January 15, 1967, at the Los Angeles Memorial Coliseum in Los Angeles,"
-                        },
+    dataset = Dataset.from_list(
+        [
+            {
+                "vars": {
+                    "query": "When was the first super bowl?",
+                    "context": {
+                        "The First AFL–NFL World Championship Game was an American football game played on January 15, 1967, at the Los Angeles Memorial Coliseum in Los Angeles,"
                     },
-                    "output": "The first Super Bowl was held on Jan 15, 1967",
-                    "expected": "1967",
-                    "metadata": {"name": "Super Bowl 1", "eval_name": "correctness"},
                 },
-                {
-                    "vars": {
-                        "query": "Who won superbowl 31?",
-                        "context": {"The Green Bay Packers play in Green Bay, Wisconsin"},
-                    },
-                    "output": "The Green Bay Packers won Super Bowl XXXI",
-                    "expected": "Packers",
-                    "metadata": {"name": "Super Bowl 31", "eval_name": "correctness"},
+                "output": "The first Super Bowl was held on Jan 15, 1967",
+                "expected": "1967",
+                "metadata": {"name": "Super Bowl 1", "eval_name": "correctness"},
+            },
+            {
+                "vars": {
+                    "query": "Who won superbowl 31?",
+                    "context": {"The Green Bay Packers play in Green Bay, Wisconsin"},
                 },
-            ]
-        }
+                "output": "The Green Bay Packers won Super Bowl XXXI",
+                "expected": "Packers",
+                "metadata": {"name": "Super Bowl 31", "eval_name": "correctness"},
+            },
+        ]
     )
     documents = SimpleDirectoryReader(input_files=["tests/test_data/super_bowl.txt"]).load_data()
     index = VectorStoreIndex.from_documents(documents)
     query_engine = index.as_query_engine()
 
-    for retrieval in dataset.to_dict().get("retrievals", []):
+    for retrieval in dataset.to_list():
         name = retrieval.get("metadata", {}).get("name")
         eval_name = retrieval.get("metadata", {}).get("eval_name", name)
         trace = GenericClient(name=name, autosubmit=False)
@@ -589,18 +587,18 @@ async def use_dataset_for_rag_eval() -> Dataset:
 
 
 async def use_dataset_for_completion_eval() -> Dataset:
-    dataset = Dataset.from_dict(
-        {
-            "prompt": [{"role": "user", "content": "What is the capital of {{country}}?"}],
-            "evaluators": [{"includes": "{{city}}", "accuracy": {"min": 0.9}}],
-            "test_data": [
-                {
+    dataset = Dataset.from_list(
+        [
+            {
+                "prompt": [{"role": "user", "content": "What is the capital of {country}?"}],
+                "evaluators": {"includes": "{city}", "accuracy": {"min": 0.9}},
+                "test_data": {
                     "vars": {"city": "Washington, D.C.", "country": "United States"},
                     "expected": {"content": "The capital of the United States is Washington, D.C."},
                     "metadata": {"name": "U.S."},
                 },
-            ],
-        }
+            }
+        ]
     )
 
     submit_dataset(dataset, "eval_questions")
@@ -612,16 +610,28 @@ async def use_dataset_for_completion_eval() -> Dataset:
 
     client = init(OpenAI(), name="Dataset eval")
 
-    for case in retrieved_dataset.to_dict().get("scenarios", []):
+    for scenario in retrieved_dataset.to_list():
+        formatted_prompt = [
+            {**message, "content": message.get("content").format(**scenario.get("test_data", {}).get("vars", {}))}
+            for message in scenario.get("prompt")
+        ]
         completion = client.chat.completions.create(
-            name=case.get("name", "Dataset eval completion"), model="gpt-4o", messages=case.get("input")
+            name=scenario.get("name", "Dataset eval completion"),
+            model="gpt-4o",
+            messages=formatted_prompt,
+            variables=scenario.get("test_data", {}).get("vars", {}),
         )
-        expected = case["includes"]
-        if isinstance(expected, list):
-            for e in expected:
-                completion.eval("openai_chat.content").includes(e)
-        else:
-            completion.eval("openai_chat.content").includes(expected)
+
+        for name, arguments in scenario.get("evaluators", {}).items():
+            if name == "includes":
+                if isinstance(arguments, list):
+                    for arg in arguments:
+                        completion.eval("openai_chat.content").includes(arg)
+                else:
+                    completion.eval("openai_chat.content").includes(arguments)
+
+            if name == "accuracy":
+                completion.eval("openai_chat.accuracy", arguments.get("min"))
 
     return retrieved_dataset
 

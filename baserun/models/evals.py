@@ -37,13 +37,19 @@ class CompletionEval(BaseModel):
         return dumped
 
     def not_includes(self, expected: str, actual: Optional[str] = None) -> bool:
-        result = expected not in (actual or self.message_content())
+        expected = self._format_from_vars(expected)
+        actual = actual or self.message_content()
+        result = expected in actual
+        self.metadata.update({"expected": expected, "actual": actual})
         self.score = 1 if result else 0
         self.target.submit_to_baserun()
         return result
 
     def includes(self, expected: str, actual: Optional[str] = None) -> bool:
-        result = expected in (actual or self.message_content())
+        expected = self._format_from_vars(expected)
+        actual = actual or self.message_content()
+        result = expected in actual
+        self.metadata.update({"expected": expected, "actual": actual})
         self.score = 1 if result else 0
         self.target.submit_to_baserun()
         return result
@@ -53,6 +59,13 @@ class CompletionEval(BaseModel):
             return "".join([d.delta.content for d in self.target.captured_choices if d.delta.content])
         else:
             return self.target.choices[0].message.content
+
+    def _format_from_vars(self, string_to_format: str) -> str:
+        variables = {tag.key: tag.value for tag in self.target.tags if tag.tag_type == "variable"}
+        if variables:
+            return string_to_format.format(**variables)
+
+        return string_to_format
 
 
 class TraceEval(BaseModel):
@@ -83,13 +96,24 @@ class TraceEval(BaseModel):
         if not actual:
             actual = self.target.output or ""
 
+        expected = self._format_from_vars(expected)
         result = actual not in expected
+        self.metadata.update({"expected": expected, "actual": actual})
         self.score = 1 if result else 0
         self.target.submit_to_baserun()
         return result
 
     def includes(self, expected: str, actual: Optional[str] = None) -> bool:
+        expected = self._format_from_vars(expected)
         result = expected in (actual or self.target.output or "")
+        self.metadata.update({"expected": expected, "actual": actual})
         self.score = 1 if result else 0
         self.target.submit_to_baserun()
         return result
+
+    def _format_from_vars(self, string_to_format: str) -> str:
+        variables = {tag.key: tag.value for tag in self.target.tags if tag.tag_type == "variable"}
+        if variables:
+            return string_to_format.format(**variables)
+
+        return string_to_format
