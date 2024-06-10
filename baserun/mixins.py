@@ -1,8 +1,9 @@
 import abc
 import json
 from abc import ABC
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Type, overload
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Type, Union, overload
 
+from datasets import Dataset
 from openai.types.chat import ChatCompletionMessageToolCall
 
 from baserun.integrations.integration import Integration
@@ -24,6 +25,7 @@ class CompletionMixin(ABC):
     evals: List[CompletionEval]
     completion_id: str
     tool_results: List[Dict[str, Any]]
+    client: "GenericClient"
 
     def _clean_kwargs(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         return {
@@ -50,6 +52,24 @@ class CompletionMixin(ABC):
     @abc.abstractmethod
     def genericize(self) -> "GenericCompletion": ...
 
+    def add_to_dataset(self, dataset: Dataset) -> Dataset:
+        completion_data = self.genericize().model_dump()
+        completion_data.pop("start_timestamp", None)
+        completion_data.pop("first_token_timestamp", None)
+        completion_data.pop("end_timestamp", None)
+        completion_data.pop("usage", None)
+        completion_data.pop("tool_results", None)
+        completion_data.pop("trace_id", None)
+        for choice in completion_data["choices"]:
+            choice.pop("finish_reason", None)
+            choice.pop("logprobs", None)
+
+        client_data = self.client.genericize().model_dump()
+        client_data.pop("start_timestamp", None)
+        client_data.pop("end_timestamp", None)
+        completion_data["client"] = client_data
+        return dataset.add_item({"completion": completion_data})
+
     def tag(self, key: str, value: str, metadata: Optional[Dict[str, Any]] = None, tag_type: Optional[str] = "custom"):
         new_tag = Tag(
             target_type="completion",
@@ -60,7 +80,8 @@ class CompletionMixin(ABC):
             metadata=metadata or {},
         )
         self.tags.append(new_tag)
-        self.submit_to_baserun()
+        if self.client.autosubmit:
+            self.submit_to_baserun()
         return new_tag
 
     def eval_many(
@@ -70,9 +91,10 @@ class CompletionMixin(ABC):
         submitted_evals = []
         for name, scores in score_dict.items():
             for score in scores:
-                submitted_evals.append(self.eval(name, score=score, skip_submit=True, metadata=metadata))
+                submitted_evals.append(self.eval(name, score=score, metadata=metadata))
 
-        self.submit_to_baserun()
+        if self.client.autosubmit:
+            self.submit_to_baserun()
         # Notably, return only the evals added here, and not _all_ evals
         return submitted_evals
 
@@ -81,12 +103,11 @@ class CompletionMixin(ABC):
         name: str,
         score: Optional[float] = None,
         metadata: Optional[Dict[str, Any]] = None,
-        skip_submit: bool = False,
     ) -> CompletionEval:
         evaluator = CompletionEval(target=self, name=name, metadata=metadata or {}, score=score)
         self.evals.append(evaluator)
 
-        if score is not None and not skip_submit:
+        if score is not None and self.client.autosubmit:
             self.submit_to_baserun()
         return evaluator
 
@@ -102,7 +123,8 @@ class CompletionMixin(ABC):
             metadata=metadata or {},
         )
         self.tags.append(new_tag)
-        self.submit_to_baserun()
+        if self.client.autosubmit:
+            self.submit_to_baserun()
         return new_tag
 
     @overload
@@ -136,16 +158,19 @@ class CompletionMixin(ABC):
             metadata=metadata or {},
         )
         self.tags.append(new_tag)
-        self.submit_to_baserun()
+        if self.client.autosubmit:
+            self.submit_to_baserun()
         return new_tag
 
     def tool_result(self, tool_call: ChatCompletionMessageToolCall, result: Any):
         self.tool_results.append({"tool_call": tool_call.model_dump(), "result": result})
-        self.submit_to_baserun()
+        if self.client.autosubmit:
+            self.submit_to_baserun()
 
     def transform(self, *args, **kwargs):
         self.tags.append(Transform(name=args[0], target_type="trace", target_id=self.completion_id, **kwargs))
-        self.submit_to_baserun()
+        if self.client.autosubmit:
+            self.submit_to_baserun()
 
     def variable(self, key: str, value: Any, metadata: Optional[Dict[str, Any]] = None) -> Tag:
         new_tag = Variable(
@@ -156,7 +181,8 @@ class CompletionMixin(ABC):
             metadata=metadata or {},
         )
         self.tags.append(new_tag)
-        self.submit_to_baserun()
+        if self.client.autosubmit:
+            self.submit_to_baserun()
         return new_tag
 
     def submit_to_baserun(self):
@@ -189,7 +215,8 @@ class ClientMixin(ABC):
             metadata=metadata or {},
         )
         self.tags.append(new_tag)
-        self.submit_to_baserun()
+        if self.autosubmit:  # type: ignore[attr-defined]
+            self.submit_to_baserun()
         return new_tag
 
     def eval_many(
@@ -199,19 +226,18 @@ class ClientMixin(ABC):
         submitted_evals = []
         for name, scores in score_dict.items():
             for score in scores:
-                submitted_evals.append(self.eval(name, score=score, skip_submit=True, metadata=metadata))
+                submitted_evals.append(self.eval(name, score=score, metadata=metadata))
 
-        self.submit_to_baserun()
+        if self.autosubmit:  # type: ignore[attr-defined]
+            self.submit_to_baserun()
         # Notably, return only the evals added here, and not _all_ evals
         return submitted_evals
 
-    def eval(
-        self, name: str, score: Optional[float] = None, metadata: Optional[Dict[str, Any]] = None, skip_submit=False
-    ) -> "TraceEval":
+    def eval(self, name: str, score: Optional[float] = None, metadata: Optional[Dict[str, Any]] = None) -> "TraceEval":
         evaluator = TraceEval(target=self, name=name, metadata=metadata or {}, score=score)
         self.evals.append(evaluator)
 
-        if score is not None and not skip_submit:
+        if score is not None and self.autosubmit:  # type: ignore[attr-defined]
             self.submit_to_baserun()
         return evaluator
 
@@ -227,24 +253,25 @@ class ClientMixin(ABC):
             metadata=metadata or {},
         )
         self.tags.append(new_tag)
-        self.submit_to_baserun()
+        if self.autosubmit:  # type: ignore[attr-defined]
+            self.submit_to_baserun()
         return new_tag
 
     @overload
-    def log(self, message: str, name: str):
+    def log(self, message: Union[Dict[str, str], str], name: str):
         """Given message and name"""
 
     @overload
-    def log(self, message: str, name: str, metadata: Dict):
+    def log(self, message: Union[Dict[str, str], str], name: str, metadata: Dict):
         """Given message, name, and metadata."""
         pass
 
     @overload
-    def log(self, message: str):
+    def log(self, message: Union[Dict[str, str], str]):
         """Given just message"""
         pass
 
-    def log(self, message: str, name: Optional[str] = None, metadata: Optional[Dict] = None):
+    def log(self, message: Union[Dict[str, str], str], name: Optional[str] = None, metadata: Optional[Dict] = None):
         # Allow for transposition of name and metadata
         if isinstance(name, dict):
             metadata = name
@@ -253,6 +280,7 @@ class ClientMixin(ABC):
             name = metadata
             metadata = {}
 
+        message = json.dumps(message) if isinstance(message, dict) else message
         new_tag = Log(
             target_type="trace",
             target_id=self.trace_id,
@@ -261,7 +289,8 @@ class ClientMixin(ABC):
             metadata=metadata or {},
         )
         self.tags.append(new_tag)
-        self.submit_to_baserun()
+        if self.autosubmit:  # type: ignore[attr-defined]
+            self.submit_to_baserun()
         return new_tag
 
     def integrate(self, integration_class: Type[Integration]):
@@ -281,7 +310,8 @@ class ClientMixin(ABC):
             **kwargs,
         )
         self.tags.append(new_tag)
-        self.submit_to_baserun()
+        if self.autosubmit:
+            self.submit_to_baserun()
         return new_tag
 
     def variable(self, key: str, value: Any, metadata: Optional[Dict[str, Any]] = None):
@@ -293,7 +323,8 @@ class ClientMixin(ABC):
             metadata=metadata or {},
         )
         self.tags.append(new_tag)
-        self.submit_to_baserun()
+        if self.autosubmit:  # type: ignore[attr-defined]
+            self.submit_to_baserun()
         return new_tag
 
     def submit_to_baserun(self):

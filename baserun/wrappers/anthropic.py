@@ -500,6 +500,7 @@ class WrappedAnthropicBaseClient(ClientMixin):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     messages: Union[WrappedSyncMessages, WrappedAsyncMessages]
     integrations: List[Integration]
+    autosubmit: bool = Field(default=True)
 
     def __init__(
         self,

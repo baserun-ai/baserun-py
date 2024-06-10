@@ -30,9 +30,5 @@ repos:
         types: [python]
         pass_filenames: false
         additional_dependencies:
-          - types-protobuf
-          - grpc-stubs
           - types-requests
-          - opentelemetry-sdk>=1.21
-          - opentelemetry-instrumentation>=0.40b0
         args: ["--config-file", "pyproject.toml", "."]
