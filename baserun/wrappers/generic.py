@@ -103,6 +103,7 @@ class GenericClient(ClientMixin, BaseModel):
     api_client: Optional[ApiClient] = Field(default_factory=ApiClient)
     metadata: Dict[str, Any] = Field(default_factory=dict)
     integrations: List[Integration] = Field(default_factory=list)
+    autosubmit: bool = Field(default=True)
 
     def genericize(self):
         return self

@@ -1,0 +1,286 @@
+### Super Bowl I (1967)
+- **Teams**: Green Bay Packers vs. Kansas City Chiefs
+- **Outcome**: Packers won 35-10
+- **Venue**: Los Angeles Memorial Coliseum, Los Angeles, CA
+
+### Super Bowl II (1968)
+- **Teams**: Green Bay Packers vs. Oakland Raiders
+- **Outcome**: Packers won 33-14
+- **Venue**: Miami Orange Bowl, Miami, FL
+
+### Super Bowl III (1969)
+- **Teams**: New York Jets vs. Baltimore Colts
+- **Outcome**: Jets won 16-7
+- **Venue**: Miami Orange Bowl, Miami, FL
+
+### Super Bowl IV (1970)
+- **Teams**: Kansas City Chiefs vs. Minnesota Vikings
+- **Outcome**: Chiefs won 23-7
+- **Venue**: Tulane Stadium, New Orleans, LA
+
+### Super Bowl V (1971)
+- **Teams**: Baltimore Colts vs. Dallas Cowboys
+- **Outcome**: Colts won 16-13
+- **Venue**: Miami Orange Bowl, Miami, FL
+
+### Super Bowl VI (1972)
+- **Teams**: Dallas Cowboys vs. Miami Dolphins
+- **Outcome**: Cowboys won 24-3
+- **Venue**: Tulane Stadium, New Orleans, LA
+
+### Super Bowl VII (1973)
+- **Teams**: Miami Dolphins vs. Washington Redskins
+- **Outcome**: Dolphins won 14-7
+- **Venue**: Los Angeles Memorial Coliseum, Los Angeles, CA
+
+### Super Bowl VIII (1974)
+- **Teams**: Miami Dolphins vs. Minnesota Vikings
+- **Outcome**: Dolphins won 24-7
+- **Venue**: Rice Stadium, Houston, TX
+
+### Super Bowl IX (1975)
+- **Teams**: Pittsburgh Steelers vs. Minnesota Vikings
+- **Outcome**: Steelers won 16-6
+- **Venue**: Tulane Stadium, New Orleans, LA
+
+### Super Bowl X (1976)
+- **Teams**: Pittsburgh Steelers vs. Dallas Cowboys
+- **Outcome**: Steelers won 21-17
+- **Venue**: Miami Orange Bowl, Miami, FL
+
+### Super Bowl XI (1977)
+- **Teams**: Oakland Raiders vs. Minnesota Vikings
+- **Outcome**: Raiders won 32-14
+- **Venue**: Rose Bowl, Pasadena, CA
+
+### Super Bowl XII (1978)
+- **Teams**: Dallas Cowboys vs. Denver Broncos
+- **Outcome**: Cowboys won 27-10
+- **Venue**: Louisiana Superdome, New Orleans, LA
+
+### Super Bowl XIII (1979)
+- **Teams**: Pittsburgh Steelers vs. Dallas Cowboys
+- **Outcome**: Steelers won 35-31
+- **Venue**: Miami Orange Bowl, Miami, FL
+
+### Super Bowl XIV (1980)
+- **Teams**: Pittsburgh Steelers vs. Los Angeles Rams
+- **Outcome**: Steelers won 31-19
+- **Venue**: Rose Bowl, Pasadena, CA
+
+### Super Bowl XV (1981)
+- **Teams**: Oakland Raiders vs. Philadelphia Eagles
+- **Outcome**: Raiders won 27-10
+- **Venue**: Louisiana Superdome, New Orleans, LA
+
+### Super Bowl XVI (1982)
+- **Teams**: San Francisco 49ers vs. Cincinnati Bengals
+- **Outcome**: 49ers won 26-21
+- **Venue**: Pontiac Silverdome, Pontiac, MI
+
+### Super Bowl XVII (1983)
+- **Teams**: Washington Redskins vs. Miami Dolphins
+- **Outcome**: Redskins won 27-17
+- **Venue**: Rose Bowl, Pasadena, CA
+
+### Super Bowl XVIII (1984)
+- **Teams**: Los Angeles Raiders vs. Washington Redskins
+- **Outcome**: Raiders won 38-9
+- **Venue**: Tampa Stadium, Tampa, FL
+
+### Super Bowl XIX (1985)
+- **Teams**: San Francisco 49ers vs. Miami Dolphins
+- **Outcome**: 49ers won 38-16
+- **Venue**: Stanford Stadium, Stanford, CA
+
+### Super Bowl XX (1986)
+- **Teams**: Chicago Bears vs. New England Patriots
+- **Outcome**: Bears won 46-10
+- **Venue**: Louisiana Superdome, New Orleans, LA
+
+### Super Bowl XXI (1987)
+- **Teams**: New York Giants vs. Denver Broncos
+- **Outcome**: Giants won 39-20
+- **Venue**: Rose Bowl, Pasadena, CA
+
+### Super Bowl XXII (1988)
+- **Teams**: Washington Redskins vs. Denver Broncos
+- **Outcome**: Redskins won 42-10
+- **Venue**: Jack Murphy Stadium, San Diego, CA
+
+### Super Bowl XXIII (1989)
+- **Teams**: San Francisco 49ers vs. Cincinnati Bengals
+- **Outcome**: 49ers won 20-16
+- **Venue**: Joe Robbie Stadium, Miami, FL
+
+### Super Bowl XXIV (1990)
+- **Teams**: San Francisco 49ers vs. Denver Broncos
+- **Outcome**: 49ers won 55-10
+- **Venue**: Louisiana Superdome, New Orleans, LA
+
+### Super Bowl XXV (1991)
+- **Teams**: New York Giants vs. Buffalo Bills
+- **Outcome**: Giants won 20-19
+- **Venue**: Tampa Stadium, Tampa, FL
+
+### Super Bowl XXVI (1992)
+- **Teams**: Washington Redskins vs. Buffalo Bills
+- **Outcome**: Redskins won 37-24
+- **Venue**: Hubert H. Humphrey Metrodome, Minneapolis, MN
+
+### Super Bowl XXVII (1993)
+- **Teams**: Dallas Cowboys vs. Buffalo Bills
+- **Outcome**: Cowboys won 52-17
+- **Venue**: Rose Bowl, Pasadena, CA
+
+### Super Bowl XXVIII (1994)
+- **Teams**: Dallas Cowboys vs. Buffalo Bills
+- **Outcome**: Cowboys won 30-13
+- **Venue**: Georgia Dome, Atlanta, GA
+
+### Super Bowl XXIX (1995)
+- **Teams**: San Francisco 49ers vs. San Diego Chargers
+- **Outcome**: 49ers won 49-26
+- **Venue**: Joe Robbie Stadium, Miami, FL
+
+### Super Bowl XXX (1996)
+- **Teams**: Dallas Cowboys vs. Pittsburgh Steelers
+- **Outcome**: Cowboys won 27-17
+- **Venue**: Sun Devil Stadium, Tempe, AZ
+
+### Super Bowl XXXI (1997)
+- **Teams**: Green Bay Packers vs. New England Patriots
+- **Outcome**: Packers won 35-21
+- **Venue**: Louisiana Superdome, New Orleans, LA
+
+### Super Bowl XXXII (1998)
+- **Teams**: Denver Broncos vs. Green Bay Packers
+- **Outcome**: Broncos won 31-24
+- **Venue**: Qualcomm Stadium, San Diego, CA
+
+### Super Bowl XXXIII (1999)
+- **Teams**: Denver Broncos vs. Atlanta Falcons
+- **Outcome**: Broncos won 34-19
+- **Venue**: Pro Player Stadium, Miami, FL
+
+### Super Bowl XXXIV (2000)
+- **Teams**: St. Louis Rams vs. Tennessee Titans
+- **Outcome**: Rams won 23-16
+- **Venue**: Georgia Dome, Atlanta, GA
+
+### Super Bowl XXXV (2001)
+- **Teams**: Baltimore Ravens vs. New York Giants
+- **Outcome**: Ravens won 34-7
+- **Venue**: Raymond James Stadium, Tampa, FL
+
+### Super Bowl XXXVI (2002)
+- **Teams**: New England Patriots vs. St. Louis Rams
+- **Outcome**: Patriots won 20-17
+- **Venue**: Louisiana Superdome, New Orleans, LA
+
+### Super Bowl XXXVII (2003)
+- **Teams**: Tampa Bay Buccaneers vs. Oakland Raiders
+- **Outcome**: Buccaneers won 48-21
+- **Venue**: Qualcomm Stadium, San Diego, CA
+
+### Super Bowl XXXVIII (2004)
+- **Teams**: New England Patriots vs. Carolina Panthers
+- **Outcome**: Patriots won 32-29
+- **Venue**: Reliant Stadium, Houston, TX
+
+### Super Bowl XXXIX (2005)
+- **Teams**: New England Patriots vs. Philadelphia Eagles
+- **Outcome**: Patriots won 24-21
+- **Venue**: Alltel Stadium, Jacksonville, FL
+
+### Super Bowl XL (2006)
+- **Teams**: Pittsburgh Steelers vs. Seattle Seahawks
+- **Outcome**: Steelers won 21-10
+- **Venue**: Ford Field, Detroit, MI
+
+### Super Bowl XLI (2007)
+- **Teams**: Indianapolis Colts vs. Chicago Bears
+- **Outcome**: Colts won 29-17
+- **Venue**: Dolphin Stadium, Miami Gardens, FL
+
+### Super Bowl XLII (2008)
+- **Teams**: New York Giants vs. New England Patriots
+- **Outcome**: Giants won 17-14
+- **Venue**: University of Phoenix Stadium, Glendale, AZ
+
+### Super Bowl XLIII (2009)
+- **Teams**: Pittsburgh Steelers vs. Arizona Cardinals
+- **Outcome**: Steelers won 27-23
+- **Venue**: Raymond James Stadium, Tampa, FL
+
+
+
+### Super Bowl XLIV (2010)
+- **Teams**: New Orleans Saints vs. Indianapolis Colts
+- **Outcome**: Saints won 31-17
+- **Venue**: Sun Life Stadium, Miami Gardens, FL
+
+### Super Bowl XLV (2011)
+- **Teams**: Green Bay Packers vs. Pittsburgh Steelers
+- **Outcome**: Packers won 31-25
+- **Venue**: Cowboys Stadium, Arlington, TX
+
+### Super Bowl XLVI (2012)
+- **Teams**: New York Giants vs. New England Patriots
+- **Outcome**: Giants won 21-17
+- **Venue**: Lucas Oil Stadium, Indianapolis, IN
+
+### Super Bowl XLVII (2013)
+- **Teams**: Baltimore Ravens vs. San Francisco 49ers
+- **Outcome**: Ravens won 34-31
+- **Venue**: Mercedes-Benz Superdome, New Orleans, LA
+
+### Super Bowl XLVIII (2014)
+- **Teams**: Seattle Seahawks vs. Denver Broncos
+- **Outcome**: Seahawks won 43-8
+- **Venue**: MetLife Stadium, East Rutherford, NJ
+
+### Super Bowl XLIX (2015)
+- **Teams**: New England Patriots vs. Seattle Seahawks
+- **Outcome**: Patriots won 28-24
+- **Venue**: University of Phoenix Stadium, Glendale, AZ
+
+### Super Bowl 50 (2016)
+- **Teams**: Denver Broncos vs. Carolina Panthers
+- **Outcome**: Broncos won 24-10
+- **Venue**: Levi's Stadium, Santa Clara, CA
+
+### Super Bowl LI (2017)
+- **Teams**: New England Patriots vs. Atlanta Falcons
+- **Outcome**: Patriots won 34-28 (OT)
+- **Venue**: NRG Stadium, Houston, TX
+
+### Super Bowl LII (2018)
+- **Teams**: Philadelphia Eagles vs. New England Patriots
+- **Outcome**: Eagles won 41-33
+- **Venue**: U.S. Bank Stadium, Minneapolis, MN
+
+### Super Bowl LIII (2019)
+- **Teams**: New England Patriots vs. Los Angeles Rams
+- **Outcome**: Patriots won 13-3
+- **Venue**: Mercedes-Benz Stadium, Atlanta, GA
+
+### Super Bowl LIV (2020)
+- **Teams**: Kansas City Chiefs vs. San Francisco 49ers
+- **Outcome**: Chiefs won 31-20
+- **Venue**: Hard Rock Stadium, Miami Gardens, FL
+
+### Super Bowl LV (2021)
+- **Teams**: Tampa Bay Buccaneers vs. Kansas City Chiefs
+- **Outcome**: Buccaneers won 31-9
+- **Venue**: Raymond James Stadium, Tampa, FL
+
+### Super Bowl LVI (2022)
+- **Teams**: Los Angeles Rams vs. Cincinnati Bengals
+- **Outcome**: Rams won 23-20
+- **Venue**: SoFi Stadium, Inglewood, CA
+
+### Super Bowl LVII (2023)
+- **Teams**: Kansas City Chiefs vs. Philadelphia Eagles
+- **Outcome**: Chiefs won 38-35
+- **Venue**: State Farm Stadium, Glendale, AZ

@@ -5,6 +5,7 @@ from datasets import Dataset, DatasetInfo
 from baserun.api import ApiClient
 from baserun.mixins import ClientMixin
 from baserun.models.dataset import DatasetMetadata
+from baserun.models.evals import CompletionEval, TraceEval
 from baserun.models.tags import Tag
 from baserun.wrappers.generic import GenericClient, GenericCompletion
 
@@ -139,6 +140,26 @@ def tag(
         return generic_completion.tag(key, value, metadata=metadata, tag_type=tag_type)
     else:
         return generic_client.tag(key, value, metadata=metadata, tag_type=tag_type)
+
+
+def evaluate(
+    name: str,
+    score: float,
+    trace_id: str,
+    completion_id: Optional[str] = None,
+    metadata: Optional[dict] = None,
+) -> Union[CompletionEval, TraceEval]:
+    client = GenericClient(name=name)
+    if completion_id:
+        completion = GenericCompletion(
+            name=name,
+            client=client,
+            completion_id=completion_id,
+            trace_id=trace_id,
+        )
+        return completion.eval(name, score, metadata=metadata)
+
+    return client.eval(name, score, metadata=metadata)
 
 
 def log(

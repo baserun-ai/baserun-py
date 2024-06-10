@@ -382,6 +382,7 @@ class WrappedOpenAIBaseClient(ClientMixin):
     chat: WrappedChat | WrappedAsyncChat
     integrations: List[Integration]
     metadata: Dict[str, Any]
+    autosubmit: bool = Field(default=True)
 
     def __init__(
         self,
