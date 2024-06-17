@@ -7,10 +7,10 @@ from datasets import Dataset
 from openai.types.chat import ChatCompletionMessageToolCall
 
 from baserun.integrations.integration import Integration
-from baserun.models.evals import CompletionEval, TraceEval
 from baserun.models.tags import Log, Tag, Transform, Variable
 
 if TYPE_CHECKING:
+    from baserun.models.evals import CompletionEval, TraceEval
     from baserun.wrappers.generic import GenericClient, GenericCompletion
 
 
@@ -22,10 +22,10 @@ class CompletionMixin(ABC):
     """
 
     tags: List[Tag]
-    evals: List[CompletionEval]
+    evals: List["CompletionEval"]
     completion_id: str
     tool_results: List[Dict[str, Any]]
-    client: "GenericClient"
+    client: "ClientMixin"
 
     def _clean_kwargs(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         return {
@@ -86,13 +86,14 @@ class CompletionMixin(ABC):
 
     def eval_many(
         self, score_dict: Dict[str, Iterable[float]], metadata: Optional[Dict[str, Any]] = None
-    ) -> List[CompletionEval]:
+    ) -> List["CompletionEval"]:
         """Submit multiple evals at once from scores in a dictionary. (This is compatible with Ragas)"""
         submitted_evals = []
         for name, scores in score_dict.items():
             for score in scores:
                 submitted_evals.append(self.eval(name, score=score, metadata=metadata))
 
+        self.evals.extend(submitted_evals)
         if self.client.autosubmit:
             self.submit_to_baserun()
         # Notably, return only the evals added here, and not _all_ evals
@@ -103,13 +104,15 @@ class CompletionMixin(ABC):
         name: str,
         score: Optional[float] = None,
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> CompletionEval:
-        evaluator = CompletionEval(target=self, name=name, metadata=metadata or {}, score=score)
-        self.evals.append(evaluator)
+    ) -> "CompletionEval":
+        from baserun.models.evals import CompletionEval
+
+        evaluation = CompletionEval(target=self, name=name, metadata=metadata or {}, score=score)
+        self.evals.append(evaluation)
 
         if score is not None and self.client.autosubmit:
             self.submit_to_baserun()
-        return evaluator
+        return evaluation
 
     def feedback(self, name: str, score: Any, metadata: Optional[Dict[str, Any]] = None):
         value = json.dumps(score)
@@ -201,6 +204,7 @@ class ClientMixin(ABC):
     trace_id: str
     output: Optional[str]
     integrations: List[Integration]
+    autosubmit: bool
 
     @abc.abstractmethod
     def genericize(self) -> "GenericClient": ...
@@ -221,7 +225,7 @@ class ClientMixin(ABC):
 
     def eval_many(
         self, score_dict: Dict[str, Iterable[float]], metadata: Optional[Dict[str, Any]] = None
-    ) -> List[TraceEval]:
+    ) -> List["TraceEval"]:
         """Submit multiple evals at once from scores in a dictionary. (This is compatible with Ragas)"""
         submitted_evals = []
         for name, scores in score_dict.items():
@@ -234,12 +238,14 @@ class ClientMixin(ABC):
         return submitted_evals
 
     def eval(self, name: str, score: Optional[float] = None, metadata: Optional[Dict[str, Any]] = None) -> "TraceEval":
-        evaluator = TraceEval(target=self, name=name, metadata=metadata or {}, score=score)
-        self.evals.append(evaluator)
+        from baserun.models.evals import TraceEval
+
+        evaluation = TraceEval(target=self, name=name, metadata=metadata or {}, score=score)
+        self.evals.append(evaluation)
 
         if score is not None and self.autosubmit:  # type: ignore[attr-defined]
             self.submit_to_baserun()
-        return evaluator
+        return evaluation
 
     def feedback(self, name: str, score: Any, metadata: Optional[Dict[str, Any]] = None):
         value = json.dumps(score)
@@ -329,7 +335,3 @@ class ClientMixin(ABC):
 
     def submit_to_baserun(self):
         pass
-
-
-TraceEval.model_rebuild()
-CompletionEval.model_rebuild()

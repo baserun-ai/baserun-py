@@ -1,6 +1,7 @@
 import logging
+from multiprocessing import Process
 
-from baserun import api
+from baserun import worker
 
 logger = logging.getLogger(__name__)
 
@@ -10,18 +11,27 @@ def pytest_addoption(parser):
 
 
 def pytest_runtest_teardown(item, nextitem):
-    while not api.exporter_queue.empty():
-        api.exporter_queue.get_nowait()
+    while not worker.exporter_queue.empty():
+        worker.exporter_queue.get_nowait()
 
-    for task in api.tasks:
+    for task in worker.tasks:
         task.cancel()
-    api.tasks = []
+    worker.tasks = []
+
+
+def pytest_runtest_setup(item):
+    while not worker.exporter_queue.empty():
+        worker.exporter_queue.get_nowait()
+
+    for task in worker.tasks:
+        task.cancel()
+    worker.tasks = []
 
 
 def pytest_sessionstart(session):
-    # This will stop start_worker from starting worker threads
-    api.exporter_thread = "Dummy"
+    # This will stop start_worker from starting worker processes
+    worker.exporter_process = Process()
 
 
 def pytest_sessionfinish(session, exitstatus):
-    api.exporter_queue.close()
+    worker.exporter_queue.close()

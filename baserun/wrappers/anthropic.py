@@ -14,6 +14,7 @@ from baserun.api import ApiClient
 from baserun.integrations.integration import Integration
 from baserun.mixins import ClientMixin, CompletionMixin
 from baserun.models.evals import CompletionEval, TraceEval
+from baserun.models.experiment import Experiment
 from baserun.models.tags import Tag
 from baserun.utils import copy_type_hints
 from baserun.wrappers.generic import (
@@ -513,8 +514,8 @@ class WrappedAnthropicBaseClient(ClientMixin):
         api_client: Optional[ApiClient] = None,
         baserun_api_key: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        experiment: Optional[Experiment] = None,
     ):
-        self.name = name or "Unnamed"
         self.tags: List[Tag] = []
         self.evals: List[TraceEval] = []
         self.client = client
@@ -529,6 +530,12 @@ class WrappedAnthropicBaseClient(ClientMixin):
         self.metadata = metadata or {}
         self.request_ids: Dict[str, str] = {}
         self.integrations = []
+        self.experiment = experiment
+
+        if name:
+            self.name = name
+        else:
+            self.name = "Anthropic Client"
 
         try:
             from baserun.integrations.llamaindex import LLamaIndexInstrumentation
@@ -552,6 +559,7 @@ class WrappedAnthropicBaseClient(ClientMixin):
             integrations=[],
             output=self.output,
             error=self.error,
+            experiment=self.experiment,
         )
 
     def submit_to_baserun(self):
@@ -573,6 +581,7 @@ class WrappedSyncAnthropicClient(WrappedAnthropicBaseClient, anthropic.Anthropic
         trace_id: Optional[str] = None,
         baserun_baserun_api_key: Optional[str] = None,
         api_client: Optional[ApiClient] = None,
+        experiment: Optional[Experiment] = None,
         **kwargs,
     ):
         WrappedAnthropicBaseClient.__init__(
@@ -586,6 +595,7 @@ class WrappedSyncAnthropicClient(WrappedAnthropicBaseClient, anthropic.Anthropic
             trace_id=trace_id,
             api_client=api_client,
             baserun_api_key=baserun_baserun_api_key,
+            experiment=experiment,
         )
         anthropic.Anthropic.__init__(self, *args, **kwargs)
         self.messages = WrappedSyncMessages(self)
@@ -603,6 +613,7 @@ class WrappedAsyncAnthropicClient(WrappedAnthropicBaseClient, anthropic.AsyncAnt
         session: Optional[str] = None,
         user: Optional[str] = None,
         trace_id: Optional[str] = None,
+        experiment: Optional[Experiment] = None,
         **kwargs,
     ):
         api_client = kwargs.pop("api_client", None)
@@ -618,18 +629,31 @@ class WrappedAsyncAnthropicClient(WrappedAnthropicBaseClient, anthropic.AsyncAnt
             trace_id=trace_id,
             api_client=api_client,
             baserun_api_key=baserun_api_key,
+            experiment=experiment,
         )
         anthropic.AsyncAnthropic.__init__(self, *args, **kwargs)
         self.messages = WrappedAsyncMessages(self)
 
 
 class Anthropic(WrappedSyncAnthropicClient):
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        *args,
+        name: Optional[str] = None,
+        experiment: Optional[Experiment] = None,
+        **kwargs,
+    ):
         client = anthropic.Anthropic(*args, **kwargs)
-        super().__init__(*args, **kwargs, client=client)
+        super().__init__(*args, **kwargs, name=name, client=client, experiment=experiment)
 
 
 class AsyncAnthropic(WrappedAsyncAnthropicClient):
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        *args,
+        name: Optional[str] = None,
+        experiment: Optional[Experiment] = None,
+        **kwargs,
+    ):
         client = anthropic.AsyncAnthropic(*args, **kwargs)
-        super().__init__(*args, **kwargs, client=client)
+        super().__init__(*args, **kwargs, name=name, client=client, experiment=experiment)

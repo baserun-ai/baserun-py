@@ -99,6 +99,8 @@ def example():
 
 ## Evals
 
+### Evaluating Completions
+
 You can perform evals directly on a completion object. The `includes` eval is used here as an example, and checks if a string is included in the completion's output. The argument passed to `eval()` is a name or label used for your reference.
 
 ```python
@@ -222,7 +224,34 @@ dataset = Dataset.from_dict(data_samples)
 submit_dataset(dataset, "questions")
 ```
 
-_Functionality to use datasets for tests and evals is coming soon._
+### Using Datasets for evals
+
+Once you have submitted a dataset, you can use the `get_dataset` function to retrieve it. The retrieved dataset can automatically create scenarios from your data. From there, you can easily evaluate these scenarios by using the `evaluate` function:
+
+```python
+from baserun import OpenAI, evaluate
+
+dataset = await get_dataset(name="capital questions")
+question = "What is the capital of {country}?"
+
+client = OpenAI()
+experiment = Experiment(dataset=dataset, client=client, name="Dataset online eval run")
+for scenario in experiment.scenarios:
+    evaluators = [Includes(scenario=scenario, expected="{city}"), Correctness(scenario=scenario, question=question)]
+
+    completion = client.chat.completions.create(
+        name=scenario.name,
+        model="gpt-4o",
+        messages=scenario.format_messages([{"role": "user", "content": question}]),
+        variables=scenario.input,
+    )
+    output = completion.choices[0].message.content
+    client.output = output
+    scenario.actual = output
+
+    evaluate(evaluators, scenario, completion=completion)
+```
+
 
 ## Further Documentation
 For a deeper dive on all capabilities and more advanced usage, please refer to our [Documentation](https://docs.baserun.ai).

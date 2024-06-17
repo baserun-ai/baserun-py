@@ -15,9 +15,11 @@ from openai import AsyncOpenAI, NotFoundError, OpenAI
 from openai.types import CreateEmbeddingResponse
 from openai.types.chat.chat_completion_message import FunctionCall
 
-from baserun import api, get_dataset, init, list_datasets, log, submit_dataset, tag
+from baserun import api, evaluate, get_dataset, init, list_datasets, log, submit_dataset, tag
 from baserun.integrations.llamaindex import LLamaIndexInstrumentation
 from baserun.models.dataset import DatasetMetadata
+from baserun.models.evaluators import Correctness, Includes
+from baserun.models.experiment import Experiment
 from baserun.wrappers.generic import (
     GenericChoice,
     GenericClient,
@@ -516,7 +518,7 @@ async def use_get_dataset() -> Dataset:
         }
     )
 
-    submit_dataset(dataset, "questions")
+    submit_dataset(dataset, name="questions", metadata={"description": "Dataset of questions and answers"})
 
     # Wait for dataset to be posted and persisted
     await asyncio.sleep(2)
@@ -543,7 +545,7 @@ async def use_dataset_for_rag_eval() -> Dataset:
     dataset = Dataset.from_list(
         [
             {
-                "vars": {
+                "input": {
                     "query": "When was the first super bowl?",
                     "context": {
                         "The First AFL–NFL World Championship Game was an American football game played on January 15, 1967, at the Los Angeles Memorial Coliseum in Los Angeles,"
@@ -554,7 +556,7 @@ async def use_dataset_for_rag_eval() -> Dataset:
                 "metadata": {"name": "Super Bowl 1", "eval_name": "correctness"},
             },
             {
-                "vars": {
+                "input": {
                     "query": "Who won superbowl 31?",
                     "context": {"The Green Bay Packers play in Green Bay, Wisconsin"},
                 },
@@ -573,7 +575,7 @@ async def use_dataset_for_rag_eval() -> Dataset:
         eval_name = retrieval.get("metadata", {}).get("eval_name", name)
         trace = GenericClient(name=name, autosubmit=False)
 
-        query = retrieval.get("vars", {}).get("query")
+        query = retrieval.get("input", {}).get("query")
         answer = query_engine.query(query)
 
         trace.variable("query", query)
@@ -586,54 +588,54 @@ async def use_dataset_for_rag_eval() -> Dataset:
         trace.submit_to_baserun()
 
 
-async def use_dataset_for_completion_eval() -> Dataset:
+async def use_submit_dataset() -> Dataset:
     dataset = Dataset.from_list(
         [
             {
-                "prompt": [{"role": "user", "content": "What is the capital of {country}?"}],
-                "evaluators": {"includes": "{city}", "accuracy": {"min": 0.9}},
-                "test_data": {
-                    "vars": {"city": "Washington, D.C.", "country": "United States"},
-                    "expected": {"content": "The capital of the United States is Washington, D.C."},
-                    "metadata": {"name": "U.S."},
-                },
-            }
-        ]
+                "input": {"city": "Washington, D.C.", "country": "United States"},
+                "expected": "The capital of the {country} is {city}",
+                "contexts": ["The United States still exists as a country and the capital has not changed recently."],
+                "name": "U.S.",
+                "id": "bcc8e116-4f70-4f6d-bb4f-d5892b5db8e1",
+            },
+            {
+                "input": {"city": "London", "country": "United Kingdom"},
+                "expected": "The capital of the {country} is {city}",
+                "contexts": ["The United Kingdom still exists as a country and the capital has not changed recently."],
+                "name": "U.K.",
+                "id": "c6efec68-b01d-44f2-b204-54afba7b9ad9",
+            },
+        ],
     )
 
-    submit_dataset(dataset, "eval_questions")
+    submit_dataset(dataset, name="capital questions", metadata={"description": "Dataset of questions about capitals"})
+    return dataset
 
-    # Wait for dataset to be posted and persisted
-    await asyncio.sleep(3)
 
-    retrieved_dataset = await get_dataset(name="eval_questions")
+async def use_dataset_for_online_eval() -> Dataset:
+    from baserun import OpenAI
 
-    client = init(OpenAI(), name="Dataset eval")
+    dataset = await get_dataset(name="capital questions")
+    question = "What is the capital of {country}?"
 
-    for scenario in retrieved_dataset.to_list():
-        formatted_prompt = [
-            {**message, "content": message.get("content").format(**scenario.get("test_data", {}).get("vars", {}))}
-            for message in scenario.get("prompt")
-        ]
+    client = OpenAI(name="Online Eval")
+    experiment = Experiment(dataset=dataset, client=client, name="Dataset online eval run")
+    for scenario in experiment.scenarios:
+        evaluators = [Includes(scenario=scenario, expected="{city}"), Correctness(scenario=scenario, question=question)]
+
         completion = client.chat.completions.create(
-            name=scenario.get("name", "Dataset eval completion"),
+            name=scenario.name,
             model="gpt-4o",
-            messages=formatted_prompt,
-            variables=scenario.get("test_data", {}).get("vars", {}),
+            messages=scenario.format_messages([{"role": "user", "content": question}]),
+            variables=scenario.input,
         )
+        output = completion.choices[0].message.content
+        client.output = output
+        scenario.actual = output
 
-        for name, arguments in scenario.get("evaluators", {}).items():
-            if name == "includes":
-                if isinstance(arguments, list):
-                    for arg in arguments:
-                        completion.eval("openai_chat.content").includes(arg)
-                else:
-                    completion.eval("openai_chat.content").includes(arguments)
+        evaluate(evaluators, scenario, completion=completion)
 
-            if name == "accuracy":
-                completion.eval("openai_chat.accuracy", arguments.get("min"))
-
-    return retrieved_dataset
+    return dataset
 
 
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):

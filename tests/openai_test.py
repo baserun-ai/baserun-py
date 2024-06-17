@@ -157,7 +157,7 @@ def test_template_sync():
     use_template(template=template)
 
     queued_requests = get_queued_objects()
-    assert len(queued_requests) == 2
+    assert len(queued_requests) == 3
     completions_request = queued_requests[0]
     data = completions_request.get("data")
 
@@ -176,7 +176,7 @@ async def test_template_async():
     await use_template_async(template=template)
 
     queued_requests = get_queued_objects()
-    assert len(queued_requests) == 2
+    assert len(queued_requests) == 3
     completions_request = queued_requests[0]
     data = completions_request.get("data")
 
@@ -213,7 +213,7 @@ def test_chat_tools():
     openai_chat_tools()
 
     queued_requests = get_queued_objects()
-    assert len(queued_requests) == 4
+    assert len(queued_requests) == 5
     completions_request = queued_requests[-2]
     assert completions_request.get("endpoint") == "completions"
     data = completions_request.get("data")
@@ -306,7 +306,7 @@ def test_evals():
     assert len(completion_eval.get("target_id")) == 36
     assert completion_eval.get("name") == "Contains answer"
     assert completion_eval.get("score") == 1
-    assert completion_eval.get("metadata") == {}
+    assert completion_eval.get("metadata", {}).get("expected") == "Washington"
 
     last_trace_request = next(request for request in reversed(queued_requests) if request.get("endpoint") == "traces")
     trace_data = last_trace_request.get("data")
@@ -317,7 +317,7 @@ def test_evals():
     assert len(trace_eval.get("target_id")) == 36
     assert trace_eval.get("name") == "Contains answer"
     assert trace_eval.get("score") == 1
-    assert trace_eval.get("metadata") == {}
+    assert trace_eval.get("metadata", {}).get("expected") == "Washington"
     assert len(trace_evals) == 1
 
 

@@ -1,5 +1,6 @@
 import functools
 import json
+import re
 
 import tiktoken
 from openai.types.chat import ChatCompletionMessageParam
@@ -66,3 +67,25 @@ def count_prompt_tokens(
     return sum([count_message_tokens(json.dumps(list(m.values())), encoder=encoder) for m in messages]) + (
         len(messages) * 3
     )
+
+
+class DefaultFormatDict(dict):
+    def __missing__(self, key):
+        return "{" + key + "}"
+
+
+class SafeFormatter:
+    def __init__(self, format_dict):
+        self.format_dict = format_dict
+
+    def format(self, format_string):
+        return re.sub(r"\{([^{}]+)\}", self._replace_match, format_string)
+
+    def _replace_match(self, match):
+        key = match.group(1)
+        return str(self.format_dict.get(key, match.group(0)))
+
+
+def format_string(string_to_format: str, **kwargs):
+    formatter = SafeFormatter(format_dict=kwargs)
+    return formatter.format(string_to_format)
