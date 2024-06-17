@@ -21,6 +21,7 @@ from baserun.api import ApiClient
 from baserun.integrations.integration import Integration
 from baserun.mixins import ClientMixin, CompletionMixin
 from baserun.models.evals import CompletionEval, TraceEval
+from baserun.models.experiment import Experiment
 from baserun.models.tags import Tag
 from baserun.utils import copy_type_hints, count_prompt_tokens, deep_merge
 from baserun.wrappers.generic import GenericChoice, GenericClient, GenericCompletion, GenericUsage
@@ -395,8 +396,8 @@ class WrappedOpenAIBaseClient(ClientMixin):
         api_client: Optional[ApiClient] = None,
         baserun_api_key: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        experiment: Optional[Experiment] = None,
     ):
-        self.name = name or ".".join([v for v in [client.organization, client.__class__.__name__] if v])
         self.tags: List[Tag] = []
         self.evals: List[TraceEval] = []
         self.client = client
@@ -410,6 +411,12 @@ class WrappedOpenAIBaseClient(ClientMixin):
         self.metadata = metadata or {}
         self.request_ids: Dict[str, str] = {}
         self.integrations = []
+        self.experiment = experiment
+
+        if name:
+            self.name = name
+        else:
+            self.name = ".".join([v for v in [client.organization, client.__class__.__name__] if v])
 
         self.api_client = api_client
         if not self.api_client:
@@ -437,6 +444,7 @@ class WrappedOpenAIBaseClient(ClientMixin):
             integrations=[],
             output=self.output,
             error=self.error,
+            experiment=self.experiment,
         )
 
     def submit_to_baserun(self):
@@ -459,6 +467,7 @@ class WrappedSyncOpenAIClient(WrappedOpenAIBaseClient, BaseOpenAI):
         api_client: Optional[ApiClient] = None,
         baserun_api_key: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        experiment: Optional[Experiment] = None,
         **kwargs,
     ):
         WrappedOpenAIBaseClient.__init__(
@@ -473,6 +482,7 @@ class WrappedSyncOpenAIClient(WrappedOpenAIBaseClient, BaseOpenAI):
             api_client=api_client,
             baserun_api_key=baserun_api_key,
             metadata=metadata or {},
+            experiment=experiment,
         )
         self.metadata = self.metadata
         self.name = self.name
@@ -517,6 +527,7 @@ class WrappedAsyncOpenAIClient(WrappedOpenAIBaseClient, BaseAsyncOpenAI):
         api_client: Optional[ApiClient] = None,
         baserun_api_key: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        experiment: Optional[Experiment] = None,
         **kwargs,
     ):
         WrappedOpenAIBaseClient.__init__(
@@ -531,6 +542,7 @@ class WrappedAsyncOpenAIClient(WrappedOpenAIBaseClient, BaseAsyncOpenAI):
             api_client=api_client,
             baserun_api_key=baserun_api_key,
             metadata=metadata or {},
+            experiment=experiment,
         )
         BaseAsyncOpenAI.__init__(self, *args, **kwargs)
         self.chat = WrappedAsyncChat(self)
@@ -561,12 +573,24 @@ class WrappedAsyncOpenAIClient(WrappedOpenAIBaseClient, BaseAsyncOpenAI):
 
 
 class OpenAI(WrappedSyncOpenAIClient):
-    def __init__(self, *args, name: Optional[str] = None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        name: Optional[str] = None,
+        experiment: Optional[Experiment] = None,
+        **kwargs,
+    ):
         client = BaseOpenAI(*args, **kwargs)
-        super().__init__(*args, **kwargs, client=client, name=name)
+        super().__init__(*args, **kwargs, client=client, name=name, experiment=experiment)
 
 
 class AsyncOpenAI(WrappedAsyncOpenAIClient):
-    def __init__(self, *args, name: Optional[str] = None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        name: Optional[str] = None,
+        experiment: Optional[Experiment] = None,
+        **kwargs,
+    ):
         client = BaseAsyncOpenAI(*args, **kwargs)
-        super().__init__(*args, **kwargs, client=client, name=name)
+        super().__init__(*args, **kwargs, client=client, name=name, experiment=experiment)

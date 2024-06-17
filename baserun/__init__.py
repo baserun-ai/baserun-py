@@ -1,11 +1,17 @@
-from typing import TYPE_CHECKING, Any, List, Optional, Type, TypeVar, Union
+import json
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, TypeVar, Union
+from uuid import uuid4
 
 from datasets import Dataset, DatasetInfo
+from datasets.fingerprint import generate_fingerprint
 
 from baserun.api import ApiClient
-from baserun.mixins import ClientMixin
+from baserun.mixins import ClientMixin, CompletionMixin
 from baserun.models.dataset import DatasetMetadata
-from baserun.models.evals import CompletionEval, TraceEval
+from baserun.models.evals import CompletionEval, Eval, TraceEval
+from baserun.models.evaluators import Evaluator
+from baserun.models.experiment import Experiment
+from baserun.models.scenario import Scenario
 from baserun.models.tags import Tag
 from baserun.wrappers.generic import GenericClient, GenericCompletion
 
@@ -67,6 +73,7 @@ def setup_globals():
         global OpenAI
         global AsyncOpenAI
         OpenAI = WrappedOpenAI
+        AsyncOpenAI = WrappedAsyncOpenAI
 
     if is_anthropic_installed():
         from baserun.wrappers.anthropic import Anthropic as WrappedAnthropic
@@ -76,10 +83,15 @@ def setup_globals():
         global AsyncAnthropic
         Anthropic = WrappedAnthropic
         AsyncAnthropic = WrappedAsyncAnthropic
-        AsyncOpenAI = WrappedAsyncOpenAI
 
 
-def init(client: T, name: Optional[str] = None, baserun_api_key: Optional[str] = None, **kwargs) -> ClientMixin | T:
+def init(
+    client: T,
+    name: Optional[str] = None,
+    baserun_api_key: Optional[str] = None,
+    experiment: Optional[Experiment] = None,
+    **kwargs,
+) -> ClientMixin | T:
     if is_openai_installed():
         from openai import AsyncOpenAI as BaseAsyncOpenAI
         from openai import OpenAI as BaseOpenAI
@@ -90,9 +102,21 @@ def init(client: T, name: Optional[str] = None, baserun_api_key: Optional[str] =
         )
 
         if isinstance(client, BaseAsyncOpenAI):
-            return WrappedAsyncOpenAIClient(**kwargs, name=name, baserun_api_key=baserun_api_key, client=client)
+            return WrappedAsyncOpenAIClient(
+                **kwargs,
+                name=name,
+                baserun_api_key=baserun_api_key,
+                client=client,
+                experiment=experiment,
+            )
         elif isinstance(client, BaseOpenAI):
-            return WrappedSyncOpenAIClient(**kwargs, name=name, baserun_api_key=baserun_api_key, client=client)
+            return WrappedSyncOpenAIClient(
+                **kwargs,
+                name=name,
+                baserun_api_key=baserun_api_key,
+                client=client,
+                experiment=experiment,
+            )
 
     if is_anthropic_installed():
         from anthropic import Anthropic as BaseAnthropic
@@ -111,9 +135,21 @@ def init(client: T, name: Optional[str] = None, baserun_api_key: Optional[str] =
         AsyncAnthropic = WrappedAsyncAnthropic
 
         if isinstance(client, BaseAnthropic):
-            return WrappedSyncAnthropicClient(**kwargs, name=name, baserun_api_key=baserun_api_key, client=client)
+            return WrappedSyncAnthropicClient(
+                **kwargs,
+                name=name,
+                baserun_api_key=baserun_api_key,
+                client=client,
+                experiment=experiment,
+            )
         elif isinstance(client, BaseAsyncAnthropic):
-            return WrappedAsyncAnthropicClient(**kwargs, name=name, baserun_api_key=baserun_api_key, client=client)
+            return WrappedAsyncAnthropicClient(
+                **kwargs,
+                name=name,
+                baserun_api_key=baserun_api_key,
+                client=client,
+                experiment=experiment,
+            )
 
     setup_globals()
     return client
@@ -143,23 +179,58 @@ def tag(
 
 
 def evaluate(
-    name: str,
-    score: float,
-    trace_id: str,
+    evaluators: List[Evaluator],
+    scenario: Scenario,
+    name: Optional[str] = None,
+    score: Optional[float] = None,
+    trace_id: Optional[str] = None,
+    client: Optional[ClientMixin] = None,
     completion_id: Optional[str] = None,
+    completion: Optional[Union[GenericCompletion, CompletionMixin]] = None,
     metadata: Optional[dict] = None,
-) -> Union[CompletionEval, TraceEval]:
-    client = GenericClient(name=name)
-    if completion_id:
-        completion = GenericCompletion(
-            name=name,
-            client=client,
-            completion_id=completion_id,
-            trace_id=trace_id,
-        )
-        return completion.eval(name, score, metadata=metadata)
+    api_key: Optional[str] = None,
+) -> List[Union[CompletionEval, TraceEval, Eval]]:
+    client = client or completion.client if completion else client
+    client = client or scenario.client if scenario.client else client
+    if not client and not trace_id:
+        raise ValueError("Either client or trace_id must be set")
 
-    return client.eval(name, score, metadata=metadata)
+    metadata = metadata or scenario.metadata or {}
+
+    name = name or "resumed"
+
+    if not client and trace_id:
+        client = GenericClient(trace_id=trace_id, name=name, api_client=ApiClient(api_key=api_key), metadata=metadata)
+
+    if client and not completion and completion_id:
+        completion = GenericCompletion(
+            completion_id=completion_id, client=client.genericize(), name=name, metadata=metadata
+        )
+
+    evaluations: List[Union[Eval, TraceEval, CompletionEval]] = []
+    if completion:
+        for evaluator in evaluators:
+            if score is None:
+                completion_eval = evaluator.evaluate()
+            else:
+                completion_eval = evaluator._create_completion_eval(score=score, metadata=metadata)
+
+            if completion_eval:
+                evaluations.append(completion_eval)
+        completion.submit_to_baserun()
+    elif client:
+        for evaluator in evaluators:
+            trace_eval: Optional[Union[Eval, TraceEval]] = None
+            if score:
+                trace_eval = evaluator._create_trace_eval(score=score, metadata=metadata)
+            else:
+                trace_eval = evaluator.evaluate()
+
+            if trace_eval:
+                evaluations.append(trace_eval)
+        client.submit_to_baserun()
+
+    return evaluations
 
 
 def log(
@@ -199,9 +270,43 @@ def feedback(
     return tag(name, score, trace_id, completion_id, metadata, tag_type="feedback")
 
 
-def submit_dataset(dataset: Any, name: str, api_key: Optional[str] = None):
+def submit_dataset(
+    dataset: Dataset,
+    name: Optional[str] = None,
+    metadata: Optional[dict] = None,
+    version: Optional[str] = None,
+    api_key: Optional[str] = None,
+):
+    # TODO: Validation
+    # TODO: Pull in dataset info into metadata (and put it back when fetching)
+    if not name:
+        name = dataset.info.dataset_name
+    else:
+        dataset.info.dataset_name = name
+
+    if not name:
+        # FIXME? Is this a reasonable default?
+        name = str(uuid4())
+
+    metadata = metadata or {}
+    for info_key, info_value in dataset.info.__dict__.items():
+        # Skip if the attribute is not serializable
+        try:
+            json.dumps(info_value)
+            if info_value:
+                metadata[info_key] = info_value
+        except TypeError:
+            pass
+
+    dataset._fingerprint = generate_fingerprint(dataset)
     api_client = ApiClient(api_key=api_key)
-    api_client.submit_dataset(dataset, name)
+    api_client.submit_dataset(
+        dataset.to_list(),
+        name,
+        metadata=metadata,
+        version=version or dataset._fingerprint,
+        fingerprint=dataset._fingerprint,
+    )
 
 
 async def list_datasets(api_key: Optional[str] = None) -> List[DatasetMetadata]:
@@ -220,13 +325,25 @@ async def get_dataset(
     if not raw_dataset:
         return None
 
-    dataset = Dataset.from_list(
-        raw_dataset.get("object", []),
-        info=DatasetInfo(
-            dataset_name=raw_dataset.get("name"),
-        ),
-    )
-    return dataset
+    info = DatasetInfo(dataset_name=raw_dataset.get("name"))
+    for key, value in raw_dataset.get("metadata", {}).items():
+        if hasattr(info, key):
+            setattr(info, key, value)
+
+    dataset_object = raw_dataset.get("object", {})
+    if isinstance(dataset_object, Dict):
+        return Dataset.from_dict(dataset_object, info=info)
+    return Dataset.from_list(dataset_object, info=info)
+
+
+def create_dataset(data: Union[Dict[str, List[Any]], List[Dict[str, Any]]], name: Optional[str] = None) -> Dataset:
+    if isinstance(data, Dict):
+        data = [data]
+
+    if not name:
+        name = str(uuid4())
+
+    return Dataset.from_list(data, info=DatasetInfo(dataset_name=name))
 
 
 setup_globals()

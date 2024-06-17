@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import httpx
-from datasets import Dataset
 
 from baserun.models.dataset import DatasetMetadata, DatasetVersionMetadata
 from baserun.worker import exporter_queue, start_worker, stop_worker
@@ -72,8 +71,22 @@ class ApiClient:
         logger.debug(f"Submitting completion:\n{json.dumps(data, indent=2)}")
         post("completions", data)
 
-    def submit_dataset(self, dataset: Dataset, name: str, version: Optional[str] = None):
-        data = {"name": name, "data": dataset.to_list(), "version": version}
+    def submit_dataset(
+        self,
+        data: Any,
+        name: str,
+        version: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        fingerprint: Optional[str] = None,
+    ):
+        data = {
+            "name": name,
+            "data": data,
+            "version": version,
+            "fingerprint": fingerprint,
+            "metadata": metadata,
+        }
+        logger.debug(f"Submitting dataset:\n{json.dumps(data, indent=2)}")
         post("datasets", data)
 
     def submit_stream(self, stream: "GenericCompletion"):
@@ -119,6 +132,7 @@ class ApiClient:
             "error": completion.error,
             "trace": self._trace_data(completion.client.genericize()),
             "template": completion.template,
+            "metadata": completion.metadata,
         }
 
     def _trace_data(self, client: "GenericClient") -> Dict[str, Any]:
@@ -135,6 +149,7 @@ class ApiClient:
             "end_user_identifier": client.user,
             "end_user_session_identifier": client.session,
             "metadata": client.metadata,
+            "experiment": client.experiment.model_dump() if client.experiment else None,
         }
 
 
@@ -148,6 +163,7 @@ async def get(base_url: str, api_key: str, endpoint: str, client: httpx.AsyncCli
     response = await client.get(
         f"{base_url}/api/public/{endpoint}",
         headers={"Authorization": f"Bearer {api_key}"},
+        timeout=30,
     )
     logger.debug(f"Response from {base_url}/api/public/{endpoint}: {response.status_code}")
     if response.status_code < 200 or response.status_code >= 300:

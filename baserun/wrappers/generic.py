@@ -1,4 +1,4 @@
-import uuid
+import uuid  # noqa
 from datetime import datetime
 from typing import Any, Dict, List, Optional, TypeVar
 
@@ -8,6 +8,7 @@ from baserun.api import ApiClient
 from baserun.integrations.integration import Integration
 from baserun.mixins import ClientMixin, CompletionMixin
 from baserun.models.evals import CompletionEval, TraceEval
+from baserun.models.experiment import Experiment
 from baserun.models.tags import Tag
 
 Model = TypeVar("Model", bound="BaseModel")
@@ -61,6 +62,7 @@ class GenericCompletion(CompletionMixin, BaseModel):
     evals: List[CompletionEval] = Field(default_factory=list)
     request_id: Optional[str] = None
     environment: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
     def genericize(self):
         return self
@@ -86,6 +88,9 @@ class GenericCompletion(CompletionMixin, BaseModel):
         self.choices = [GenericChoice(message=m, index=i) for m, i in enumerate(value)]
         self.submit_to_baserun()
 
+    def message_content(self):
+        return "".join([m.content for m in self.messages if m.content])
+
 
 class GenericClient(ClientMixin, BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -104,6 +109,7 @@ class GenericClient(ClientMixin, BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
     integrations: List[Integration] = Field(default_factory=list)
     autosubmit: bool = Field(default=True)
+    experiment: Optional[Experiment] = None
 
     def genericize(self):
         return self

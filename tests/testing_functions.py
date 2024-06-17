@@ -15,9 +15,11 @@ from openai import AsyncOpenAI, NotFoundError, OpenAI
 from openai.types import CreateEmbeddingResponse
 from openai.types.chat.chat_completion_message import FunctionCall
 
-from baserun import api, get_dataset, init, list_datasets, log, submit_dataset, tag
+from baserun import api, evaluate, get_dataset, init, list_datasets, log, submit_dataset, tag
 from baserun.integrations.llamaindex import LLamaIndexInstrumentation
 from baserun.models.dataset import DatasetMetadata
+from baserun.models.evaluators import Correctness, Includes
+from baserun.models.experiment import Experiment
 from baserun.wrappers.generic import (
     GenericChoice,
     GenericClient,
@@ -516,7 +518,7 @@ async def use_get_dataset() -> Dataset:
         }
     )
 
-    submit_dataset(dataset, "questions")
+    submit_dataset(dataset, name="questions", metadata={"description": "Dataset of questions and answers"})
 
     # Wait for dataset to be posted and persisted
     await asyncio.sleep(2)
@@ -540,42 +542,40 @@ def compile_completions_dataset() -> Dataset:
 async def use_dataset_for_rag_eval() -> Dataset:
     from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 
-    dataset = Dataset.from_dict(
-        {
-            "retrievals": [
-                {
-                    "vars": {
-                        "query": "When was the first super bowl?",
-                        "context": {
-                            "The First AFL–NFL World Championship Game was an American football game played on January 15, 1967, at the Los Angeles Memorial Coliseum in Los Angeles,"
-                        },
+    dataset = Dataset.from_list(
+        [
+            {
+                "input": {
+                    "query": "When was the first super bowl?",
+                    "context": {
+                        "The First AFL–NFL World Championship Game was an American football game played on January 15, 1967, at the Los Angeles Memorial Coliseum in Los Angeles,"
                     },
-                    "output": "The first Super Bowl was held on Jan 15, 1967",
-                    "expected": "1967",
-                    "metadata": {"name": "Super Bowl 1", "eval_name": "correctness"},
                 },
-                {
-                    "vars": {
-                        "query": "Who won superbowl 31?",
-                        "context": {"The Green Bay Packers play in Green Bay, Wisconsin"},
-                    },
-                    "output": "The Green Bay Packers won Super Bowl XXXI",
-                    "expected": "Packers",
-                    "metadata": {"name": "Super Bowl 31", "eval_name": "correctness"},
+                "output": "The first Super Bowl was held on Jan 15, 1967",
+                "expected": "1967",
+                "metadata": {"name": "Super Bowl 1", "eval_name": "correctness"},
+            },
+            {
+                "input": {
+                    "query": "Who won superbowl 31?",
+                    "context": {"The Green Bay Packers play in Green Bay, Wisconsin"},
                 },
-            ]
-        }
+                "output": "The Green Bay Packers won Super Bowl XXXI",
+                "expected": "Packers",
+                "metadata": {"name": "Super Bowl 31", "eval_name": "correctness"},
+            },
+        ]
     )
     documents = SimpleDirectoryReader(input_files=["tests/test_data/super_bowl.txt"]).load_data()
     index = VectorStoreIndex.from_documents(documents)
     query_engine = index.as_query_engine()
 
-    for retrieval in dataset.to_dict().get("retrievals", []):
+    for retrieval in dataset.to_list():
         name = retrieval.get("metadata", {}).get("name")
         eval_name = retrieval.get("metadata", {}).get("eval_name", name)
         trace = GenericClient(name=name, autosubmit=False)
 
-        query = retrieval.get("vars", {}).get("query")
+        query = retrieval.get("input", {}).get("query")
         answer = query_engine.query(query)
 
         trace.variable("query", query)
@@ -588,42 +588,54 @@ async def use_dataset_for_rag_eval() -> Dataset:
         trace.submit_to_baserun()
 
 
-async def use_dataset_for_completion_eval() -> Dataset:
-    dataset = Dataset.from_dict(
-        {
-            "prompt": [{"role": "user", "content": "What is the capital of {{country}}?"}],
-            "evaluators": [{"includes": "{{city}}", "accuracy": {"min": 0.9}}],
-            "test_data": [
-                {
-                    "vars": {"city": "Washington, D.C.", "country": "United States"},
-                    "expected": {"content": "The capital of the United States is Washington, D.C."},
-                    "metadata": {"name": "U.S."},
-                },
-            ],
-        }
+async def use_submit_dataset() -> Dataset:
+    dataset = Dataset.from_list(
+        [
+            {
+                "input": {"city": "Washington, D.C.", "country": "United States"},
+                "expected": "The capital of the {country} is {city}",
+                "contexts": ["The United States still exists as a country and the capital has not changed recently."],
+                "name": "U.S.",
+                "id": "bcc8e116-4f70-4f6d-bb4f-d5892b5db8e1",
+            },
+            {
+                "input": {"city": "London", "country": "United Kingdom"},
+                "expected": "The capital of the {country} is {city}",
+                "contexts": ["The United Kingdom still exists as a country and the capital has not changed recently."],
+                "name": "U.K.",
+                "id": "c6efec68-b01d-44f2-b204-54afba7b9ad9",
+            },
+        ],
     )
 
-    submit_dataset(dataset, "eval_questions")
+    submit_dataset(dataset, name="capital questions", metadata={"description": "Dataset of questions about capitals"})
+    return dataset
 
-    # Wait for dataset to be posted and persisted
-    await asyncio.sleep(3)
 
-    retrieved_dataset = await get_dataset(name="eval_questions")
+async def use_dataset_for_online_eval() -> Dataset:
+    from baserun import OpenAI
 
-    client = init(OpenAI(), name="Dataset eval")
+    dataset = await get_dataset(name="capital questions")
+    question = "What is the capital of {country}?"
 
-    for case in retrieved_dataset.to_dict().get("scenarios", []):
+    client = OpenAI(name="Online Eval")
+    experiment = Experiment(dataset=dataset, client=client, name="Dataset online eval run")
+    for scenario in experiment.scenarios:
+        evaluators = [Includes(scenario=scenario, expected="{city}"), Correctness(scenario=scenario, question=question)]
+
         completion = client.chat.completions.create(
-            name=case.get("name", "Dataset eval completion"), model="gpt-4o", messages=case.get("input")
+            name=scenario.name,
+            model="gpt-4o",
+            messages=scenario.format_messages([{"role": "user", "content": question}]),
+            variables=scenario.input,
         )
-        expected = case["includes"]
-        if isinstance(expected, list):
-            for e in expected:
-                completion.eval("openai_chat.content").includes(e)
-        else:
-            completion.eval("openai_chat.content").includes(expected)
+        output = completion.choices[0].message.content
+        client.output = output
+        scenario.actual = output
 
-    return retrieved_dataset
+        evaluate(evaluators, scenario, completion=completion)
+
+    return dataset
 
 
 def call_function(functions, function_name: str, parsed_args: argparse.Namespace):
