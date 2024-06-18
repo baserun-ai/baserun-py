@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "baserun"
-version = "2.0.4"
+version = "2.0.5"
 description = "tools for testing, debugging, and evaluating llm features."
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Erik Peterson", email = "erik@baserun.ai" }]
-requires-python = ">=3.8, <3.12"
+requires-python = ">=3.8"
 dependencies = ["httpx[http2]>=0.24.0"]
 
 [project.urls]
