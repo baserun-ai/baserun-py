@@ -402,7 +402,7 @@ class WrappedOpenAIBaseClient(ClientMixin):
         self.evals: List[TraceEval] = []
         self.client = client
         self.trace_id = trace_id or str(uuid4())
-        self.output = None
+        self.output = ""
         self.error: Union[str, None] = None
         self.user = user
         self.session = session

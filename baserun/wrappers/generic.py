@@ -64,6 +64,14 @@ class GenericCompletion(CompletionMixin, BaseModel):
     environment: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
+    def __init__(self, **data):
+        client = data.pop("client")
+        tags = data.pop("tags", [])
+        evals = data.pop("evals", [])
+        tool_results = data.pop("tool_results", [])
+        super().__init__(client=client, **data)
+        self.setup_mixin(client=client, tags=tags, evals=evals, tool_results=tool_results, **data)
+
     def genericize(self):
         return self
 
@@ -110,6 +118,10 @@ class GenericClient(ClientMixin, BaseModel):
     integrations: List[Integration] = Field(default_factory=list)
     autosubmit: bool = Field(default=True)
     experiment: Optional[Experiment] = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.setup_mixin(**data)
 
     def genericize(self):
         return self

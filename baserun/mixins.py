@@ -1,6 +1,5 @@
 import abc
 import json
-from abc import ABC
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Type, Union, overload
 
 from datasets import Dataset
@@ -14,18 +13,27 @@ if TYPE_CHECKING:
     from baserun.wrappers.generic import GenericClient, GenericCompletion
 
 
-class CompletionMixin(ABC):
+class CompletionMixin:
     """
     Provides logic that is common to all wrapped completion objects.
     FYI the reason this isn't a pydantic model is each library's "Completion" type is super different, and
     if you have a "base" completion type you will get hella type conflicts.
     """
 
-    tags: List[Tag]
-    evals: List["CompletionEval"]
-    completion_id: str
-    tool_results: List[Dict[str, Any]]
-    client: "ClientMixin"
+    def setup_mixin(
+        self,
+        client: "ClientMixin",
+        tags: Optional[List[Tag]] = None,
+        evals: Optional[List["CompletionEval"]] = None,
+        completion_id: Optional[str] = None,
+        tool_results: Optional[List[Dict[str, Any]]] = None,
+        **kwargs,
+    ):
+        self.client = client
+        self.tags = tags or []
+        self.evals = evals or []
+        self.completion_id = completion_id or ""
+        self.tool_results = tool_results or []
 
     def _clean_kwargs(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         return {
@@ -192,19 +200,28 @@ class CompletionMixin(ABC):
         pass
 
 
-class ClientMixin(ABC):
+class ClientMixin:
     """
     Provides logic that is common to all wrapped client / trace objects.
     FYI the reason this isn't a pydantic model is each library's "Client" type is super different, and
     if you have a "base" client type you will get hella type conflicts.
     """
 
-    tags: List[Tag]
-    evals: List["TraceEval"]
-    trace_id: str
-    output: Optional[str]
-    integrations: List[Integration]
-    autosubmit: bool
+    def setup_mixin(
+        self,
+        trace_id: Optional[str] = None,
+        output: Optional[str] = None,
+        autosubmit: bool = True,
+        tags: Optional[List[Tag]] = None,
+        evals: Optional[List["TraceEval"]] = None,
+        **kwargs,
+    ):
+        self.tags: List[Tag] = tags or []
+        self.evals: List["TraceEval"] = evals or []
+        self.trace_id = trace_id or ""
+        self.output = output
+        self.integrations: List[Integration] = []
+        self.autosubmit = autosubmit
 
     @abc.abstractmethod
     def genericize(self) -> "GenericClient": ...
