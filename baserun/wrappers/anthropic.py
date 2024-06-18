@@ -8,7 +8,7 @@ from uuid import uuid4
 import anthropic
 import anthropic.resources
 import httpx  # noqa: F401
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 from baserun.api import ApiClient
 from baserun.integrations.integration import Integration
@@ -47,6 +47,11 @@ class WrappedMessage(anthropic.types.Message, CompletionMixin):
     tool_results: List[Any] = Field(default_factory=list)
     tags: List[Tag] = Field(default_factory=list)
     evals: List[CompletionEval] = Field(default_factory=list)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        client = kwargs.pop("client")
+        self.setup_mixin(client=client, **kwargs)
 
     def genericize(self):
         choices = []
@@ -94,30 +99,42 @@ class WrappedMessage(anthropic.types.Message, CompletionMixin):
         self.client.api_client.submit_completion(self.genericize())
 
 
-class WrappedStreamBase(CompletionMixin, BaseModel):
+class WrappedStreamBase(CompletionMixin):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     client: "WrappedAnthropicBaseClient"
-    id: Optional[str] = None
+    id: Optional[str]
     name: str
-    error: Optional[str] = None
+    error: Optional[str]
     trace_id: str
     completion_id: str
-    template: Optional[str] = None
+    template: Optional[str]
     start_timestamp: datetime
-    end_timestamp: Optional[datetime] = None
-    first_token_timestamp: Optional[datetime] = None
-    input_messages: List[anthropic.types.MessageParam] = Field(default_factory=list)
-    config_params: Dict[str, Any] = Field(default_factory=dict)
-    tool_results: List[Any] = Field(default_factory=list)
-    tags: List[Tag] = Field(default_factory=list)
-    evals: List[CompletionEval] = Field(default_factory=list)
+    end_timestamp: Optional[datetime]
+    first_token_timestamp: Optional[datetime]
+    input_messages: List[anthropic.types.MessageParam]
+    config_params: Dict[str, Any]
+    tool_results: List[Any]
+    tags: List[Tag]
+    evals: List[CompletionEval]
 
     # Used for evals on streaming responses
-    captured_messages: List[anthropic.types.Message] = Field(default_factory=list)
+    captured_messages: List[anthropic.types.Message]
 
     def __init__(self, *args, **kwargs):
-        CompletionMixin.__init__(self)
-        BaseModel.__init__(self, **kwargs)
+        self.client = kwargs.pop("client")
+        self.id = kwargs.pop("id", str(uuid4()))
+        self.name = kwargs.pop("name", "Anthropic Stream")
+        self.error = kwargs.pop("error", None)
+        self.trace_id = kwargs.pop("trace_id", self.client.trace_id)
+        self.template = None
+        self.start_timestamp = kwargs.pop("start_timestamp", datetime.now(timezone.utc))
+        self.end_timestamp = None
+        self.first_token_timestamp = None
+        self.input_messages = kwargs.pop("input_messages", [])
+        self.config_params = kwargs.pop("config_params", {})
+        self.captured_messages = []
+
+        self.setup_mixin(client=self.client, **kwargs)
 
     def genericize(self):
         usage = GenericUsage(
@@ -179,20 +196,34 @@ class WrappedAsyncStream(WrappedStreamBase, anthropic.AsyncStream, Generic[T]):
         async for item in self._iterator:
             yield item
 
-    async def __stream__(self) -> AsyncIterator[anthropic.types.MessageStreamEvent]:
+    async def __stream__(self) -> AsyncIterator[anthropic.types.RawMessageStreamEvent]:
         captured_message = None
         content_block = None
 
         async for item in super().__stream__():
-            if isinstance(item, anthropic.types.MessageStartEvent):
+            if isinstance(item, anthropic.types.RawMessageStartEvent):
                 captured_message = item.message
                 self.id = item.message.id
-            elif captured_message and isinstance(item, anthropic.types.ContentBlockStartEvent):
+            elif captured_message and isinstance(item, anthropic.types.RawContentBlockStartEvent):
                 content_block = item.content_block
                 captured_message.content.append(content_block)
-            elif content_block and isinstance(item, anthropic.types.ContentBlockDeltaEvent):
+            elif (
+                isinstance(content_block, anthropic.types.TextBlock)
+                and isinstance(item, anthropic.types.RawContentBlockDeltaEvent)
+                and isinstance(item.delta, anthropic.types.TextDelta)
+            ):
                 content_block.text += item.delta.text
-            elif captured_message and isinstance(item, anthropic.types.MessageDeltaEvent):
+
+            elif (
+                isinstance(content_block, anthropic.types.ToolUseBlock)
+                and isinstance(item, anthropic.types.RawContentBlockDeltaEvent)
+                and isinstance(item.delta, anthropic.types.InputJsonDelta)
+            ):
+                # TODO: Figure out how to merge partial json
+                # content_block.dict += item.delta.partial_json
+                pass
+
+            elif captured_message and isinstance(item, anthropic.types.RawMessageDeltaEvent):
                 captured_message.stop_reason = item.delta.stop_reason
                 captured_message.stop_sequence = item.delta.stop_sequence
                 captured_message.usage.output_tokens += item.usage.output_tokens
@@ -220,21 +251,33 @@ class WrappedSyncStream(WrappedStreamBase, anthropic.Stream, Generic[T]):
         for item in self._iterator:
             yield item
 
-    def __stream__(self) -> Iterator[anthropic.types.MessageStreamEvent]:
+    def __stream__(self) -> Iterator[anthropic.types.RawMessageStreamEvent]:
         stream = super().__stream__()
         captured_message = None
         content_block = None
 
         for item in stream:
-            if isinstance(item, anthropic.types.MessageStartEvent):
+            if isinstance(item, anthropic.types.RawMessageStartEvent):
                 captured_message = item.message
                 self.id = item.message.id
-            elif captured_message and isinstance(item, anthropic.types.ContentBlockStartEvent):
+            elif captured_message and isinstance(item, anthropic.types.RawContentBlockStartEvent):
                 content_block = item.content_block
                 captured_message.content.append(content_block)
-            elif content_block and isinstance(item, anthropic.types.ContentBlockDeltaEvent):
+            elif (
+                isinstance(content_block, anthropic.types.TextBlock)
+                and isinstance(item, anthropic.types.RawContentBlockDeltaEvent)
+                and isinstance(item.delta, anthropic.types.TextDelta)
+            ):
                 content_block.text += item.delta.text
-            elif captured_message and isinstance(item, anthropic.types.MessageDeltaEvent):
+            elif (
+                isinstance(content_block, anthropic.types.ToolUseBlock)
+                and isinstance(item, anthropic.types.RawContentBlockDeltaEvent)
+                and isinstance(item.delta, anthropic.types.InputJsonDelta)
+            ):
+                # TODO: Figure out how to merge partial json
+                # content_block.dict += item.delta.partial_json
+                pass
+            elif captured_message and isinstance(item, anthropic.types.RawMessageDeltaEvent):
                 captured_message.stop_reason = item.delta.stop_reason
                 captured_message.stop_sequence = item.delta.stop_sequence
                 captured_message.usage.output_tokens += item.usage.output_tokens
@@ -250,13 +293,13 @@ class WrappedSyncStream(WrappedStreamBase, anthropic.Stream, Generic[T]):
 class WrappedMessageStreamManager(anthropic.MessageStreamManager, Generic[T]):
     def __init__(
         self,
-        api_request: Callable[[], anthropic.MessageStream],
+        api_request: Callable[[], anthropic.Stream[anthropic.types.RawMessageStreamEvent]],
         stream: WrappedSyncStream[anthropic.types.MessageStreamEvent],
     ) -> None:
         super().__init__(api_request)
-        self.__stream: WrappedSyncStream[anthropic.types.MessageStreamEvent] = stream
+        self.__stream: WrappedSyncStream[anthropic.types.RawMessageStreamEvent] = stream
 
-    def __enter__(self) -> WrappedSyncStream[anthropic.types.MessageStreamEvent]:
+    def __enter__(self):
         return self.__stream
 
     def __exit__(
@@ -273,12 +316,12 @@ class WrappedAsyncMessageStreamManager(anthropic.AsyncMessageStreamManager, Gene
     def __init__(
         self,
         stream_params: Dict[str, Any],
-        api_request: Awaitable[anthropic.MessageStream],
+        api_request: Awaitable[anthropic.AsyncStream[anthropic.types.RawMessageStreamEvent]],
     ) -> None:
         self.stream_params = stream_params
         super().__init__(api_request)
 
-    async def __aenter__(self) -> WrappedAsyncStream[anthropic.types.MessageStreamEvent]:
+    async def __aenter__(self):
         stream = await super().__aenter__()
 
         return WrappedAsyncStream(**self.stream_params, response=stream.response)
@@ -304,6 +347,10 @@ class WrappedSyncMessages(anthropic.resources.Messages):
         wrapped_completion: Union[WrappedSyncStream, WrappedMessage, None] = None
 
         if isinstance(stream_or_completion, anthropic.types.Message):
+            if isinstance(stream_or_completion.content[0], anthropic.types.ToolUseBlock):
+                # TODO
+                return super().create(*args, **kwargs)
+
             output = stream_or_completion.content[0].text
             if not name:
                 name = output[:20]
@@ -363,7 +410,7 @@ class WrappedSyncMessages(anthropic.resources.Messages):
             name = "Anthropic Stream"
 
         start_timestamp = datetime.now(timezone.utc)
-        stream_manager: anthropic.MessageStreamManager[anthropic.MessageStream] = super().stream(*args, **kwargs)
+        stream_manager: anthropic.MessageStreamManager = super().stream(*args, **kwargs)
         request_callable = stream_manager._MessageStreamManager__api_request  # type: ignore[attr-defined]
         stream = request_callable()
         first_token_timestamp = datetime.now(timezone.utc)
@@ -413,6 +460,10 @@ class WrappedAsyncMessages(anthropic.resources.AsyncMessages):
         wrapped_completion: Union[WrappedAsyncStream, WrappedMessage, None] = None
 
         if isinstance(stream_or_completion, anthropic.types.Message):
+            if isinstance(stream_or_completion.content[0], anthropic.types.ToolUseBlock):
+                # TODO
+                return await super().create(*args, **kwargs)
+
             output = stream_or_completion.content[0].text
             if not name:
                 name = output[:20]
@@ -472,9 +523,7 @@ class WrappedAsyncMessages(anthropic.resources.AsyncMessages):
             name = "Anthropic Stream"
 
         start_timestamp = datetime.now(timezone.utc)
-        stream_manager: anthropic.AsyncMessageStreamManager[anthropic.AsyncMessageStream] = super().stream(
-            *args, **kwargs
-        )
+        stream_manager: anthropic.AsyncMessageStreamManager = super().stream(*args, **kwargs)
         request = stream_manager._AsyncMessageStreamManager__api_request  # type: ignore[attr-defined]
         first_token_timestamp = datetime.now(timezone.utc)
 
@@ -544,6 +593,8 @@ class WrappedAnthropicBaseClient(ClientMixin):
         except ImportError:
             pass
 
+        self.setup_mixin(trace_id=self.trace_id)
+
     def genericize(self):
         return GenericClient(
             name=self.name,
@@ -579,7 +630,7 @@ class WrappedSyncAnthropicClient(WrappedAnthropicBaseClient, anthropic.Anthropic
         session: Optional[str] = None,
         user: Optional[str] = None,
         trace_id: Optional[str] = None,
-        baserun_baserun_api_key: Optional[str] = None,
+        baserun_api_key: Optional[str] = None,
         api_client: Optional[ApiClient] = None,
         experiment: Optional[Experiment] = None,
         **kwargs,
@@ -594,7 +645,7 @@ class WrappedSyncAnthropicClient(WrappedAnthropicBaseClient, anthropic.Anthropic
             session=session,
             trace_id=trace_id,
             api_client=api_client,
-            baserun_api_key=baserun_baserun_api_key,
+            baserun_api_key=baserun_api_key,
             experiment=experiment,
         )
         anthropic.Anthropic.__init__(self, *args, **kwargs)

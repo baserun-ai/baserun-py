@@ -10,7 +10,11 @@ readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Erik Peterson", email = "erik@baserun.ai" }]
 requires-python = ">=3.8"
-dependencies = ["httpx[http2]>=0.24.0"]
+dependencies = [
+  "httpx[http2]>=0.24.0",
+  "datasets>=2.0.0",
+  "pydantic>=2.0.0, <3",
+]
 
 [project.urls]
 Homepage = "https://baserun.ai"

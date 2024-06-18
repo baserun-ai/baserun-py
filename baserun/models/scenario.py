@@ -18,7 +18,7 @@ class Scenario(BaseModel):
     input: Dict[str, Any]
     experiment: Optional["Experiment"] = Field(exclude=True, default=None)
     actual: Optional[str] = None
-    expected: Optional[Dict[str, str]] = None
+    expected: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
     contexts: Optional[List[str]] = Field(default_factory=list)
 
