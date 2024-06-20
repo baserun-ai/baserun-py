@@ -1,5 +1,5 @@
 import uuid  # noqa
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -23,12 +23,16 @@ class GenericUsage(BaseModel):
 class GenericInputMessage(BaseModel):
     role: str
     content: Optional[str] = None
+    name: Optional[str] = None
+    tool_call_id: Optional[str] = None
     tool_calls: Optional[List[Dict[str, Any]]] = None
 
 
 class GenericCompletionMessage(BaseModel):
     role: str = "assistant"
     content: Optional[str] = None
+    name: Optional[str] = None
+    tool_call_id: Optional[str] = None
     tool_calls: Optional[List[Dict[str, Any]]] = None
 
 
@@ -111,7 +115,7 @@ class GenericClient(ClientMixin, BaseModel):
     error: Optional[str] = None
     user: Optional[str] = None
     session: Optional[str] = None
-    start_timestamp: Optional[datetime] = Field(default_factory=datetime.now)
+    start_timestamp: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
     end_timestamp: Optional[datetime] = None
     api_client: Optional[ApiClient] = Field(default_factory=ApiClient)
     metadata: Dict[str, Any] = Field(default_factory=dict)
