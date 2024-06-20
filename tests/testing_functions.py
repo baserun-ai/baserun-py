@@ -489,6 +489,7 @@ def use_ragas_with_llama_index():
 
     dataset = Dataset.from_dict(data_samples)
 
+    # TODO: Add contexts and ground truth to the evals
     score = evaluate(dataset, metrics=[faithfulness, answer_correctness])
     trace_client.eval_many(score.scores.data.to_pydict())
 
@@ -539,6 +540,25 @@ def compile_completions_dataset() -> Dataset:
     return json.dumps(dataset.to_list(), indent=2)
 
 
+async def use_llama_with_chat_engine() -> Dataset:
+    from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
+
+    query = "Who won superbowl 31?"
+
+    documents = SimpleDirectoryReader(input_files=["tests/test_data/super_bowl.txt"]).load_data()
+    index = VectorStoreIndex.from_documents(documents)
+    chat_engine = index.as_chat_engine()
+
+    trace = LLamaIndexInstrumentation.start().client
+    trace.name = "Super Bowl"
+    trace.variable("query", query)
+
+    answer = chat_engine.query(query)
+
+    trace.output = answer.response
+    trace.submit_to_baserun()
+
+
 async def use_dataset_for_rag_eval() -> Dataset:
     from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 
@@ -573,7 +593,8 @@ async def use_dataset_for_rag_eval() -> Dataset:
     for retrieval in dataset.to_list():
         name = retrieval.get("metadata", {}).get("name")
         eval_name = retrieval.get("metadata", {}).get("eval_name", name)
-        trace = GenericClient(name=name, autosubmit=False)
+
+        trace = LLamaIndexInstrumentation.start().client
 
         query = retrieval.get("input", {}).get("query")
         answer = query_engine.query(query)

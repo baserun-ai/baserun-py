@@ -1,6 +1,7 @@
 import abc
 import json
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Type, Union, overload
+from uuid import uuid4
 
 from datasets import Dataset
 from openai.types.chat import ChatCompletionMessageToolCall
@@ -218,7 +219,7 @@ class ClientMixin:
     ):
         self.tags: List[Tag] = tags or []
         self.evals: List["TraceEval"] = evals or []
-        self.trace_id = trace_id or ""
+        self.trace_id = trace_id or str(uuid4())
         self.output = output
         self.integrations: List[Integration] = []
         self.autosubmit = autosubmit
