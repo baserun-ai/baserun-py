@@ -341,7 +341,7 @@ def create_full_trace(question="What is the capital of the US?") -> str:
     completion.submit_to_baserun()
     client.output = content
     client.feedback("content", 0.9, metadata={"comment": "This is a great answer"})
-    client.eval("Contains answer").includes(expected="Washington")
+    client.eval("Correct answer").includes(expected="Washington")
     return content
 
 

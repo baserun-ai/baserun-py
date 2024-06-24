@@ -21,16 +21,23 @@ async def post_and_log_response(
     base_url: str, api_key: str, endpoint: str, data: Dict[str, Any], client: httpx.AsyncClient
 ):
     logger = logging.getLogger(__name__ + ".poster")
-    logger.debug(f"Posting to {base_url}/api/public/{endpoint}")
-    response = await client.post(
-        f"{base_url}/api/public/{endpoint}",
-        headers={"Authorization": f"Bearer {api_key}"},
-        json=data,
-    )
-    logger.debug(f"Response from {base_url}/api/public/{endpoint}: {response.status_code}")
-    if response.status_code < 200 or response.status_code >= 300:
-        logger.debug("Text: " + response.text)
-        logger.debug("Data: " + json.dumps(data, indent=2))
+    try:
+        logger.debug(f"Posting to {base_url}/api/public/{endpoint}")
+        response = await client.post(
+            f"{base_url}/api/public/{endpoint}",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json=data,
+        )
+        logger.debug(f"Response from {base_url}/api/public/{endpoint}: {response.status_code}")
+        if response.status_code < 200 or response.status_code >= 300:
+            logger.debug("Text: " + response.text)
+            logger.debug("Data: " + json.dumps(data, indent=2))
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error occurred: {e.response.status_code} - {e.response.text}")
+    except httpx.RequestError as e:
+        logger.error(f"Request error occurred: {e}")
+    except Exception as e:
+        logger.error(f"An unexpected error occurred: {e}")
 
 
 async def worker(queue: Queue, base_url: str, api_key: str):
