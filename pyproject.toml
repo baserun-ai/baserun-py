@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "baserun"
-version = "2.0.7"
+version = "2.0.8"
 description = "tools for testing, debugging, and evaluating llm features."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -14,6 +14,7 @@ dependencies = [
   "httpx[http2]>=0.24.0",
   "datasets>=2.0.0",
   "pydantic>=2.0.0, <3",
+  "tenacity>=8.0.1",
 ]
 
 [project.urls]
