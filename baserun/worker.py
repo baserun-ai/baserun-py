@@ -1,4 +1,5 @@
 import asyncio
+import atexit
 import json
 import logging
 from collections import defaultdict
@@ -6,6 +7,7 @@ from multiprocessing import Process, Queue
 from typing import TYPE_CHECKING, Any, Dict, List, Union
 
 import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 if TYPE_CHECKING:
     pass
@@ -17,6 +19,7 @@ tasks: List[asyncio.Task] = []
 exporter_process: Union[Process, None] = None
 
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
 async def post_and_log_response(
     base_url: str, api_key: str, endpoint: str, data: Dict[str, Any], client: httpx.AsyncClient
 ):
@@ -37,12 +40,16 @@ async def post_and_log_response(
     except httpx.RequestError as e:
         logger.error(f"Request error occurred: {e}")
     except Exception as e:
+        logger = logging.getLogger(__name__ + ".poster")
         logger.error(f"An unexpected error occurred: {e}")
 
 
 async def worker(queue: Queue, base_url: str, api_key: str):
     logger = logging.getLogger(__name__ + ".worker")
     logger.debug(f"Starting worker with base_url: {base_url}")
+
+    atexit.register(stop_worker)
+
     requests_in_progress: Dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
     tasks = []
 
