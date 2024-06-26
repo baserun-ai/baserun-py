@@ -6,7 +6,6 @@ import logging
 import os
 import sys
 import traceback
-from time import sleep
 from typing import List
 
 import openai
@@ -710,7 +709,7 @@ if __name__ == "__main__":
     else:
         call_function(traced_functions, function_name, parsed_args)
 
-    sleep(4)
+    # sleep(4)
     api.stop_worker()
 
-    sleep(1)
+    # sleep(1)
