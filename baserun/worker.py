@@ -4,6 +4,7 @@ import json
 import logging
 from collections import defaultdict
 from multiprocessing import Process, Queue
+from time import sleep
 from typing import TYPE_CHECKING, Any, Dict, List, Union
 
 import httpx
@@ -40,7 +41,6 @@ async def post_and_log_response(
     except httpx.RequestError as e:
         logger.error(f"Request error occurred: {e}")
     except Exception as e:
-        logger = logging.getLogger(__name__ + ".poster")
         logger.error(f"An unexpected error occurred: {e}")
 
 
@@ -105,6 +105,9 @@ def start_worker(base_url: str, api_key: str):
         exporter_process.daemon = False
         exporter_process.start()
 
+        # Give the worker some time to start
+        sleep(0.5)
+
 
 def stop_worker():
     global exporter_process, exporter_queue, tasks
@@ -122,11 +125,11 @@ def stop_worker():
             # If there's no running loop (i.e. it's already been stopped), just ignore this exception
             pass
 
-        # Terminate the process
-        exporter_process.terminate()
-        exporter_process.join()
-
     # Close and join the queue
     if exporter_queue is not None and not getattr(exporter_queue, "_closed"):
         exporter_queue.close()
         exporter_queue.join_thread()
+
+    # Wait for the process to exit (it should finish after the queue is closed)
+    if exporter_process is not None and exporter_process.is_alive():
+        exporter_process.join()

@@ -111,6 +111,7 @@ class ApiClient:
         config_params = completion.config_params or {}
         config_params.pop("event_handler", None)
 
+        # TODO: This should just use pydantic's model_dump (with timestamp conversions etc)
         return {
             "id": completion.id,
             "completion_id": completion.completion_id,
@@ -136,6 +137,7 @@ class ApiClient:
         }
 
     def _trace_data(self, client: "GenericClient") -> Dict[str, Any]:
+        # TODO: This should just use pydantic's model_dump (with timestamp conversions etc)
         return {
             "id": client.trace_id,
             "name": client.name,
